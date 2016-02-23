@@ -1,0 +1,209 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      4915,        200]
+NotebookOptionsPosition[      4488,        182]
+NotebookOutlinePosition[      4831,        197]
+CellTagsIndexPosition[      4788,        194]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ StyleBox[
+  RowBox[{
+   RowBox[{
+    SubsuperscriptBox["B", "i", "n"], 
+    RowBox[{"(", "u", ")"}]}], "=", 
+   RowBox[{
+    RowBox[{"(", GridBox[{
+       {"n"},
+       {"i"}
+      }], ")"}], 
+    SuperscriptBox["u", "i"], 
+    SuperscriptBox[
+     RowBox[{"(", 
+      RowBox[{"1", "-", "u"}], ")"}], 
+     RowBox[{"n", "-", "i"}]]}]}], "Text",
+  FontSize->16]], "Input",
+ CellChangeTimes->{
+  3.6609989477797546`*^9, {3.660999039714945*^9, 3.6609991102356462`*^9}}],
+
+Cell["", "Text"],
+
+Cell[TextData[{
+ "see https://en.wikiversity.org/wiki/CAGD/Algebraic_Geometry\nResultant \
+(which is a form of a common root of two surfaces) of two Degree 3 \
+Polynominals\n\nf(t)=",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["a", "3"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox[
+   SuperscriptBox["t", "3"], TraditionalForm]]],
+ "+",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["a", "2"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox[
+   SuperscriptBox["t", "2"], TraditionalForm]]],
+ "+",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["a", "1"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox["t", TraditionalForm]]],
+ "+",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["a", "0"], TraditionalForm]]],
+ ", g(t)=",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["b", "3"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox[
+   SuperscriptBox["t", "3"], TraditionalForm]]],
+ "+",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["b", "2"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox[
+   SuperscriptBox["t", "2"], TraditionalForm]]],
+ "+",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["b", "1"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox["t", TraditionalForm]]],
+ "+",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["b", "0"], TraditionalForm]]],
+ "\n\nis calculate as\n\nR(f,g)=\[LeftBracketingBar]",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"(", GridBox[{
+      {
+       RowBox[{"(", 
+        RowBox[{"3", ",", "2"}], ")"}], 
+       RowBox[{"(", 
+        RowBox[{"3", ",", "1"}], ")"}], 
+       RowBox[{"(", 
+        RowBox[{"3", ",", "0"}], ")"}]},
+      {
+       RowBox[{"(", 
+        RowBox[{"3", ",", "1"}], ")"}], 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"3", ",", "0"}], ")"}], "+", 
+        RowBox[{"(", 
+         RowBox[{"2", ",", "1"}], ")"}]}], 
+       RowBox[{"(", 
+        RowBox[{"2", ",", "0"}], ")"}]},
+      {
+       RowBox[{"(", 
+        RowBox[{"3", ",", "0"}], ")"}], 
+       RowBox[{"(", 
+        RowBox[{"2", ",", "0"}], ")"}], 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "0"}], ")"}]}
+     }], ")"}], TraditionalForm]]],
+ "\[RightBracketingBar]\n\nwhere (i,j) = ",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["a", "i"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["b", "j"], TraditionalForm]]],
+ "-",
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["a", "j"], TraditionalForm]]],
+ Cell[BoxData[
+  FormBox[
+   SubscriptBox["b", "i"], TraditionalForm]]],
+ "=\[LeftBracketingBar]",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"(", GridBox[{
+      {
+       SubscriptBox["a", "i"], 
+       SubscriptBox["a", "j"]},
+      {
+       SubscriptBox["b", "i"], 
+       SubscriptBox["b", "j"]}
+     }], ")"}], TraditionalForm]]],
+ "\[RightBracketingBar]\n\n"
+}], "Text",
+ CellChangeTimes->{{3.6610005017088785`*^9, 3.661000590451604*^9}, {
+  3.6610006229325485`*^9, 3.6610006229355497`*^9}, {3.661000802870449*^9, 
+  3.6610010367172194`*^9}, {3.6610010999322505`*^9, 3.6610012439949718`*^9}}],
+
+Cell["\<\
+The paper requires that we substitute parameterisation of G(u,v) into the \
+Matrix\
+\>", "Text",
+ CellChangeTimes->{
+  3.661001251362153*^9, {3.6610014948240037`*^9, 3.6610015344160004`*^9}}],
+
+Cell["\<\
+
+Expansion/Simplification\
+\>", "Text",
+ CellChangeTimes->{{3.661001704750592*^9, 3.6610017236704636`*^9}}],
+
+Cell["\<\
+
+
+
+
+
+
+
+
+
+BTW:
+http://www-sop.inria.fr/members/Laurent.Buse/Talks/gdspm13.pdf
+    raytracing against bezier patches\
+\>", "Text",
+ CellChangeTimes->{{3.6610061238081927`*^9, 3.661006146811495*^9}}]
+},
+WindowSize->{759, 669},
+WindowMargins->{{63, Automatic}, {8, Automatic}},
+FrontEndVersion->"10.3 for Microsoft Windows (64-bit) (October 9, 2015)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 481, 18, 53, "Input"],
+Cell[1042, 40, 16, 0, 30, "Text"],
+Cell[1061, 42, 2890, 109, 303, "Text"],
+Cell[3954, 153, 201, 5, 30, "Text"],
+Cell[4158, 160, 117, 4, 49, "Text"],
+Cell[4278, 166, 206, 14, 239, "Text"]
+}
+]
+*)
+
+(* End of internal cache information *)
