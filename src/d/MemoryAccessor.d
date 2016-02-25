@@ -15,7 +15,7 @@ else {
    import core.stdc.stdlib : malloc, realloc, free;
 }
 
-void *allocateMemoryNoScanNoMove(ulong size) nothrow {
+void *allocateMemoryNoScanNoMove(size_t size) nothrow {
 	static if( MEMORY_TYPE == EnumMemoryType.GC ) {
        return GC.malloc(size, GC.BlkAttr.NO_SCAN | GC.BlkAttr.NO_MOVE);
     }
@@ -24,7 +24,7 @@ void *allocateMemoryNoScanNoMove(ulong size) nothrow {
     }
 }
 
-void *reallocateMemoryNoScanNoMove(void *ptr, ulong size) nothrow {
+void *reallocateMemoryNoScanNoMove(void *ptr, size_t size) nothrow {
 	static if( MEMORY_TYPE == EnumMemoryType.GC ) {
        return GC.realloc(ptr, size, GC.BlkAttr.NO_SCAN | GC.BlkAttr.NO_MOVE);
     }
