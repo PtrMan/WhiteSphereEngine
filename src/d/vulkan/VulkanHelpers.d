@@ -86,7 +86,9 @@ mixin(GenVulkanInitFunction!("WriteDescriptorSet"));
 mixin(GenVulkanInitFunction!("CommandBufferBeginInfo"));
 mixin(GenVulkanInitFunction!("RenderPassBeginInfo"));
 mixin(GenVulkanInitFunction!("ImageMemoryBarrier"));
-
+mixin(GenVulkanInitFunction!("ImageCreateInfo"));
+mixin(GenVulkanInitFunction!("ImageViewCreateInfo"));
+mixin(GenVulkanInitFunction!("FramebufferCreateInfo"));
 
 
 

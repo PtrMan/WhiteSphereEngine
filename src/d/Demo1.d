@@ -2,9 +2,6 @@ import core.runtime;
 import core.sys.windows.windows;
 import std.string;
 
-
-import core.memory : GC;
-
 extern (Windows)
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             LPSTR lpCmdLine, int nCmdShow)
@@ -14,10 +11,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     try
     {
         Runtime.initialize();
-        
-        
-    GC.disable();
-        
         result = myWinMain(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
         Runtime.terminate();
     }
@@ -55,6 +48,7 @@ int myWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int
 	chainElements ~= new ChainElement(&platformVulkan1Libary);
 	chainElements ~= new ChainElement(&platformVulkan2DeviceBase);
 	chainElements ~= new ChainElement(&platformVulkan3SwapChain);
+	chainElements ~= new ChainElement(&platformVulkan4);
 	chainElements ~= new ChainElement(&innerFunction);
 	processChain(chainElements, chainContext);
 

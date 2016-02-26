@@ -28,11 +28,24 @@ class ChainContext {
 	struct Vulkan {
 		VulkanDevice chosenDevice;
 		
-		VulkanSwapChain swapChain = null;
-		
 		NonGcHandle!VkInstance instance;
 		
 		NonGcHandle!VkCommandPool cmdPool;
+		
+		NonGcHandle!VkFormat depthFormatMediumPrecision;
+		NonGcHandle!VkFormat depthFormatHighPrecision;
+		
+		VkQueue highPriorityQueue, lowPriorityQueue;
+		
+		
+		// prototyping
+			VkRenderPass renderPass;
+		
+		// swapchain related
+			VulkanSwapChain swapChain = null;
+			
+			VkCommandBuffer setupCmdBuffer;			
+		
 	}
 	
 	public Vulkan vulkan;

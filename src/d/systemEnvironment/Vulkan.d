@@ -228,13 +228,11 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 	// retrive queues
-
-	VkQueue highPriorityQueue, lowPriorityQueue;
 	{
 		uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
 
-		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 0, &highPriorityQueue);
-		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 1, &lowPriorityQueue);
+		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 0, &chainContext.vulkan.highPriorityQueue);
+		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 1, &chainContext.vulkan.lowPriorityQueue);
 	}
 
 
@@ -286,20 +284,20 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &primaryCommandBuffer);
 
 
-	VkFormat depthFormatMediumPrecision;
-	VkFormat depthFormatHighPrecision;
+	chainContext.vulkan.depthFormatMediumPrecision = NonGcHandle!VkFormat.createNotInitialized();
+	chainContext.vulkan.depthFormatHighPrecision = NonGcHandle!VkFormat.createNotInitialized();
 
 	// find best formats
 	{
 		bool calleeSuccess;
 		VkFormat[] preferedMediumPrecisionFormats = [VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D16_UNORM];
-		depthFormatMediumPrecision = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedMediumPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
+		*(chainContext.vulkan.depthFormatMediumPrecision.ptr) = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedMediumPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
 		if( !calleeSuccess ) {
 			throw new EngineException(true, true, "Couldn't find a format for '" ~ "depthFormatMediumPrecision" ~ "'!");
 		}
 
 		VkFormat[] preferedHighPrecisionFormats = [VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT];
-		depthFormatHighPrecision = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedHighPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
+		*(chainContext.vulkan.depthFormatHighPrecision.ptr) = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedHighPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
 		if( !calleeSuccess ) {
 			throw new EngineException(true, true, "Couldn't find a format for '" ~ "depthFormatHighPrecision" ~ "'!");
 		}
@@ -338,14 +336,14 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	// TODO< linux >
 	// do most things VulkanExampleBase does 
 	VkCommandBuffer postPresentCmdBuffer;
-	VkCommandBuffer setupCmdBuffer;
+	
 	
 	TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
 	
 	void createSetupCommandBuffer() {
-		if (setupCmdBuffer !is null) {
-			vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &setupCmdBuffer);
-			setupCmdBuffer = null; // todo : check if still necessary
+		if (chainContext.vulkan.setupCmdBuffer !is null) {
+			vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &chainContext.vulkan.setupCmdBuffer);
+			chainContext.vulkan.setupCmdBuffer = null; // todo : check if still necessary
 		}
 	
 		VkCommandBufferAllocateInfo cmdBufAllocateInfo;
@@ -354,7 +352,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
     	cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		cmdBufAllocateInfo.commandBufferCount = 1;
 		
-		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &setupCmdBuffer);
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &chainContext.vulkan.setupCmdBuffer);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
 		}
@@ -365,7 +363,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 		initCommandBufferBeginInfo(&cmdBufInfo);
 		// todo : check null handles, flags?
 	
-		vulkanResult = vkBeginCommandBuffer(setupCmdBuffer, &cmdBufInfo);
+		vulkanResult = vkBeginCommandBuffer(chainContext.vulkan.setupCmdBuffer, &cmdBufInfo);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't begin command buffer!");
 		}
@@ -374,7 +372,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	void setupSwapChain() {
 		uint32_t width = chainContext.window.width;
 		uint32_t height = chainContext.window.height;
-		chainContext.vulkan.swapChain.create(setupCmdBuffer, &width, &height);
+		chainContext.vulkan.swapChain.create(chainContext.vulkan.setupCmdBuffer, &width, &height);
 	}
 	
 	void createCommandBuffers() {
@@ -413,7 +411,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	//scope(exit) vkDestroyCommandPool(chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
 
 	createSetupCommandBuffer();
-	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &setupCmdBuffer);
+	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &chainContext.vulkan.setupCmdBuffer);
 	
 	setupSwapChain();
 	scope(exit) chainContext.vulkan.swapChain.cleanup();
@@ -426,6 +424,272 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	
 	// TODO< other initialisation for swapchain and vulkan api >
 	
+	
+	chainIndex++;
+	chainElements[chainIndex](chainContext, chainElements, chainIndex);
+}
+
+/**
+ * more specific, does access the swapchain informations 
+ *
+ *
+ */
+public void platformVulkan4(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
+	// most
+	// from https://github.com/SaschaWillems/Vulkan/blob/master/base/vulkanexamplebase.cpp
+	// under MIT license
+	
+	VkResult vulkanResult;
+
+	struct DepthStencil {
+		VkImage image;
+		VkDeviceMemory mem;
+		VkImageView view;
+	}
+	DepthStencil depthStencil;
+	
+	TypedPointerWithLength!VkFramebuffer frameBuffers;
+	
+	
+	void setupDepthStencil() {
+		VkImageCreateInfo image;
+		initImageCreateInfo(&image);
+		image.imageType = VK_IMAGE_TYPE_2D;
+		image.format = chainContext.vulkan.depthFormatMediumPrecision.value;
+		image.extent.width = chainContext.window.width;
+		image.extent.height = chainContext.window.height;
+		image.extent.depth = 1;
+		image.mipLevels = 1;
+		image.arrayLayers = 1;
+		image.samples = VK_SAMPLE_COUNT_1_BIT;
+		image.tiling = VK_IMAGE_TILING_OPTIMAL;
+		image.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		image.flags = 0;
+	
+		VkMemoryAllocateInfo mem_alloc;
+		initMemoryAllocateInfo(&mem_alloc);
+		mem_alloc.allocationSize = 0;
+		mem_alloc.memoryTypeIndex = 0;
+	
+		VkImageViewCreateInfo depthStencilView;
+		initImageViewCreateInfo(&depthStencilView);
+		depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		depthStencilView.format = chainContext.vulkan.depthFormatMediumPrecision.value;
+		depthStencilView.flags = 0;
+		depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		depthStencilView.subresourceRange.baseMipLevel = 0;
+		depthStencilView.subresourceRange.levelCount = 1;
+		depthStencilView.subresourceRange.baseArrayLayer = 0;
+		depthStencilView.subresourceRange.layerCount = 1;
+	
+		VkMemoryRequirements memReqs;
+		
+		vulkanResult = vkCreateImage(chainContext.vulkan.chosenDevice.logicalDevice, &image, null, &depthStencil.image);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, vulkan.Messages.COULDNT_IMAGE);
+		}
+		
+		vkGetImageMemoryRequirements(chainContext.vulkan.chosenDevice.logicalDevice, depthStencil.image, &memReqs);
+		mem_alloc.allocationSize = memReqs.size;
+		
+		bool calleeSuccess;
+		mem_alloc.memoryTypeIndex = vulkanHelperSearchBestIndexOfMemoryType(chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, calleeSuccess);
+		if( !calleeSuccess ) {
+			throw new EngineException(true, true, "Failed to find best index of memory type!");
+		}
+		
+		vulkanResult = vkAllocateMemory(chainContext.vulkan.chosenDevice.logicalDevice, &mem_alloc, null, &depthStencil.mem);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, vulkan.Messages.COULDNT_ALLOCATE_MEMORY);
+		}
+
+	
+		vulkanResult = vkBindImageMemory(chainContext.vulkan.chosenDevice.logicalDevice, depthStencil.image, depthStencil.mem, 0);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, vulkan.Messages.COULDNT_BIND_IMAGE_MEMORY);
+		}
+
+		setImageLayout(chainContext.vulkan.setupCmdBuffer, depthStencil.image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	
+		depthStencilView.image = depthStencil.image;
+		vulkanResult = vkCreateImageView(chainContext.vulkan.chosenDevice.logicalDevice, &depthStencilView, null, &depthStencil.view);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, vulkan.Messages.COULDNT_IMAGE_VIEW);
+		}
+	}
+	
+	
+	void createRenderpass() {
+		
+		VkFormat colorformat = VK_FORMAT_B8G8R8A8_UNORM;
+
+		VkAttachmentDescription[2] attachments;
+		attachments[0].format = colorformat;
+		attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		attachments[1].format = chainContext.vulkan.depthFormatMediumPrecision.value;
+		attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+		attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference colorReference;
+		colorReference.attachment = 0;
+		colorReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference depthReference;
+		depthReference.attachment = 1;
+		depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass;
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // only this is possible in vulkan 1.0.2
+		subpass.flags = 0;
+		subpass.inputAttachmentCount = 0;
+		subpass.pInputAttachments = null;
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = cast(immutable(VkAttachmentReference)*)&colorReference;
+		subpass.pResolveAttachments = null;
+		subpass.pDepthStencilAttachment = cast(immutable(VkAttachmentReference)*)&depthReference;
+		subpass.preserveAttachmentCount = 0;
+		subpass.pPreserveAttachments = null;
+
+		VkRenderPassCreateInfo renderPassCreateInfo;
+		initRenderPassCreateInfo(&renderPassCreateInfo);
+		renderPassCreateInfo.attachmentCount = 2;
+		renderPassCreateInfo.pAttachments = cast(immutable(VkAttachmentDescription)*)&attachments;
+		renderPassCreateInfo.subpassCount = 1;
+		renderPassCreateInfo.pSubpasses = cast(immutable(VkSubpassDescription)*)&subpass;
+		renderPassCreateInfo.dependencyCount = 0;
+		renderPassCreateInfo.pDependencies = cast(immutable(VkSubpassDependency)*)null;
+
+		vulkanResult = vkCreateRenderPass(chainContext.vulkan.chosenDevice.logicalDevice, &renderPassCreateInfo, null, &chainContext.vulkan.renderPass);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create renderpass!");
+		}
+	}
+	
+	void setupFrameBuffer() {
+		VkImageView[2] attachments;
+	
+		// Depth/Stencil attachment is the same for all frame buffers
+		attachments[1] = depthStencil.view;
+	
+		VkFramebufferCreateInfo frameBufferCreateInfo;
+		initFramebufferCreateInfo(&frameBufferCreateInfo);
+		frameBufferCreateInfo.renderPass = chainContext.vulkan.renderPass;
+		frameBufferCreateInfo.attachmentCount = 2;
+		frameBufferCreateInfo.pAttachments = cast(immutable(VkImageView)*)attachments.ptr; // TODO< cleanup >
+		frameBufferCreateInfo.width = chainContext.window.width;
+		frameBufferCreateInfo.height = chainContext.window.height;
+		frameBufferCreateInfo.layers = 1;
+	
+		// Create frame buffers for every swap chain image
+		frameBuffers = TypedPointerWithLength!VkFramebuffer.allocate(chainContext.vulkan.swapChain.imageCount);
+		for (uint32_t i = 0; i < frameBuffers.length; i++) {
+			attachments[0] = chainContext.vulkan.swapChain.buffers.ptr[i].view;
+			vulkanResult = vkCreateFramebuffer(chainContext.vulkan.chosenDevice.logicalDevice, &frameBufferCreateInfo, null, &frameBuffers.ptr[i]);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't create framebuffer!");
+			}
+		}
+	}
+	
+	void flushSetupCommandBuffer() {
+		if (chainContext.vulkan.setupCmdBuffer is null)
+			return;
+	
+		vulkanSuccess = vkEndCommandBuffer(chainContext.vulkan.setupCmdBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't end command buffer!");
+		}
+
+	
+		VkSubmitInfo submitInfo;
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = cast(immutable(VkCommandBuffer)*)&chainContext.vulkan.setupCmdBuffer;
+	
+		vulkanSuccess = vkQueueSubmit(chainContext.vulkan.highPriorityQueue, 1, &submitInfo, 0);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't submi to queue!");
+		}
+
+		
+		vulkanSuccess = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't wait on queue idle!");
+		}
+
+	
+		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, cast(immutable(VkCommandBuffer)*)&chainContext.vulkan.setupCmdBuffer);
+		chainContext.vulkan.setupCmdBuffer = null; // todo : check if still necessary
+	}
+	
+	// THIS IS DUPLICATED CODE!
+	void createSetupCommandBuffer() {
+		if (chainContext.vulkan.setupCmdBuffer !is null) {
+			vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &chainContext.vulkan.setupCmdBuffer);
+			chainContext.vulkan.setupCmdBuffer = null; // todo : check if still necessary
+		}
+	
+		VkCommandBufferAllocateInfo cmdBufAllocateInfo;
+		initCommandBufferAllocateInfo(&cmdBufAllocateInfo);
+		cmdBufAllocateInfo.commandPool = chainContext.vulkan.cmdPool.value;
+    	cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		cmdBufAllocateInfo.commandBufferCount = 1;
+		
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &chainContext.vulkan.setupCmdBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
+		}
+		
+		// todo : Command buffer is also started here, better put somewhere else
+		// todo : Check if necessaray at all...
+		VkCommandBufferBeginInfo cmdBufInfo;
+		initCommandBufferBeginInfo(&cmdBufInfo);
+		// todo : check null handles, flags?
+	
+		vulkanResult = vkBeginCommandBuffer(chainContext.vulkan.setupCmdBuffer, &cmdBufInfo);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't begin command buffer!");
+		}
+	}
+
+
+	setupDepthStencil(); // DONE
+	/*scope(exit) TODO;*/
+	
+	createRenderpass(); // DONE
+	scope(exit) vkDestroyRenderPass(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.renderPass, null);
+
+	// we don't do this for now
+	// TODO LOW
+	//createPipelineCache();
+	
+	
+	setupFrameBuffer(); // DONE
+	scope(exit) {
+		for (uint32_t i = 0; i < frameBuffers.length; i++) {
+			vkDestroyFramebuffer(chainContext.vulkan.chosenDevice.logicalDevice, frameBuffers.ptr[i], null);
+		}
+		
+		frameBuffers.dispose();
+		frameBuffers = null;
+	}
+	
+	
+	flushSetupCommandBuffer();
+	
+	createSetupCommandBuffer();
 	
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
