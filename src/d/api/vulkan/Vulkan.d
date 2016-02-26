@@ -3651,11 +3651,12 @@ version(Win32) {
                 HWND                            hwnd;
 	}
 
+	extern( System ) @nogc nothrow {
         alias PFN_vkCreateWin32SurfaceKHR = nothrow VkResult function(VkInstance instance, const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
         alias PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR = nothrow VkBool32 function(VkPhysicalDevice physicalDevice, uint queueFamilyIndex);
-
-	extern( System ) @nogc nothrow {
-		static PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
-		static PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin32PresentationSupportKHR;
    }
+
+	static PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
+	static PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin32PresentationSupportKHR;
+
 }

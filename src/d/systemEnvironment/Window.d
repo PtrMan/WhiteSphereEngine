@@ -46,18 +46,18 @@ private void initializeWindow(ChainContext chainContext) {
 		// this is not 100% clean but we grab the hInstance from the system and set it
 		// see http://stackoverflow.com/questions/1749972/determine-the-current-hinstance
 		// NOTE< propably doesn't work if we create a opengl context >
-		chainContext.windowsContext.hInstance = GetModuleHandleA(null);
+		//chainContext.windowsContext.hInstance = GetModuleHandleA(null);
 		
 		string ClassName = "PtrEngine";
 	   	string WindowCaption = chainContext.window.caption;
 		
 		WNDCLASSA Wnd;
-		MSG Msg;
-		bool CalleeSuccess;
-		string ErrorMessage;
+		//MSG Msg;
+		//bool CalleeSuccess;
+		//string ErrorMessage;
 		
 		memset(&Wnd, 0, WNDCLASSA.sizeof);
-		Wnd.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC; // CS_OWNDC
+		Wnd.style = CS_HREDRAW | CS_VREDRAW; // | CS_OWNDC; // CS_OWNDC
 		Wnd.lpfnWndProc = &WndProc;
 		Wnd.hInstance =  chainContext.windowsContext.hInstance;
 		Wnd.hIcon = LoadIconW( null, IDI_APPLICATION );
@@ -70,13 +70,52 @@ private void initializeWindow(ChainContext chainContext) {
 			throw new EngineException(true, true, "RegisterClassA() failed!");
 		}
 		
-		chainContext.windowsContext.hwnd = CreateWindowA( 
+		/*chainContext.windowsContext.hwnd = CreateWindowA( 
 		      cast(LPCSTR)ClassName.toStringz,
 		      cast(LPCSTR)ClassName.toStringz,
-		      WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS ,
+		      WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,//WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS ,
 		      0, 0, chainContext.window.width, chainContext.window.height,
 		      null, null, chainContext.windowsContext.hInstance, null
-		);
+		);*/
+		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+		
+	DWORD dwExStyle = 0;
+	DWORD dwStyle = 0;
+	
+	RECT windowRect;
+	//if (fullscreen)
+	//{
+	//	windowRect.left = (long)0;
+	//	windowRect.right = (long)screenWidth;
+	//	windowRect.top = (long)0;
+	//	windowRect.bottom = (long)screenHeight;
+	//}
+	//else
+	{
+		windowRect.left = screenWidth / 2 - chainContext.window.width / 2;
+		windowRect.right = chainContext.window.width;
+		windowRect.top = screenHeight / 2 - chainContext.window.height / 2;
+		windowRect.bottom = chainContext.window.height;
+	}
+
+	AdjustWindowRectEx(&windowRect, dwStyle, FALSE, dwExStyle);
+
+		
+		chainContext.windowsContext.hwnd = CreateWindowExA(0,
+		cast(LPCSTR)ClassName.toStringz,
+		cast(LPCSTR)ClassName.toStringz,
+		//		WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
+		dwStyle | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
+		windowRect.left,
+		windowRect.top,
+		windowRect.right,
+		windowRect.bottom,
+		null,
+		null,
+		chainContext.windowsContext.hInstance,
+		null);
 		
 		if( chainContext.windowsContext.hwnd is null) {
 			throw new EngineException(true, true, "Failed to create window!");
@@ -84,7 +123,11 @@ private void initializeWindow(ChainContext chainContext) {
 		
 		int nCmdShow = SW_SHOWDEFAULT;
 		ShowWindow(chainContext.windowsContext.hwnd, nCmdShow);
+		SetForegroundWindow(chainContext.windowsContext.hwnd);
+		SetFocus(chainContext.windowsContext.hwnd);
+		
 		UpdateWindow(chainContext.windowsContext.hwnd);
+		
 	}
 }
 

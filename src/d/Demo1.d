@@ -2,6 +2,9 @@ import core.runtime;
 import core.sys.windows.windows;
 import std.string;
 
+
+import core.memory : GC;
+
 extern (Windows)
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             LPSTR lpCmdLine, int nCmdShow)
@@ -11,13 +14,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     try
     {
         Runtime.initialize();
+        
+        
+    GC.disable();
+        
         result = myWinMain(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
         Runtime.terminate();
     }
     catch (Throwable e) 
     {
-        //MessageBoxA(null, e.toString().toStringz(), "Error",
-        //            MB_OK | MB_ICONEXCLAMATION);
+        MessageBoxA(null, e.toString().toStringz(), "Error",
+                    MB_OK | MB_ICONEXCLAMATION);
         result = 0;     // failed
     }
  
@@ -41,6 +48,7 @@ int myWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int
 	chainContext.window.caption = "PtrEngine Demo1";
 	chainContext.window.width = 800;
 	chainContext.window.height = 600;
+	chainContext.windowsContext.hInstance = hInstance;
 	
 	ChainElement[] chainElements;
 	chainElements ~= new ChainElement(&platformWindow);

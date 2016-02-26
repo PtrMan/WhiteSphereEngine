@@ -39,7 +39,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	string[] extensionsToLoadGced;
 	const bool withSurface = true; // do we want to render to a surface?
 	if( withSurface ) {
-		//extensionsToLoadGced ~= VK_KHR_SURFACE_EXTENSION_NAME;
+		extensionsToLoadGced ~= VK_KHR_SURFACE_EXTENSION_NAME; // required
 		version(Win32) {
 			extensionsToLoadGced ~= VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
 		}
@@ -240,7 +240,8 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 	// create command pool
-	VkCommandPool commandPool;
+	// TODO LOW< rename >
+	chainContext.vulkan.cmdPool = NonGcHandle!VkCommandPool.createNotInitialized();
 	
 	uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
 
@@ -253,12 +254,12 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		chainContext.vulkan.chosenDevice.logicalDevice,
 		&commandPoolCreateInfo,
 		null,
-		&commandPool
+		chainContext.vulkan.cmdPool.ptr
 	);
 	if( !vulkanSuccess(vulkanResult) ) {
 		throw new EngineException(true, true, "Couldn't create command pool!");
 	}
-	scope(exit) vkDestroyCommandPool(chainContext.vulkan.chosenDevice.logicalDevice, commandPool, null);
+	scope(exit) vkDestroyCommandPool(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
 
 
 
@@ -270,7 +271,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	VkCommandBufferAllocateInfo commandBufferAllocationInfo;
 	initCommandBufferAllocateInfo(&commandBufferAllocationInfo);
-	commandBufferAllocationInfo.commandPool = commandPool;
+	commandBufferAllocationInfo.commandPool = chainContext.vulkan.cmdPool.value;
 	commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	commandBufferAllocationInfo.commandBufferCount = 1; // we just want to allocate one command buffer in the target array
 
@@ -280,9 +281,9 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		&commandBufferAllocationInfo,
 		&primaryCommandBuffer);
 	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "Couldn't allocate command buffer!");
+		throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
 	}
-	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, commandPool, 1, &primaryCommandBuffer);
+	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &primaryCommandBuffer);
 
 
 	VkFormat depthFormatMediumPrecision;
@@ -311,6 +312,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 }
 
 import vulkan.VulkanSwapChain;
+static import vulkan.Messages;
 
 /**
  * initializes and setup the swapchain
@@ -319,6 +321,10 @@ import vulkan.VulkanSwapChain;
  *
  */
 public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
+	// much is
+	// from https://github.com/SaschaWillems/Vulkan/blob/master/base/vulkanexamplebase.cpp
+	// under MIT license
+	
 	VkResult vulkanResult;
 	
 	chainContext.vulkan.swapChain = new VulkanSwapChain();
@@ -328,13 +334,98 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	version(Win32) {
 		chainContext.vulkan.swapChain.initSurface(chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
 	}
-	// TODO< linux >
 	
+	// TODO< linux >
+	// do most things VulkanExampleBase does 
+	VkCommandBuffer postPresentCmdBuffer;
+	VkCommandBuffer setupCmdBuffer;
+	
+	TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
+	
+	void createSetupCommandBuffer() {
+		if (setupCmdBuffer !is null) {
+			vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &setupCmdBuffer);
+			setupCmdBuffer = null; // todo : check if still necessary
+		}
+	
+		VkCommandBufferAllocateInfo cmdBufAllocateInfo;
+		initCommandBufferAllocateInfo(&cmdBufAllocateInfo);
+		cmdBufAllocateInfo.commandPool = chainContext.vulkan.cmdPool.value;
+    	cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		cmdBufAllocateInfo.commandBufferCount = 1;
+		
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &setupCmdBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
+		}
+		
+		// todo : Command buffer is also started here, better put somewhere else
+		// todo : Check if necessaray at all...
+		VkCommandBufferBeginInfo cmdBufInfo;
+		initCommandBufferBeginInfo(&cmdBufInfo);
+		// todo : check null handles, flags?
+	
+		vulkanResult = vkBeginCommandBuffer(setupCmdBuffer, &cmdBufInfo);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't begin command buffer!");
+		}
+	}
+	
+	void setupSwapChain() {
+		uint32_t width = chainContext.window.width;
+		uint32_t height = chainContext.window.height;
+		chainContext.vulkan.swapChain.create(setupCmdBuffer, &width, &height);
+	}
+	
+	void createCommandBuffers() {
+		// Create one command buffer per frame buffer 
+		// in the swap chain
+		// Command buffers store a reference to the 
+		// frame buffer inside their render pass info
+		// so for static usage withouth having to rebuild 
+		// them each frame, we use one per frame buffer
+		assert(chainContext.vulkan.swapChain.imageCount > 0);
+		drawCmdBuffers = TypedPointerWithLength!VkCommandBuffer.allocate(chainContext.vulkan.swapChain.imageCount);
+		
+		VkCommandBufferAllocateInfo cmdBufAllocateInfo;
+		initCommandBufferAllocateInfo(&cmdBufAllocateInfo);
+		cmdBufAllocateInfo.commandPool = chainContext.vulkan.cmdPool.value;
+		cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		cmdBufAllocateInfo.commandBufferCount = cast(uint32_t)drawCmdBuffers.length;
+		
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, drawCmdBuffers.ptr);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't allocate command buffer!");
+		}
+	
+		// Create one command buffer for submitting the
+		// post present image memory barrier
+		cmdBufAllocateInfo.commandBufferCount = 1;
+	
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &postPresentCmdBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't allocate command buffer!");
+		}
+	}
+	
+	// not necessary, we did this already
+	//createCommandPool();
+	//scope(exit) vkDestroyCommandPool(chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
+
+	createSetupCommandBuffer();
+	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &setupCmdBuffer);
+	
+	setupSwapChain();
+	scope(exit) chainContext.vulkan.swapChain.cleanup();
+	
+	createCommandBuffers();
+	scope(exit) {
+		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &postPresentCmdBuffer);
+		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, drawCmdBuffers.length, drawCmdBuffers.ptr);		
+	}
 	
 	// TODO< other initialisation for swapchain and vulkan api >
 	
-	// chainContext.vulkan.swapChain.create(TODO)
-	//scope(exit) chainContext.vulkan.swapChain.cleanup();
 	
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);

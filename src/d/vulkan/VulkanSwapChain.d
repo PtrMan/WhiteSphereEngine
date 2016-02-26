@@ -69,7 +69,7 @@ class VulkanSwapChain {
 	// Tries to find a graphics and a present queue
 	void initSurface(
 //version(Win32) { // #ifdef _WIN32
-		void* platformHandle, void* platformWindow
+		HINSTANCE platformHandle, HWND platformWindow
 //}
 //version(Linux) {
 //#ifdef __ANDROID__
@@ -86,15 +86,8 @@ class VulkanSwapChain {
 		version(Win32) {
 		VkWin32SurfaceCreateInfoKHR surfaceCreateInfo;
 		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		surfaceCreateInfo.hinstance = cast(HINSTANCE)platformHandle;
-		surfaceCreateInfo.hwnd = cast(HWND)platformWindow;
-		
-		{
-			import std.stdio;
-			writeln(platformHandle, " ", platformWindow);
-			writeln(vkCreateWin32SurfaceKHR);
-		}
-		
+		surfaceCreateInfo.hinstance = platformHandle;
+		surfaceCreateInfo.hwnd = platformWindow;
 		vulkanResult = vkCreateWin32SurfaceKHR(instance, &surfaceCreateInfo, null, &surface);
 		}
 //#else
@@ -368,21 +361,24 @@ class VulkanSwapChain {
 			colorAttachmentView.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			colorAttachmentView.flags = 0;
 
-			buffers[i].image = images[i];
+			buffers.ptr[i].image = images[i];
 
 			// Transform images from initial (undefined) to present layout
 			vulkan.VulkanTools.setImageLayout(
 				cmdBuffer,
-				buffers[i].image,
+				buffers.ptr[i].image,
 				VK_IMAGE_ASPECT_COLOR_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 			);
 			
-			colorAttachmentView.image = buffers[i].image;
+			colorAttachmentView.image = buffers.ptr[i].image;
 
-			vulkanResult = vkCreateImageView(device, &colorAttachmentView, null, &buffers[i].view);
+			vulkanResult = vkCreateImageView(device, &colorAttachmentView, null, &buffers.ptr[i].view);
 			if( !vulkanSuccess(vulkanResult) ) {
+				import std.stdio;
+				writeln(vulkanResult);
+				
 				throw new EngineException(true, true, "Couldn't create image view!");
 			}
 		}
@@ -408,7 +404,7 @@ class VulkanSwapChain {
 	// TODO< reame to dispose and implement IDisposable >
 	void cleanup() {
 		for (uint32_t i = 0; i < imageCount; i++) {
-			vkDestroyImageView(device, buffers[i].view, null);
+			vkDestroyImageView(device, buffers.ptr[i].view, null);
 			buffers.ptr[i].view = 0;
 		}
 		fpDestroySwapchainKHR(device, swapChain, null);

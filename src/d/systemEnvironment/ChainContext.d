@@ -31,6 +31,8 @@ class ChainContext {
 		VulkanSwapChain swapChain = null;
 		
 		NonGcHandle!VkInstance instance;
+		
+		NonGcHandle!VkCommandPool cmdPool;
 	}
 	
 	public Vulkan vulkan;
