@@ -2,6 +2,7 @@ import core.runtime;
 import core.sys.windows.windows;
 import std.string;
 
+/*
 extern (Windows)
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             LPSTR lpCmdLine, int nCmdShow)
@@ -23,7 +24,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
  
     return result;
 }
-
+*/
 
 import systemEnvironment.EnvironmentChain;
 import systemEnvironment.Vulkan;
@@ -36,6 +37,19 @@ import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
 
 import std.stdint;
+
+
+// TODO< move to utilities! >
+// helper which creates code to copy an GC'ed array to a non-GC'ed array, memory gets released with scope
+template copyGcedArrayToNongcedMemory(string sourceGcedArray, string destinationNonGcedVariablename) {
+	const char[] copyGcedArrayToNongcedMemory = 
+	"import core.memory : GC;\n" ~
+	"import core.stdc.string : memcpy;\n" ~
+	
+    destinationNonGcedVariablename ~" = cast(typeof(" ~ destinationNonGcedVariablename ~ "))GC.malloc(" ~ sourceGcedArray ~ ".sizeof, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);\n" ~
+	"scope(exit) GC.free(" ~ destinationNonGcedVariablename ~ ");\n" ~
+	"memcpy(" ~ destinationNonGcedVariablename ~ ", " ~ sourceGcedArray ~ ".ptr, " ~ sourceGcedArray ~ ".sizeof);\n";
+}
 
 
 void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
@@ -185,6 +199,47 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 		uint32_t[1/*TODO*/] testIndices;
 	
 		vulkanHelperCreateMemoryAndBufferBindAndFill(indices.bufferDescriptor, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &testIndices, testIndices.sizeof);
+		
+		
+		
+		// Binding description
+	vertices.bindingDescriptionsGced.length = 1;
+	vertices.bindingDescriptionsGced[0].binding = VERTEX_BUFFER_BIND_ID;
+	vertices.bindingDescriptionsGced[0].stride = (3+3) * float.sizeof;
+	vertices.bindingDescriptionsGced[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	// Attribute descriptions
+	// Describes memory layout and shader attribute locations
+	vertices.attributeDescriptionsGced.length = 2;
+	// Location 0 : Position
+	vertices.attributeDescriptionsGced[0].binding = VERTEX_BUFFER_BIND_ID;
+	vertices.attributeDescriptionsGced[0].location = 0;
+	vertices.attributeDescriptionsGced[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	vertices.attributeDescriptionsGced[0].offset = 0;
+	vertices.attributeDescriptionsGced[0].binding = 0;
+	// Location 1 : Color
+	vertices.attributeDescriptionsGced[1].binding = VERTEX_BUFFER_BIND_ID;
+	vertices.attributeDescriptionsGced[1].location = 1;
+	vertices.attributeDescriptionsGced[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+	vertices.attributeDescriptionsGced[1].offset = float.sizeof * 3;
+	vertices.attributeDescriptionsGced[1].binding = 0;
+
+	// Assign to vertex buffer
+	initPipelineVertexInputStateCreateInfo(&vertices.vi);
+
+	
+	
+	// this crashes and sucks >
+	//VkVertexInputBindingDescription* bindingDescriptionsNonGced;
+	//mixin(copyGcedArrayToNongcedMemory!("vertices.bindingDescriptionsGced", "bindingDescriptionsNonGced"));	
+	//VkVertexInputAttributeDescription* attributeDescriptionsNonGced;
+	//mixin(copyGcedArrayToNongcedMemory!("vertices.attributeDescriptionsGced", "attributeDescriptionsNonGced"));
+	
+	vertices.vi.vertexBindingDescriptionCount = vertices.bindingDescriptionsGced.length;
+	vertices.vi.pVertexBindingDescriptions = cast(immutable(VkVertexInputBindingDescription)*)vertices.bindingDescriptionsGced.ptr;
+	vertices.vi.vertexAttributeDescriptionCount = vertices.attributeDescriptionsGced.length;
+	vertices.vi.pVertexAttributeDescriptions = cast(immutable(VkVertexInputAttributeDescription)*)vertices.attributeDescriptionsGced.ptr;
+
 	}
 	
 	
@@ -428,20 +483,22 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 			shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 			shaderStages[1].pName = "main";
 			
+			IDisposable[] toCleanupAfterCreationOfPipeline;
+			
 			static if(/*USE_GLSL*/false) {
 				shaderStages[0].module_ = loadShaderGlSl("triangle.vert", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT);
 				shaderStages[1].module_ = loadShaderGlSl("triangle.frag", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
 			}
 			else {
-				shaderStages[0].module_ = loadShader("triangle.vert.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT);
-				shaderStages[1].module_ = loadShader("triangle.frag.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
+				toCleanupAfterCreationOfPipeline ~= loadShader("triangle.vert.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &shaderStages[0].module_);
+				toCleanupAfterCreationOfPipeline ~= loadShader("triangle.frag.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &shaderStages[1].module_);
 			}
 			
 			// Assign states
 			// Two shader stages
 			graphicsPipelineCreateInfo.stageCount = 2;
 			// Assign pipeline state create information
-			graphicsPipelineCreateInfo.pStages = cast(immutable(VkPipelineShaderStageCreateInfo)*)shaderStages.ptr;
+			graphicsPipelineCreateInfo.pStages = cast(immutable(VkPipelineShaderStageCreateInfo)*)&shaderStages;
 			graphicsPipelineCreateInfo.pVertexInputState = cast(immutable(VkPipelineVertexInputStateCreateInfo)*)&vertices.vi;
 			graphicsPipelineCreateInfo.pInputAssemblyState = cast(immutable(VkPipelineInputAssemblyStateCreateInfo)*)&inputAssemblyState;
 			graphicsPipelineCreateInfo.pViewportState = cast(immutable(VkPipelineViewportStateCreateInfo)*)&viewportState;
@@ -453,12 +510,17 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 			
 			graphicsPipelineCreateInfo.renderPass = chainContext.vulkan.renderPass;
 			
-	
+			
 			// Create rendering pipeline
 			VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 			vulkanResult = vkCreateGraphicsPipelines(chosenDevice.logicalDevice, pipelineCache, 1, &graphicsPipelineCreateInfo, null, &pipelineDefault);
 			if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Couldn't create Graphics Pipeline!");
+			}
+			
+			// release all memory of the shaders
+			foreach( IDisposable iterationDisposable; toCleanupAfterCreationOfPipeline ) {
+				iterationDisposable.dispose();
 			}
 		}
 	}
@@ -484,7 +546,7 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 			throw new EngineException(true, true, "Couldn't create Descriptor pool!");
 		}
 	
-	}	
+	}
 
 	void setupDescriptorSet() {
 		// Update descriptor sets determining the shader binding points
@@ -656,12 +718,25 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 	writeln("INNER EXIT");
 }
 
-int myWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+//int myWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+void main(string[] args) {
+	// for tracing down possible bugs
+	import core.memory : GC;
+	GC.disable();
+	
+	
 	ChainContext chainContext = new ChainContext();
 	chainContext.window.caption = "PtrEngine Demo1";
 	chainContext.window.width = 800;
 	chainContext.window.height = 600;
-	chainContext.windowsContext.hInstance = hInstance;
+	version(Win32) {
+		import core.sys.windows.windows;
+		
+		// this is not 100% clean but we grab the hInstance from the system and set it
+		// see http://stackoverflow.com/questions/1749972/determine-the-current-hinstance
+		// NOTE< propably doesn't work if we create a opengl context >
+		chainContext.windowsContext.hInstance = GetModuleHandleA(null);
+	}
 	
 	ChainElement[] chainElements;
 	chainElements ~= new ChainElement(&platformWindow);
@@ -672,5 +747,5 @@ int myWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int
 	chainElements ~= new ChainElement(&innerFunction);
 	processChain(chainElements, chainContext);
 
-    return 1;
+    //return 1;
 }

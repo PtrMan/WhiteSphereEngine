@@ -40,6 +40,12 @@ void initRenderPassCreateInfo(VkRenderPassCreateInfo* renderPassCreateInfo) {
 	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 }
 
+// need to be defined manually because the camel case is a special case
+void initDebugReportCallbackCreateInfoEXT(VkDebugReportCallbackCreateInfoEXT* structure) {
+	memset(structure, 0, VkDebugReportCallbackCreateInfoEXT.sizeof);
+	structure.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+}
+
 
 // helper for mixin template
 private string convertFromCamelCaseToUnderscore(string input) {

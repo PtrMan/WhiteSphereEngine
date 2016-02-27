@@ -42,7 +42,7 @@ import Exceptions;
 
 // tries to retrive the adress
 // inspired by the function bindGLfunc of derelict
-private void bindVulkanFunctionByInstance(void** functionPtrPtr, VkInstance instance, string name) {
+public void bindVulkanFunctionByInstance(void** functionPtrPtr, VkInstance instance, string name) {
 	import std.string : toStringz;
 	
 	*functionPtrPtr = helperGetVulkanFunctionAdressByInstance(instance, toStringz(name));
@@ -221,6 +221,11 @@ public void initializeVulkanPointers() {
     	bindVulkanFunctionByInstance(cast(void**)&vkCreateWin32SurfaceKHR, null, "vkCreateWin32SurfaceKHR");
 		bindVulkanFunctionByInstance(cast(void**)&vkGetPhysicalDeviceWin32PresentationSupportKHR, null, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
     }
+    
+    //bindVulkanFunctionByInstance(cast(void**)&vkCreateDebugReportCallbackEXT, null, "vkCreateDebugReportCallbackEXT");
+	//bindVulkanFunctionByInstance(cast(void**)&vkDestroyDebugReportCallbackEXT, null, "vkDestroyDebugReportCallbackEXT");
+	//bindVulkanFunctionByInstance(cast(void**)&vkDebugReportMessageEXT, null, "vkDebugReportMessageEXT");
+
 }
 
 public void releaseVulkanLibrary() {

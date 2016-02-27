@@ -197,25 +197,72 @@ VkShaderModule loadShaderGlSl(string fileName, VkDevice device, VkShaderStageFla
 }
 */
 
-VkShaderModule loadShader(string fileName, VkDevice device, VkShaderStageFlagBits stage) {
+import IDisposable;
+
+// returns a IDisposable object which hold the memory of the shader, must be freed by application after the creation of the renderpass
+IDisposable loadShader(string fileName, VkDevice device, VkShaderStageFlagBits stage, VkShaderModule* ptrDestintionShaderModule) {
+	import MemoryAccessor;
+	
+	class MemoryReference : IDisposable {
+		public final this(void* ptr) {
+			this.protectedPtr = ptr;
+		}
+		
+		public final void dispose() {
+			if( protectedPtr is null ) {
+				return;
+			}
+			MemoryAccessor.freeMemory(protectedPtr);
+			protectedPtr = null;
+		}
+		
+		public @property void* ptr() {
+			return protectedPtr;
+		}
+		
+		protected void* protectedPtr;
+	}
+	
 	import std.file : read;
+	import core.stdc.string : memcpy;
 
 	void[] data = read(fileName);
+	assert((data.length % 4) == 0);
+	assert(data.length > 0);
+	
+	MemoryReference memoryReference;
+	{
+		void* memoryRawPtr = MemoryAccessor.allocateMemoryNoScanNoMove(data.length);
+		memcpy(memoryRawPtr, data.ptr, data.length);
+		memoryReference = new MemoryReference(memoryRawPtr);
+	}
 	
 	VkShaderModuleCreateInfo moduleCreateInfo;
 	initShaderModuleCreateInfo(&moduleCreateInfo);
 	
 	moduleCreateInfo.codeSize = data.length;
-	moduleCreateInfo.pCode = cast(immutable(uint)*)data.ptr;
+	moduleCreateInfo.pCode = cast(immutable(uint)*)memoryReference.ptr;
 	moduleCreateInfo.flags = 0;
+
+	{
+		import std.stdio : writeln;
+		writeln("HERE");
+	}
+
 	
-	VkShaderModule shaderModule;
-	VkResult vulkanResult = vkCreateShaderModule(device, &moduleCreateInfo, null, &shaderModule);
+	VkResult vulkanResult = vkCreateShaderModule(device, &moduleCreateInfo, null, ptrDestintionShaderModule);
+	
+	{
+		import std.stdio : writeln;
+		writeln("HERE");
+	}
 	
 	if( !vulkanSuccess(vulkanResult) ) {
+		memoryReference.dispose();
+		
 		throw new EngineException(false, false, "Failed to load GLSL shader!");
 	}
 	
-	return shaderModule;
+	return memoryReference;
 }
 

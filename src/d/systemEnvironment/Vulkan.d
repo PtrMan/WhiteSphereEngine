@@ -22,8 +22,19 @@ import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
+import vulkan.VulkanPlatform;
 import Exceptions : EngineException;
 import TypedPointerWithLength : TypedPointerWithLength;
+
+
+import helpers.Conversion : convertCStringToD;
+
+private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+	import std.stdio;
+	
+	writeln("vulkan debug: layerprefix=", convertCStringToD(pLayerPrefix), " message=", convertCStringToD(pMsg));
+	return 1;
+}
 
 /**
  * queries all devices and creates a connection to the best device,
@@ -33,10 +44,17 @@ import TypedPointerWithLength : TypedPointerWithLength;
 public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
 	
+	bool withDebugReportExtension = true;
+	
 	// we enable the standard debug and validation layers
 	string[] layersToLoadGced = ["VK_LAYER_LUNARG_standard_validation"];
 	
 	string[] extensionsToLoadGced;
+	
+	if( withDebugReportExtension ) {
+		extensionsToLoadGced ~= VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+	}
+	
 	const bool withSurface = true; // do we want to render to a surface?
 	if( withSurface ) {
 		extensionsToLoadGced ~= VK_KHR_SURFACE_EXTENSION_NAME; // required
@@ -85,6 +103,36 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		throw new EngineException(true, true, "vkCreateInstance failed!");
 	}
 	scope(exit) vkDestroyInstance(chainContext.vulkan.instance.value, null);
+	
+	
+	// init remaining function pointers for debugging
+	if( withDebugReportExtension ) {
+		bindVulkanFunctionByInstance(cast(void**)&vkCreateDebugReportCallbackEXT, chainContext.vulkan.instance.value, "vkCreateDebugReportCallbackEXT");
+		bindVulkanFunctionByInstance(cast(void**)&vkDestroyDebugReportCallbackEXT, chainContext.vulkan.instance.value, "vkDestroyDebugReportCallbackEXT");
+		bindVulkanFunctionByInstance(cast(void**)&vkDebugReportMessageEXT, chainContext.vulkan.instance.value, "vkDebugReportMessageEXT");
+	}
+	
+	// init debugging
+	if( withDebugReportExtension ) {
+		VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfoEXT;
+		initDebugReportCallbackCreateInfoEXT(&debugReportCallbackCreateInfoEXT);
+		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback;
+		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+	
+		VkDebugReportCallbackEXT debugReportCallback;
+		vulkanResult = vkCreateDebugReportCallbackEXT( chainContext.vulkan.instance.value, cast(const(VkDebugReportCallbackCreateInfoEXT)*)&debugReportCallbackCreateInfoEXT, null, &debugReportCallback );
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "vkCreateDebugReportCallbackEXT failed!");
+		}
+	}
+	
+	scope(exit) {
+		if( withDebugReportExtension ) {
+			// TODO< debug cleanup >
+		}
+	}
+	
+	
 	
 	
 	// enumerate devices
