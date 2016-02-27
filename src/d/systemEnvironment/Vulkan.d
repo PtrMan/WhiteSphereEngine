@@ -338,7 +338,6 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	VkCommandBuffer postPresentCmdBuffer;
 	
 	
-	TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
 	
 	void createSetupCommandBuffer() {
 		if (chainContext.vulkan.setupCmdBuffer !is null) {
@@ -383,15 +382,15 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 		// so for static usage withouth having to rebuild 
 		// them each frame, we use one per frame buffer
 		assert(chainContext.vulkan.swapChain.imageCount > 0);
-		drawCmdBuffers = TypedPointerWithLength!VkCommandBuffer.allocate(chainContext.vulkan.swapChain.imageCount);
+		chainContext.vulkan.drawCmdBuffers = TypedPointerWithLength!VkCommandBuffer.allocate(chainContext.vulkan.swapChain.imageCount);
 		
 		VkCommandBufferAllocateInfo cmdBufAllocateInfo;
 		initCommandBufferAllocateInfo(&cmdBufAllocateInfo);
 		cmdBufAllocateInfo.commandPool = chainContext.vulkan.cmdPool.value;
 		cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		cmdBufAllocateInfo.commandBufferCount = cast(uint32_t)drawCmdBuffers.length;
+		cmdBufAllocateInfo.commandBufferCount = cast(uint32_t)chainContext.vulkan.drawCmdBuffers.length;
 		
-		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, drawCmdBuffers.ptr);
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, chainContext.vulkan.drawCmdBuffers.ptr);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't allocate command buffer!");
 		}
@@ -419,7 +418,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	createCommandBuffers();
 	scope(exit) {
 		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &postPresentCmdBuffer);
-		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, drawCmdBuffers.length, drawCmdBuffers.ptr);		
+		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, chainContext.vulkan.drawCmdBuffers.length, chainContext.vulkan.drawCmdBuffers.ptr);		
 	}
 	
 	// TODO< other initialisation for swapchain and vulkan api >
@@ -448,7 +447,6 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 	}
 	DepthStencil depthStencil;
 	
-	TypedPointerWithLength!VkFramebuffer frameBuffers;
 	
 	
 	void setupDepthStencil() {
@@ -593,10 +591,10 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 		frameBufferCreateInfo.layers = 1;
 	
 		// Create frame buffers for every swap chain image
-		frameBuffers = TypedPointerWithLength!VkFramebuffer.allocate(chainContext.vulkan.swapChain.imageCount);
-		for (uint32_t i = 0; i < frameBuffers.length; i++) {
+		chainContext.vulkan.frameBuffers = TypedPointerWithLength!VkFramebuffer.allocate(chainContext.vulkan.swapChain.imageCount);
+		for (uint32_t i = 0; i < chainContext.vulkan.frameBuffers.length; i++) {
 			attachments[0] = chainContext.vulkan.swapChain.buffers.ptr[i].view;
-			vulkanResult = vkCreateFramebuffer(chainContext.vulkan.chosenDevice.logicalDevice, &frameBufferCreateInfo, null, &frameBuffers.ptr[i]);
+			vulkanResult = vkCreateFramebuffer(chainContext.vulkan.chosenDevice.logicalDevice, &frameBufferCreateInfo, null, &chainContext.vulkan.frameBuffers.ptr[i]);
 			if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Couldn't create framebuffer!");
 			}
@@ -678,12 +676,12 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 	
 	setupFrameBuffer(); // DONE
 	scope(exit) {
-		for (uint32_t i = 0; i < frameBuffers.length; i++) {
-			vkDestroyFramebuffer(chainContext.vulkan.chosenDevice.logicalDevice, frameBuffers.ptr[i], null);
+		for (uint32_t i = 0; i < chainContext.vulkan.frameBuffers.length; i++) {
+			vkDestroyFramebuffer(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.frameBuffers.ptr[i], null);
 		}
 		
-		frameBuffers.dispose();
-		frameBuffers = null;
+		chainContext.vulkan.frameBuffers.dispose();
+		chainContext.vulkan.frameBuffers = null;
 	}
 	
 	

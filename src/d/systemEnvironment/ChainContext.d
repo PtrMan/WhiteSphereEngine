@@ -38,14 +38,20 @@ class ChainContext {
 		VkQueue highPriorityQueue, lowPriorityQueue;
 		
 		
+		
+		
 		// prototyping
 			VkRenderPass renderPass;
-		
+			
+			
+
+			
 		// swapchain related
 			VulkanSwapChain swapChain = null;
 			
 			VkCommandBuffer setupCmdBuffer;			
-		
+			TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
+			TypedPointerWithLength!VkFramebuffer frameBuffers;
 	}
 	
 	public Vulkan vulkan;

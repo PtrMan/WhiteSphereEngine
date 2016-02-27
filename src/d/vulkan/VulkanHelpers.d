@@ -4,6 +4,8 @@ import core.stdc.string : memset;
 
 import api.vulkan.Vulkan;
 
+enum VK_FLAGS_NONE = 0;
+
 void initInstanceCreateInfo(VkInstanceCreateInfo* instanceCreateInfo) {
 	memset(instanceCreateInfo, 0, VkInstanceCreateInfo.sizeof);
 	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -89,7 +91,6 @@ mixin(GenVulkanInitFunction!("ImageMemoryBarrier"));
 mixin(GenVulkanInitFunction!("ImageCreateInfo"));
 mixin(GenVulkanInitFunction!("ImageViewCreateInfo"));
 mixin(GenVulkanInitFunction!("FramebufferCreateInfo"));
-
 
 
 bool vulkanSuccess(VkResult result) {
