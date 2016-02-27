@@ -117,7 +117,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfoEXT;
 		initDebugReportCallbackCreateInfoEXT(&debugReportCallbackCreateInfoEXT);
 		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback;
-		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT; // enable me    | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 	
 		VkDebugReportCallbackEXT debugReportCallback;
 		vulkanResult = vkCreateDebugReportCallbackEXT( chainContext.vulkan.instance.value, cast(const(VkDebugReportCallbackCreateInfoEXT)*)&debugReportCallbackCreateInfoEXT, null, &debugReportCallback );

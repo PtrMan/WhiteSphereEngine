@@ -360,35 +360,32 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 	}
 	
 	void setupDescriptorSetLayout() {
-		VkPipelineLayout pipelineLayout;
-		{
-			VkDescriptorSetLayoutBinding descriptorSetLayoutBinding;
-			descriptorSetLayoutBinding.binding = 0;
-			descriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorSetLayoutBinding.descriptorCount = 1;
-			descriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			descriptorSetLayoutBinding.pImmutableSamplers = null;
-	
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo;
-			initDescriptorSetLayoutCreateInfo(&descriptorSetLayoutCreateInfo);
-			descriptorSetLayoutCreateInfo.bindingCount = 1;
-			descriptorSetLayoutCreateInfo.pBindings = cast(immutable(VkDescriptorSetLayoutBinding)*)&descriptorSetLayoutBinding;
-	
-			vulkanResult = vkCreateDescriptorSetLayout(chosenDevice.logicalDevice, &descriptorSetLayoutCreateInfo, null, &descriptorSetLayout);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't create Descriptor set layout!");
-			}
-			
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-			initPipelineLayoutCreateInfo(&pipelineLayoutCreateInfo);
-			pipelineLayoutCreateInfo.setLayoutCount = 1;
-			pipelineLayoutCreateInfo.pSetLayouts = cast(immutable(ulong)*)&descriptorSetLayout;
-	
-			vulkanResult = vkCreatePipelineLayout(chosenDevice.logicalDevice, &pipelineLayoutCreateInfo, null, &pipelineLayout);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't create Pipeline layout!");
-			}
+		VkDescriptorSetLayoutBinding descriptorSetLayoutBinding;
+		descriptorSetLayoutBinding.binding = 0;
+		descriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorSetLayoutBinding.descriptorCount = 1;
+		descriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		descriptorSetLayoutBinding.pImmutableSamplers = null;
+
+		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo;
+		initDescriptorSetLayoutCreateInfo(&descriptorSetLayoutCreateInfo);
+		descriptorSetLayoutCreateInfo.bindingCount = 1;
+		descriptorSetLayoutCreateInfo.pBindings = cast(immutable(VkDescriptorSetLayoutBinding)*)&descriptorSetLayoutBinding;
+
+		vulkanResult = vkCreateDescriptorSetLayout(chosenDevice.logicalDevice, &descriptorSetLayoutCreateInfo, null, &descriptorSetLayout);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create Descriptor set layout!");
 		}
+		
+		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+		initPipelineLayoutCreateInfo(&pipelineLayoutCreateInfo);
+		pipelineLayoutCreateInfo.setLayoutCount = 1;
+		pipelineLayoutCreateInfo.pSetLayouts = cast(immutable(ulong)*)&descriptorSetLayout;
+
+		vulkanResult = vkCreatePipelineLayout(chosenDevice.logicalDevice, &pipelineLayoutCreateInfo, null, &pipelineLayout);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create Pipeline layout!");
+		}	
 	}
 	
 	
@@ -540,7 +537,9 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 		// Set the max. number of sets that can be requested
 		// Requesting descriptors beyond maxSets will result in an error
 		descriptorPoolInfo.maxSets = 1;
-
+		
+		writeln("call vkCreateDescriptorPool()");
+		
 		vulkanResult = vkCreateDescriptorPool(chosenDevice.logicalDevice, &descriptorPoolInfo, null, &descriptorPool);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't create Descriptor pool!");
