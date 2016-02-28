@@ -35,6 +35,7 @@ import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
+import vulkan.VulkanSwapChain;
 
 import std.stdint;
 
@@ -52,12 +53,13 @@ template copyGcedArrayToNongcedMemory(string sourceGcedArray, string destination
 }
 
 
+
 void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	import std.stdio;
 	
 	// cache variables
 	VulkanDevice chosenDevice = chainContext.vulkan.chosenDevice;
-
+	VulkanSwapChain swapChain = chainContext.vulkan.swapChain;
 
 	VkResult vulkanResult;
 	
@@ -114,10 +116,10 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 	UniformDataVS uniformDataVS;
 	
 	
-	struct Pipelines {
-		VkPipeline solid;
-	}
-	Pipelines pipelines;
+	//struct Pipelines {
+	//	VkPipeline solid;
+	//}
+	//Pipelines pipelines;
 
 	
 	
@@ -192,11 +194,26 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 		
 		vertices.bufferDescriptor = new BufferDescriptor();
 		float[3*(3+3)] testVerticesWithColor;
+		// fill with testdata
+		testVerticesWithColor[(3+3)*0 + 0] = 0.5f;
+		testVerticesWithColor[(3+3)*0 + 3] = 1.0f; // color red
+		
+		testVerticesWithColor[(3+3)*1 + 0] = -0.5f;
+		testVerticesWithColor[(3+3)*1 + 1] = -0.5f;
+		testVerticesWithColor[(3+3)*1 + 4] = 1.0f; // color green
+		
+		testVerticesWithColor[(3+3)*2 + 0] = -0.5f;
+		testVerticesWithColor[(3+3)*1 + 1] = 0.5f;
+		testVerticesWithColor[(3+3)*1 + 5] = 1.0f; // color blue
+		
 	
 		vulkanHelperCreateMemoryAndBufferBindAndFill(vertices.bufferDescriptor, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &testVerticesWithColor, testVerticesWithColor.sizeof);
 	
 		indices.bufferDescriptor = new BufferDescriptor();
-		uint32_t[1/*TODO*/] testIndices;
+		uint32_t[3] testIndices;
+		testIndices[0] = 0;
+		testIndices[1] = 1;
+		testIndices[2] = 2;
 	
 		vulkanHelperCreateMemoryAndBufferBindAndFill(indices.bufferDescriptor, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &testIndices, testIndices.sizeof);
 		
@@ -389,136 +406,133 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 	}
 	
 	
-	
+	VkPipeline pipelineDefault;
 	
 	void preparePipelines() {
-		VkPipeline pipelineDefault;
-		{
-			import core.stdc.string : memcpy;
-	
-			VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
-			initGraphicsPipelineCreateInfo(&graphicsPipelineCreateInfo);
-			graphicsPipelineCreateInfo.layout = pipelineLayout;
-			graphicsPipelineCreateInfo.renderPass = chainContext.vulkan.renderPass;
-	
-			// TODO< rename >
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
-			initPipelineInputAssemblyStateCreateInfo(&inputAssemblyState);
-			inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // This pipeline renders vertex data as triangle lists
-	
-			// TODO< rename >
-			VkPipelineRasterizationStateCreateInfo rasterizationState;
-			initPipelineRasterizationStateCreateInfo(&rasterizationState);
-			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL; // Solid polygon mode
-			rasterizationState.cullMode = VK_CULL_MODE_NONE; // No culling
-			rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-			rasterizationState.depthClampEnable = vulkanBoolean(false);
-			rasterizationState.rasterizerDiscardEnable = vulkanBoolean(false);
-			rasterizationState.depthBiasEnable = vulkanBoolean(false);
-	
-			
-			VkPipelineColorBlendStateCreateInfo colorBlendState;
-			initPipelineColorBlendStateCreateInfo(&colorBlendState);
-			// One blend attachment state
-			// Blending is not used in this example
-			VkPipelineColorBlendAttachmentState[1] blendAttachmentState;
-			blendAttachmentState[0].colorWriteMask = 0xf;
-			blendAttachmentState[0].blendEnable = vulkanBoolean(false);
-			colorBlendState.attachmentCount = 1;
-			colorBlendState.pAttachments = cast(immutable(VkPipelineColorBlendAttachmentState)*)&blendAttachmentState;
-	
-			// Viewport state
-			VkPipelineViewportStateCreateInfo viewportState;
-			initPipelineViewportStateCreateInfo(&viewportState);
-			viewportState.viewportCount = 1; // One viewport
-			viewportState.scissorCount = 1; // One scissor rectangle
-			
-			// Enable dynamic states
-			// Describes the dynamic states to be used with this pipeline
-			// Dynamic states can be set even after the pipeline has been created
-			// So there is no need to create new pipelines just for changing
-			// a viewport's dimensions or a scissor box
-			VkPipelineDynamicStateCreateInfo dynamicState;
-			initPipelineDynamicStateCreateInfo(&dynamicState);
-			// The dynamic state properties themselves are stored in the command buffer
-			VkDynamicState[] dynamicStateEnablesGced;
-			dynamicStateEnablesGced ~= (VK_DYNAMIC_STATE_VIEWPORT);
-			dynamicStateEnablesGced ~= (VK_DYNAMIC_STATE_SCISSOR);
-	
-			// copy to non GC'ed memory
-			VkDynamicState* dynamicStateEnablesNonGced = cast(VkDynamicState*)GC.malloc(VkDynamicState.sizeof * dynamicStateEnablesGced.length, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
-			scope(exit) GC.free(dynamicStateEnablesNonGced);
-			memcpy(dynamicStateEnablesNonGced, dynamicStateEnablesGced.ptr, VkDynamicState.sizeof * dynamicStateEnablesGced.length);
-	
-			dynamicState.pDynamicStates = cast(immutable(VkDynamicState*))dynamicStateEnablesNonGced;
-			dynamicState.dynamicStateCount = dynamicStateEnablesGced.length;
-	
-			// depth and stencil
-			VkPipelineDepthStencilStateCreateInfo depthStencilState;
-			initPipelineDepthStencilStateCreateInfo(&depthStencilState);
-			depthStencilState.depthTestEnable = vulkanBoolean(true);
-			depthStencilState.depthWriteEnable = vulkanBoolean(true);
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-			depthStencilState.depthBoundsTestEnable = vulkanBoolean(false);
-			depthStencilState.back.failOp = VK_STENCIL_OP_KEEP;
-			depthStencilState.back.passOp = VK_STENCIL_OP_KEEP;
-			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
-			depthStencilState.stencilTestEnable = vulkanBoolean(false);
-			depthStencilState.front = depthStencilState.back;
-	
-			// Multi sampling state
-			VkPipelineMultisampleStateCreateInfo multisampleState;
-			initPipelineMultisampleStateCreateInfo(&multisampleState);
-			multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-	
-			// Load shaders
-			VkPipelineShaderStageCreateInfo[2] shaderStages;
-			initPipelineShaderStageCreateInfo(&(shaderStages[0]));
-			initPipelineShaderStageCreateInfo(&(shaderStages[1]));
-			shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shaderStages[0].pName = "main";
-			shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shaderStages[1].pName = "main";
-			
-			IDisposable[] toCleanupAfterCreationOfPipeline;
-			
-			static if(/*USE_GLSL*/false) {
-				shaderStages[0].module_ = loadShaderGlSl("triangle.vert", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT);
-				shaderStages[1].module_ = loadShaderGlSl("triangle.frag", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
-			}
-			else {
-				toCleanupAfterCreationOfPipeline ~= loadShader("triangle.vert.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &shaderStages[0].module_);
-				toCleanupAfterCreationOfPipeline ~= loadShader("triangle.frag.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &shaderStages[1].module_);
-			}
-			
-			// Assign states
-			// Two shader stages
-			graphicsPipelineCreateInfo.stageCount = 2;
-			// Assign pipeline state create information
-			graphicsPipelineCreateInfo.pStages = cast(immutable(VkPipelineShaderStageCreateInfo)*)&shaderStages;
-			graphicsPipelineCreateInfo.pVertexInputState = cast(immutable(VkPipelineVertexInputStateCreateInfo)*)&vertices.vi;
-			graphicsPipelineCreateInfo.pInputAssemblyState = cast(immutable(VkPipelineInputAssemblyStateCreateInfo)*)&inputAssemblyState;
-			graphicsPipelineCreateInfo.pViewportState = cast(immutable(VkPipelineViewportStateCreateInfo)*)&viewportState;
-			graphicsPipelineCreateInfo.pRasterizationState = cast(immutable(VkPipelineRasterizationStateCreateInfo)*)&rasterizationState;
-			graphicsPipelineCreateInfo.pMultisampleState = cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&multisampleState;
-			graphicsPipelineCreateInfo.pDepthStencilState = cast(immutable(VkPipelineDepthStencilStateCreateInfo)*)&depthStencilState;
-			graphicsPipelineCreateInfo.pColorBlendState = cast(immutable(VkPipelineColorBlendStateCreateInfo)*)&colorBlendState;
-			graphicsPipelineCreateInfo.pDynamicState = cast(immutable(VkPipelineDynamicStateCreateInfo)*)&dynamicState;
-			
-			graphicsPipelineCreateInfo.renderPass = chainContext.vulkan.renderPass;
-			
-			
-			// Create rendering pipeline
-			VkPipelineCache pipelineCache = VK_NULL_HANDLE;
-			vulkanResult = vkCreateGraphicsPipelines(chosenDevice.logicalDevice, pipelineCache, 1, &graphicsPipelineCreateInfo, null, &pipelineDefault);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't create Graphics Pipeline!");
-			}
-			
-			// release all memory of the shaders
-			foreach( IDisposable iterationDisposable; toCleanupAfterCreationOfPipeline ) {
-				iterationDisposable.dispose();
-			}
+		import core.stdc.string : memcpy;
+
+		VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
+		initGraphicsPipelineCreateInfo(&graphicsPipelineCreateInfo);
+		graphicsPipelineCreateInfo.layout = pipelineLayout;
+		graphicsPipelineCreateInfo.renderPass = chainContext.vulkan.renderPass;
+
+		// TODO< rename >
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
+		initPipelineInputAssemblyStateCreateInfo(&inputAssemblyState);
+		inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // This pipeline renders vertex data as triangle lists
+
+		// TODO< rename >
+		VkPipelineRasterizationStateCreateInfo rasterizationState;
+		initPipelineRasterizationStateCreateInfo(&rasterizationState);
+		rasterizationState.polygonMode = VK_POLYGON_MODE_FILL; // Solid polygon mode
+		rasterizationState.cullMode = VK_CULL_MODE_NONE; // No culling
+		rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizationState.depthClampEnable = vulkanBoolean(false);
+		rasterizationState.rasterizerDiscardEnable = vulkanBoolean(false);
+		rasterizationState.depthBiasEnable = vulkanBoolean(false);
+
+		
+		VkPipelineColorBlendStateCreateInfo colorBlendState;
+		initPipelineColorBlendStateCreateInfo(&colorBlendState);
+		// One blend attachment state
+		// Blending is not used in this example
+		VkPipelineColorBlendAttachmentState[1] blendAttachmentState;
+		blendAttachmentState[0].colorWriteMask = 0xf;
+		blendAttachmentState[0].blendEnable = vulkanBoolean(false);
+		colorBlendState.attachmentCount = 1;
+		colorBlendState.pAttachments = cast(immutable(VkPipelineColorBlendAttachmentState)*)&blendAttachmentState;
+
+		// Viewport state
+		VkPipelineViewportStateCreateInfo viewportState;
+		initPipelineViewportStateCreateInfo(&viewportState);
+		viewportState.viewportCount = 1; // One viewport
+		viewportState.scissorCount = 1; // One scissor rectangle
+		
+		// Enable dynamic states
+		// Describes the dynamic states to be used with this pipeline
+		// Dynamic states can be set even after the pipeline has been created
+		// So there is no need to create new pipelines just for changing
+		// a viewport's dimensions or a scissor box
+		VkPipelineDynamicStateCreateInfo dynamicState;
+		initPipelineDynamicStateCreateInfo(&dynamicState);
+		// The dynamic state properties themselves are stored in the command buffer
+		VkDynamicState[] dynamicStateEnablesGced;
+		dynamicStateEnablesGced ~= (VK_DYNAMIC_STATE_VIEWPORT);
+		dynamicStateEnablesGced ~= (VK_DYNAMIC_STATE_SCISSOR);
+
+		// copy to non GC'ed memory
+		VkDynamicState* dynamicStateEnablesNonGced = cast(VkDynamicState*)GC.malloc(VkDynamicState.sizeof * dynamicStateEnablesGced.length, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
+		scope(exit) GC.free(dynamicStateEnablesNonGced);
+		memcpy(dynamicStateEnablesNonGced, dynamicStateEnablesGced.ptr, VkDynamicState.sizeof * dynamicStateEnablesGced.length);
+
+		dynamicState.pDynamicStates = cast(immutable(VkDynamicState*))dynamicStateEnablesNonGced;
+		dynamicState.dynamicStateCount = dynamicStateEnablesGced.length;
+
+		// depth and stencil
+		VkPipelineDepthStencilStateCreateInfo depthStencilState;
+		initPipelineDepthStencilStateCreateInfo(&depthStencilState);
+		depthStencilState.depthTestEnable = vulkanBoolean(true);
+		depthStencilState.depthWriteEnable = vulkanBoolean(true);
+		depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		depthStencilState.depthBoundsTestEnable = vulkanBoolean(false);
+		depthStencilState.back.failOp = VK_STENCIL_OP_KEEP;
+		depthStencilState.back.passOp = VK_STENCIL_OP_KEEP;
+		depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
+		depthStencilState.stencilTestEnable = vulkanBoolean(false);
+		depthStencilState.front = depthStencilState.back;
+
+		// Multi sampling state
+		VkPipelineMultisampleStateCreateInfo multisampleState;
+		initPipelineMultisampleStateCreateInfo(&multisampleState);
+		multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		// Load shaders
+		VkPipelineShaderStageCreateInfo[2] shaderStages;
+		initPipelineShaderStageCreateInfo(&(shaderStages[0]));
+		initPipelineShaderStageCreateInfo(&(shaderStages[1]));
+		shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+		shaderStages[0].pName = "main";
+		shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		shaderStages[1].pName = "main";
+		
+		IDisposable[] toCleanupAfterCreationOfPipeline;
+		
+		static if(/*USE_GLSL*/false) {
+			shaderStages[0].module_ = loadShaderGlSl("triangle.vert", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT);
+			shaderStages[1].module_ = loadShaderGlSl("triangle.frag", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
+		}
+		else {
+			toCleanupAfterCreationOfPipeline ~= loadShader("triangle.vert.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &shaderStages[0].module_);
+			toCleanupAfterCreationOfPipeline ~= loadShader("triangle.frag.spv", chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &shaderStages[1].module_);
+		}
+		
+		// Assign states
+		// Two shader stages
+		graphicsPipelineCreateInfo.stageCount = 2;
+		// Assign pipeline state create information
+		graphicsPipelineCreateInfo.pStages = cast(immutable(VkPipelineShaderStageCreateInfo)*)&shaderStages;
+		graphicsPipelineCreateInfo.pVertexInputState = cast(immutable(VkPipelineVertexInputStateCreateInfo)*)&vertices.vi;
+		graphicsPipelineCreateInfo.pInputAssemblyState = cast(immutable(VkPipelineInputAssemblyStateCreateInfo)*)&inputAssemblyState;
+		graphicsPipelineCreateInfo.pViewportState = cast(immutable(VkPipelineViewportStateCreateInfo)*)&viewportState;
+		graphicsPipelineCreateInfo.pRasterizationState = cast(immutable(VkPipelineRasterizationStateCreateInfo)*)&rasterizationState;
+		graphicsPipelineCreateInfo.pMultisampleState = cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&multisampleState;
+		graphicsPipelineCreateInfo.pDepthStencilState = cast(immutable(VkPipelineDepthStencilStateCreateInfo)*)&depthStencilState;
+		graphicsPipelineCreateInfo.pColorBlendState = cast(immutable(VkPipelineColorBlendStateCreateInfo)*)&colorBlendState;
+		graphicsPipelineCreateInfo.pDynamicState = cast(immutable(VkPipelineDynamicStateCreateInfo)*)&dynamicState;
+		
+		graphicsPipelineCreateInfo.renderPass = chainContext.vulkan.renderPass;
+		
+		
+		// Create rendering pipeline
+		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
+		vulkanResult = vkCreateGraphicsPipelines(chosenDevice.logicalDevice, pipelineCache, 1, &graphicsPipelineCreateInfo, null, &pipelineDefault);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create Graphics Pipeline!");
+		}
+		
+		// release all memory of the shaders
+		foreach( IDisposable iterationDisposable; toCleanupAfterCreationOfPipeline ) {
+			iterationDisposable.dispose();
 		}
 	}
 	
@@ -537,8 +551,6 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 		// Set the max. number of sets that can be requested
 		// Requesting descriptors beyond maxSets will result in an error
 		descriptorPoolInfo.maxSets = 1;
-		
-		writeln("call vkCreateDescriptorPool()");
 		
 		vulkanResult = vkCreateDescriptorPool(chosenDevice.logicalDevice, &descriptorPoolInfo, null, &descriptorPool);
 		if( !vulkanSuccess(vulkanResult) ) {
@@ -641,7 +653,7 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 				vkCmdBindDescriptorSets(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, NULL);
 	
 				// Bind the rendering pipeline (including the shaders)
-				vkCmdBindPipeline(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.solid);
+				vkCmdBindPipeline(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDefault);
 	
 				// Bind triangle vertices
 				VkDeviceSize[1] offsets;
@@ -713,6 +725,143 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 	
 	buildCommandBuffers();
 	// TODO< cleanup >
+	
+	
+	
+	
+	void draw() {		
+		VkSemaphore presentCompleteSemaphore;
+		VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+		initSemaphoreCreateInfo(&presentCompleteSemaphoreCreateInfo);
+		presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		vulkanResult = vkCreateSemaphore(chosenDevice.logicalDevice, &presentCompleteSemaphoreCreateInfo, null, &presentCompleteSemaphore);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create Semaphore!");
+		}
+
+		// Get next image in the swap chain (back/front buffer)
+		vulkanResult = swapChain.acquireNextImage(presentCompleteSemaphore, &chainContext.vulkan.currentBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't aquire next image for swapchain!");
+		}
+		
+		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't queue wait idle(1)!");
+		}
+
+
+
+		// The submit infor structure contains a list of
+		// command buffers and semaphores to be submitted to a queue
+		// If you want to submit multiple command buffers, pass an array
+		VkSubmitInfo submitInfo;
+		initSubmitInfo(&submitInfo);
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = cast(immutable(VkSemaphore)*)&presentCompleteSemaphore;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = cast(immutable(VkCommandBuffer)*)&chainContext.vulkan.drawCmdBuffers.ptr[chainContext.vulkan.currentBuffer];
+
+		// Submit to the graphics queue
+		vulkanResult = vkQueueSubmit(chainContext.vulkan.highPriorityQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't submit to queue!");
+		}
+		
+		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't queue wait idle(2)!");
+		}
+
+
+
+		// Present the current buffer to the swap chain
+		// This will display the image
+		vulkanResult = swapChain.queuePresent(chainContext.vulkan.highPriorityQueue, chainContext.vulkan.currentBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't present to swapchain!");
+		}
+		
+		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't queue wait idle(3)!");
+		}
+
+
+
+		vkDestroySemaphore(chosenDevice.logicalDevice, presentCompleteSemaphore, null);
+
+		// Add a post present image memory barrier
+		// This will transform the frame buffer color attachment back
+		// to it's initial layout after it has been presented to the
+		// windowing system 
+		VkImageMemoryBarrier postPresentBarrier;
+		initImageMemoryBarrier(&postPresentBarrier);
+		postPresentBarrier.srcAccessMask = 0;
+		postPresentBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		postPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		postPresentBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		postPresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		postPresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		postPresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        postPresentBarrier.subresourceRange.baseMipLevel = 0;
+        postPresentBarrier.subresourceRange.levelCount = 1;
+        postPresentBarrier.subresourceRange.baseArrayLayer = 0;
+        postPresentBarrier.subresourceRange.layerCount = 1;
+		postPresentBarrier.image = swapChain.buffers.ptr[chainContext.vulkan.currentBuffer].image;
+
+		// Use dedicated command buffer from example base class for submitting the post present barrier
+		VkCommandBufferBeginInfo cmdBufInfo;
+		initCommandBufferBeginInfo(&cmdBufInfo);
+
+		vulkanResult = vkBeginCommandBuffer(chainContext.vulkan.postPresentCmdBuffer, &cmdBufInfo);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't begin command buffer!");
+		}
+
+
+		// Put post present barrier into command buffer
+		vkCmdPipelineBarrier(
+			chainContext.vulkan.postPresentCmdBuffer,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_FLAGS_NONE,
+			0, null,
+			0, null,
+			1, &postPresentBarrier);
+
+		vulkanResult = vkEndCommandBuffer(chainContext.vulkan.postPresentCmdBuffer);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't end command buffer!");
+		}
+
+
+		// Submit to the queue
+		initSubmitInfo(&submitInfo);
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = cast(immutable(VkCommandBuffer)*)&chainContext.vulkan.postPresentCmdBuffer;
+
+		vulkanResult = vkQueueSubmit(chainContext.vulkan.highPriorityQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't submit to queue!");
+		}
+
+		
+		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't queue wait idle!");
+		}
+
+	}
+	
+	// mainloop
+	for(;;) {
+		vkDeviceWaitIdle(chosenDevice.logicalDevice);
+		draw();
+		vkDeviceWaitIdle(chosenDevice.logicalDevice);
+	}
+	
 	
 	writeln("INNER EXIT");
 }

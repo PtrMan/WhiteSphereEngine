@@ -1,5 +1,7 @@
 module systemEnvironment.ChainContext;
 
+import std.stdint;
+
 import api.vulkan.Vulkan;
 import memory.NonGcHandle : NonGcHandle;
 import vulkan.VulkanSwapChain;
@@ -49,6 +51,10 @@ class ChainContext {
 		// swapchain related
 			VulkanSwapChain swapChain = null;
 			
+			// Active frame buffer index
+			uint32_t currentBuffer = 0;
+			
+			VkCommandBuffer postPresentCmdBuffer;
 			VkCommandBuffer setupCmdBuffer;			
 			TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
 			TypedPointerWithLength!VkFramebuffer frameBuffers;

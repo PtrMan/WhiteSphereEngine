@@ -84,6 +84,12 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	
 	
+	VkApplicationInfo appInfo;
+	initApplicationInfo(&appInfo);
+	appInfo.pApplicationName = "PtrEngine";
+	appInfo.pEngineName = "PtrEngine";
+	// todo : Use VK_API_VERSION 
+	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 2); // because driver doesn't jet support higher version
 	
 	
 	VkInstanceCreateInfo instanceCreateInfo;
@@ -94,6 +100,8 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	instanceCreateInfo.enabledExtensionCount = cast(uint32_t)extensionsNonGced.length;
 	instanceCreateInfo.ppEnabledExtensionNames = extensionsNonGced.ptr;
+	
+	instanceCreateInfo.pApplicationInfo = cast(immutable(VkApplicationInfo)*)&appInfo;
 	
 	chainContext.vulkan.instance = NonGcHandle!VkInstance.createNotInitialized();
 	scope(exit) chainContext.vulkan.instance.dispose();
@@ -117,7 +125,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfoEXT;
 		initDebugReportCallbackCreateInfoEXT(&debugReportCallbackCreateInfoEXT);
 		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback;
-		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT; // enable me    | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT; // enable me | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 	
 		VkDebugReportCallbackEXT debugReportCallback;
 		vulkanResult = vkCreateDebugReportCallbackEXT( chainContext.vulkan.instance.value, cast(const(VkDebugReportCallbackCreateInfoEXT)*)&debugReportCallbackCreateInfoEXT, null, &debugReportCallback );
@@ -282,6 +290,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 0, &chainContext.vulkan.highPriorityQueue);
 		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 1, &chainContext.vulkan.lowPriorityQueue);
 	}
+	
 
 
 
@@ -383,7 +392,6 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	
 	// TODO< linux >
 	// do most things VulkanExampleBase does 
-	VkCommandBuffer postPresentCmdBuffer;
 	
 	
 	
@@ -447,7 +455,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 		// post present image memory barrier
 		cmdBufAllocateInfo.commandBufferCount = 1;
 	
-		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &postPresentCmdBuffer);
+		vulkanResult = vkAllocateCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, &cmdBufAllocateInfo, &chainContext.vulkan.postPresentCmdBuffer);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't allocate command buffer!");
 		}
@@ -465,8 +473,8 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	
 	createCommandBuffers();
 	scope(exit) {
-		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &postPresentCmdBuffer);
-		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, chainContext.vulkan.drawCmdBuffers.length, chainContext.vulkan.drawCmdBuffers.ptr);		
+		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &chainContext.vulkan.postPresentCmdBuffer);
+		vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, chainContext.vulkan.drawCmdBuffers.length, chainContext.vulkan.drawCmdBuffers.ptr);
 	}
 	
 	// TODO< other initialisation for swapchain and vulkan api >
