@@ -4,6 +4,21 @@ module api.vulkan.Vulkan;
 
 import std.stdint;
 
+
+
+
+auto VK_MAKE_VERSION(int major, int minor, int patch) {
+        return (major << 22) | (minor << 12) | patch;
+}
+
+enum VK_VERSION_1_0 = 1;
+enum VK_API_VERSION = VK_MAKE_VERSION(1, 0, 3);
+
+auto VK_VERSION_MAJOR(uint ver) { return ver >> 22;           }
+auto VK_VERSION_MINOR(uint ver) { return (ver >> 12) & 0x3ff; }
+auto VK_VERSION_PATCH(uint ver) { return ver & 0xfff;         }
+
+
 public static const uint64_t VK_NULL_HANDLE = 0;
 
 private alias uint size_t; // not sure if correct
