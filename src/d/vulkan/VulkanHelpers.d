@@ -72,7 +72,7 @@ template GenVulkanInitFunction(string functionname) {
     "}\n";
 }
 
-
+mixin(GenVulkanInitFunction!("ApplicationInfo"));
 mixin(GenVulkanInitFunction!("BufferCreateInfo"));
 mixin(GenVulkanInitFunction!("MemoryAllocateInfo"));
 mixin(GenVulkanInitFunction!("DescriptorSetLayoutCreateInfo"));
@@ -97,7 +97,8 @@ mixin(GenVulkanInitFunction!("ImageMemoryBarrier"));
 mixin(GenVulkanInitFunction!("ImageCreateInfo"));
 mixin(GenVulkanInitFunction!("ImageViewCreateInfo"));
 mixin(GenVulkanInitFunction!("FramebufferCreateInfo"));
-
+mixin(GenVulkanInitFunction!("SemaphoreCreateInfo"));
+mixin(GenVulkanInitFunction!("SubmitInfo"));
 
 bool vulkanSuccess(VkResult result) {
 	return result == VK_SUCCESS;
