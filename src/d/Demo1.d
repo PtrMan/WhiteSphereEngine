@@ -620,7 +620,8 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 			renderPassBeginInfo.renderArea.extent.height = chainContext.window.height;
 			renderPassBeginInfo.clearValueCount = 2;
 			renderPassBeginInfo.pClearValues = cast(immutable(VkClearValue)*)clearValues.ptr;
-	
+			
+			assert( chainContext.vulkan.drawCmdBuffers.length > 0 );
 			for (int32_t i = 0; i < chainContext.vulkan.drawCmdBuffers.length; ++i)
 			{
 				// Set target frame buffer
@@ -695,7 +696,7 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 					1, &prePresentBarrier
 				);
 	
-				vulkanResult = vkEndCommandBuffer(chainContext.vulkan.drawCmdBuffers[i]);
+				vulkanResult = vkEndCommandBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i]);
 				if( !vulkanSuccess(vulkanResult) ) {
 					throw new EngineException(true, true, "Couldn't end command buffer!");
 				}
@@ -746,11 +747,6 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 			throw new EngineException(true, true, "Couldn't aquire next image for swapchain!");
 		}
 		
-		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't queue wait idle(1)!");
-		}
-
 
 
 		// The submit infor structure contains a list of
@@ -769,11 +765,6 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 			throw new EngineException(true, true, "Couldn't submit to queue!");
 		}
 		
-		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't queue wait idle(2)!");
-		}
-
 
 
 		// Present the current buffer to the swap chain
@@ -782,12 +773,6 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't present to swapchain!");
 		}
-		
-		vulkanResult = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't queue wait idle(3)!");
-		}
-
 
 
 		vkDestroySemaphore(chosenDevice.logicalDevice, presentCompleteSemaphore, null);
