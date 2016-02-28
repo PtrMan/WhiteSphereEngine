@@ -595,113 +595,111 @@ void innerFunction(ChainContext chainContext, ChainElement[] chainElements, uint
 	// into command buffers that are then resubmitted to the queue
 	void buildCommandBuffers() {
 		// Command buffers used for rendering
-		VkCommandBuffer[] drawCmdBuffersGced;
+		VkCommandBufferBeginInfo cmdBufInfo;
+		initCommandBufferBeginInfo(&cmdBufInfo);
+		
+		VkClearColorValue defaultClearColor;
+		defaultClearColor.float32[0] = 0.025f;
+		defaultClearColor.float32[1] = 0.025f;
+		defaultClearColor.float32[2] = 0.025f;
+		defaultClearColor.float32[3] = 1.0f;
+
+		VkClearValue[2] clearValues;
+		clearValues[0].color = defaultClearColor;
+		clearValues[1].depthStencil.depth = 1.0f;
+		clearValues[1].depthStencil.stencil = 0;
+
+		VkRenderPassBeginInfo renderPassBeginInfo;
+		initRenderPassBeginInfo(&renderPassBeginInfo);
+		renderPassBeginInfo.renderPass = chainContext.vulkan.renderPass;
+		renderPassBeginInfo.renderArea.offset.x = 0;
+		renderPassBeginInfo.renderArea.offset.y = 0;
+		renderPassBeginInfo.renderArea.extent.width = chainContext.window.width;
+		renderPassBeginInfo.renderArea.extent.height = chainContext.window.height;
+		renderPassBeginInfo.clearValueCount = 2;
+		renderPassBeginInfo.pClearValues = cast(immutable(VkClearValue)*)clearValues.ptr;
+		
+		assert( chainContext.vulkan.drawCmdBuffers.length > 0 );
+		for (int32_t i = 0; i < chainContext.vulkan.drawCmdBuffers.length; ++i)
 		{
-			VkCommandBufferBeginInfo cmdBufInfo;
-			initCommandBufferBeginInfo(&cmdBufInfo);
-			
-			VkClearColorValue defaultClearColor;
-			defaultClearColor.float32[0] = 0.025f;
-			defaultClearColor.float32[1] = 0.025f;
-			defaultClearColor.float32[2] = 0.025f;
-			defaultClearColor.float32[3] = 1.0f;
-	
-			VkClearValue[2] clearValues;
-			clearValues[0].color = defaultClearColor;
-			clearValues[1].depthStencil.depth = 1.0f;
-			clearValues[1].depthStencil.stencil = 0;
-	
-			VkRenderPassBeginInfo renderPassBeginInfo;
-			initRenderPassBeginInfo(&renderPassBeginInfo);
-			renderPassBeginInfo.renderPass = chainContext.vulkan.renderPass;
-			renderPassBeginInfo.renderArea.offset.x = 0;
-			renderPassBeginInfo.renderArea.offset.y = 0;
-			renderPassBeginInfo.renderArea.extent.width = chainContext.window.width;
-			renderPassBeginInfo.renderArea.extent.height = chainContext.window.height;
-			renderPassBeginInfo.clearValueCount = 2;
-			renderPassBeginInfo.pClearValues = cast(immutable(VkClearValue)*)clearValues.ptr;
-			
-			assert( chainContext.vulkan.drawCmdBuffers.length > 0 );
-			for (int32_t i = 0; i < chainContext.vulkan.drawCmdBuffers.length; ++i)
-			{
-				// Set target frame buffer
-				renderPassBeginInfo.framebuffer = chainContext.vulkan.frameBuffers.ptr[i];
-	
-				vulkanResult = vkBeginCommandBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i], &cmdBufInfo);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Couldn't begin command buffer!");
-				}
-	
-				vkCmdBeginRenderPass(chainContext.vulkan.drawCmdBuffers.ptr[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-	
-				// Update dynamic viewport state
-				VkViewport viewport;
-				viewport.height = cast(float)chainContext.window.height;
-				viewport.width = cast(float)chainContext.window.width;
-				viewport.minDepth = cast(float)0.0f;
-				viewport.maxDepth = cast(float)1.0f;
-				vkCmdSetViewport(chainContext.vulkan.drawCmdBuffers.ptr[i], 0, 1, &viewport);
-	
-				// Update dynamic scissor state
-				VkRect2D scissor;
-				scissor.extent.width = chainContext.window.width;
-				scissor.extent.height = chainContext.window.height;
-				scissor.offset.x = 0;
-				scissor.offset.y = 0;
-				vkCmdSetScissor(chainContext.vulkan.drawCmdBuffers.ptr[i], 0, 1, &scissor);
-	
-				// Bind descriptor sets describing shader binding points
-				vkCmdBindDescriptorSets(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, NULL);
-	
-				// Bind the rendering pipeline (including the shaders)
-				vkCmdBindPipeline(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDefault);
-	
-				// Bind triangle vertices
-				VkDeviceSize[1] offsets;
-				vkCmdBindVertexBuffers(chainContext.vulkan.drawCmdBuffers.ptr[i], VERTEX_BUFFER_BIND_ID, 1, &vertices.bufferDescriptor.buffer, offsets.ptr);
-	
-				// Bind triangle indices
-				vkCmdBindIndexBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i], indices.bufferDescriptor.buffer, 0, VK_INDEX_TYPE_UINT32);
-	
-				// Draw indexed triangle
-				vkCmdDrawIndexed(chainContext.vulkan.drawCmdBuffers.ptr[i], indices.count, 1, 0, 0, 1);
-	
-				vkCmdEndRenderPass(chainContext.vulkan.drawCmdBuffers.ptr[i]);
-	
-				// Add a present memory barrier to the end of the command buffer
-				// This will transform the frame buffer color attachment to a
-				// new layout for presenting it to the windowing system integration 
-				VkImageMemoryBarrier prePresentBarrier;
-				initImageMemoryBarrier(&prePresentBarrier);
-				prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				prePresentBarrier.dstAccessMask = 0;
-				prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-				prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-				prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				prePresentBarrier.subresourceRange.baseMipLevel = 0;
-				prePresentBarrier.subresourceRange.levelCount = 1;
-				prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-				prePresentBarrier.subresourceRange.layerCount = 1;
-				prePresentBarrier.image = chainContext.vulkan.swapChain.buffers[i].image;
-	
-				VkImageMemoryBarrier* pMemoryBarrier = &prePresentBarrier;
-				vkCmdPipelineBarrier(
-					chainContext.vulkan.drawCmdBuffers.ptr[i], 
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
-					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-					VK_FLAGS_NONE,
-					0, null,
-					0, null,
-					1, &prePresentBarrier
-				);
-	
-				vulkanResult = vkEndCommandBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i]);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Couldn't end command buffer!");
-				}
+			// Set target frame buffer
+			renderPassBeginInfo.framebuffer = chainContext.vulkan.frameBuffers.ptr[i];
+
+			vulkanResult = vkBeginCommandBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i], &cmdBufInfo);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't begin command buffer!");
+			}
+
+			vkCmdBeginRenderPass(chainContext.vulkan.drawCmdBuffers.ptr[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			// Update dynamic viewport state
+			VkViewport viewport;
+			viewport.height = cast(float)chainContext.window.height;
+			viewport.width = cast(float)chainContext.window.width;
+			viewport.minDepth = cast(float)0.0f;
+			viewport.maxDepth = cast(float)1.0f;
+			vkCmdSetViewport(chainContext.vulkan.drawCmdBuffers.ptr[i], 0, 1, &viewport);
+
+			// Update dynamic scissor state
+			VkRect2D scissor;
+			scissor.extent.width = chainContext.window.width;
+			scissor.extent.height = chainContext.window.height;
+			scissor.offset.x = 0;
+			scissor.offset.y = 0;
+			vkCmdSetScissor(chainContext.vulkan.drawCmdBuffers.ptr[i], 0, 1, &scissor);
+
+			// Bind descriptor sets describing shader binding points
+			vkCmdBindDescriptorSets(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, NULL);
+
+			// Bind the rendering pipeline (including the shaders)
+			vkCmdBindPipeline(chainContext.vulkan.drawCmdBuffers.ptr[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDefault);
+
+			// Bind triangle vertices
+			VkDeviceSize[1] offsets;
+			vkCmdBindVertexBuffers(chainContext.vulkan.drawCmdBuffers.ptr[i], VERTEX_BUFFER_BIND_ID, 1, &vertices.bufferDescriptor.buffer, offsets.ptr);
+
+			// Bind triangle indices
+			vkCmdBindIndexBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i], indices.bufferDescriptor.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+			// Draw indexed triangle
+			vkCmdDrawIndexed(chainContext.vulkan.drawCmdBuffers.ptr[i], indices.count, 1, 0, 0, 1);
+
+			vkCmdEndRenderPass(chainContext.vulkan.drawCmdBuffers.ptr[i]);
+
+			// Add a present memory barrier to the end of the command buffer
+			// This will transform the frame buffer color attachment to a
+			// new layout for presenting it to the windowing system integration 
+			VkImageMemoryBarrier prePresentBarrier;
+			initImageMemoryBarrier(&prePresentBarrier);
+			prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			prePresentBarrier.dstAccessMask = 0;
+			prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			prePresentBarrier.subresourceRange.baseMipLevel = 0;
+			prePresentBarrier.subresourceRange.levelCount = 1;
+			prePresentBarrier.subresourceRange.baseArrayLayer = 0;
+			prePresentBarrier.subresourceRange.layerCount = 1;
+			prePresentBarrier.image = chainContext.vulkan.swapChain.buffers.ptr[i].image;
+
+			VkImageMemoryBarrier* pMemoryBarrier = &prePresentBarrier;
+			vkCmdPipelineBarrier(
+				chainContext.vulkan.drawCmdBuffers.ptr[i], 
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+				VK_FLAGS_NONE,
+				0, null,
+				0, null,
+				1, &prePresentBarrier
+			);
+
+			vulkanResult = vkEndCommandBuffer(chainContext.vulkan.drawCmdBuffers.ptr[i]);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't end command buffer!");
 			}
 		}
+	
 	}
 	
 	

@@ -361,7 +361,7 @@ class VulkanSwapChain {
 			colorAttachmentView.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			colorAttachmentView.flags = 0;
 
-			buffers.ptr[i].image = images[i];
+			buffers.ptr[i].image = images.ptr[i];
 
 			// Transform images from initial (undefined) to present layout
 			vulkan.VulkanTools.setImageLayout(
