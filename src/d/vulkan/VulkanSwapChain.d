@@ -132,12 +132,12 @@ class VulkanSwapChain {
 		uint32_t graphicsQueueNodeIndex = UINT32_MAX;
 		uint32_t presentQueueNodeIndex = UINT32_MAX;
 		for (uint32_t i = 0; i < queueCount; i++) {
-			if ((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+			if ((queueProps.ptr[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
 				if (graphicsQueueNodeIndex == UINT32_MAX) {
 					graphicsQueueNodeIndex = i;
 				}
 
-				if (supportsPresent[i] == VK_TRUE) {
+				if (supportsPresent.ptr[i] == VK_TRUE) {
 					graphicsQueueNodeIndex = i;
 					presentQueueNodeIndex = i;
 					break;
@@ -149,7 +149,7 @@ class VulkanSwapChain {
 			// If there's no queue that supports both present and graphics
 			// try to find a separate present queue
 			for (uint32_t i = 0; i < queueCount; ++i) {
-				if (supportsPresent[i] == VK_TRUE) {
+				if (supportsPresent.ptr[i] == VK_TRUE) {
 					presentQueueNodeIndex = i;
 					break;
 				}
@@ -189,7 +189,7 @@ class VulkanSwapChain {
 		
 		// If the surface format list only includes one entry with VK_FORMAT_UNDEFINED,
 		// there is no preferered format, so we assume VK_FORMAT_B8G8R8A8_UNORM
-		if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
+		if ((formatCount == 1) && (surfaceFormats.ptr[0].format == VK_FORMAT_UNDEFINED)) {
 			colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 		}
 		else {
@@ -197,9 +197,9 @@ class VulkanSwapChain {
 			// If you need a specific format (e.g. SRGB) you'd need to
 			// iterate over the list of available surface format and
 			// check for it's presence
-			colorFormat = surfaceFormats[0].format;
+			colorFormat = surfaceFormats.ptr[0].format;
 		}
-		colorSpace = surfaceFormats[0].colorSpace;
+		colorSpace = surfaceFormats.ptr[0].colorSpace;
 	}
 	
 	
@@ -269,11 +269,11 @@ class VulkanSwapChain {
 		// Prefer mailbox mode if present, it's the lowest latency non-tearing present  mode
 		VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
 		for (size_t i = 0; i < presentModeCount; i++) {
-			if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+			if (presentModes.ptr[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
 				swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 				break;
 			}
-			if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) && (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
+			if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) && (presentModes.ptr[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
 				swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 			}
 		}
