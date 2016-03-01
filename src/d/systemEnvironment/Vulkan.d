@@ -440,7 +440,9 @@ public void platformVulkan3SwapChain2(ChainContext chainContext, ChainElement[] 
 	
 	VulkanSwapChain2 swapChain = new VulkanSwapChain2();
 
-	swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
+	// for testing
+	swapChain.connect(null, null, null);
+	//swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
 	version(Win32) {
 		swapChain.initSurface(chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);

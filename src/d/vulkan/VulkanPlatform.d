@@ -27,9 +27,12 @@ public void* helperGetVulkanFunctionAdressByInstance(VkInstance instance, immuta
 }
 
 public void* helperGetVulkanFunctionAdressByDevice(VkDevice device, immutable(char*)name) {
+	
+	if( device !is null ) { // quick hack for hack...
 	void* resultFromVulkan = vkGetDeviceProcAddr(device, name);
 	if( resultFromVulkan !is null ) {
 		return resultFromVulkan;
+	}
 	}
 	
 	version(Win32) {

@@ -37,7 +37,7 @@ private template GET_DEVICE_PROC_ADDR(string dev, string entrypoint) {
 // belongs finally into InitialisationHelpers.d
 import helpers.Conversion : convertCStringToD;
 
-private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+private extern(System) VkBool32 vulkanDebugCallback2(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
 	import std.stdio;
 	
 	writeln("vulkan debug: layerprefix=", convertCStringToD(pLayerPrefix), " message=", convertCStringToD(pMsg));
@@ -46,7 +46,7 @@ private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugRep
 
 
 
-
+import helpers.VariableValidator;
 
 /**
  * alternative implementation of swapchain because I had issues with the other implementation
@@ -56,10 +56,10 @@ private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugRep
  * https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/xhtml/vkspec.html#_vk_khr_swapchain
  */
 class VulkanSwapChain2 {
-	private Nullable!VkInstance instance;
-	private Nullable!VkDevice device;
-	private Nullable!VkPhysicalDevice physicalDevice;
-	private Nullable!VkSurfaceKHR surface;
+	private VariableValidator!VkInstance instance;
+	private VariableValidator!VkDevice device;
+	private VariableValidator!VkPhysicalDevice physicalDevice;
+	private VariableValidator!VkSurfaceKHR surface;
 	
 	// Function pointers
 	private PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
@@ -95,6 +95,11 @@ class VulkanSwapChain2 {
 		// for windows
 		HINSTANCE platformHandle, HWND platformWindow
 	) {
+		instance.invalidate();
+		device.invalidate();
+		physicalDevice.invalidate();
+		surface.invalidate();
+		
 		import TypedPointerWithLength : TypedPointerWithLength;
 		import std.string : toStringz;
 		import vulkan.VulkanDevice;
@@ -168,13 +173,22 @@ class VulkanSwapChain2 {
 	
 	
 	chainContext.vulkan.instance = NonGcHandle!VkInstance.createNotInitialized();
+	//instance = chainContext.vulkan.instance.value;
 	scope(exit) chainContext.vulkan.instance.dispose();
 	
 	{
 		VkInstance instance;
 		vulkan.InitialisationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
+		
+		{
+			import std.stdio;
+			writeln("initializeInstance value is ",instance);
+		}
+		
+		
 		chainContext.vulkan.instance.value = instance;
 	}
+	instance = chainContext.vulkan.instance.value;
 	scope(exit) vulkan.InitialisationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
 	
 	
@@ -189,7 +203,7 @@ class VulkanSwapChain2 {
 	if( withDebugReportExtension ) {
 		VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfoEXT;
 		initDebugReportCallbackCreateInfoEXT(&debugReportCallbackCreateInfoEXT);
-		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback;
+		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback2;
 		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT; // enable me | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 	
 		VkDebugReportCallbackEXT debugReportCallback;
@@ -241,7 +255,13 @@ class VulkanSwapChain2 {
 	// HACK
 	// < we select the first device >
 	chainContext.vulkan.chosenDevice = possibleDevices[0];
-
+	
+	
+	// set some funny variables
+	physicalDevice = chainContext.vulkan.chosenDevice.physicalDevice;
+	
+	
+	
 
 	// query memory
 	chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties = cast(VkPhysicalDeviceMemoryProperties*)GC.malloc(VkPhysicalDeviceMemoryProperties.sizeof, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
@@ -258,28 +278,39 @@ class VulkanSwapChain2 {
 
 
 
+		vulkanResult = createSurface(platformHandle, platformWindow);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create SwapChain Surface!");
+		}
+
+
 
 		
 		
 		
 		
 		
-		
+		import std.stdio;
 		/////////////
 		// big hack, we do initialize the whole crap device here, just for getting to a black screen, need to work out the correct queue initializing code
 		///////////////
-		
+		writeln("HERE");
 		
 		uint32_t queueFamilyCount;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice.value, &queueFamilyCount, null);
+
+		writeln("HERE 2");
 
     VkQueueFamilyProperties* pMainQueueInfo = cast(VkQueueFamilyProperties*)malloc(queueFamilyCount * VkQueueFamilyProperties.sizeof);
+    
+    writeln("HERE 3");
+    
     VkBool32* pSupportsPresent = cast(VkBool32 *)malloc(queueFamilyCount * VkBool32.sizeof);
 
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, pMainQueueInfo);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice.value, &queueFamilyCount, pMainQueueInfo);
 
     for (uint32_t i = 0; i < queueFamilyCount; ++i)
-        fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &pSupportsPresent[i]);
+        fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.value, i, surface.value, &pSupportsPresent[i]);
 
     // Search for a graphics and a present queue in the array of queue
     // families, try to find one that supports both
@@ -393,7 +424,7 @@ class VulkanSwapChain2 {
 	}
 	scope(exit) vkDestroyDevice(chainContext.vulkan.chosenDevice.logicalDevice, null);
     
-    
+    device = chainContext.vulkan.chosenDevice.logicalDevice;
     
     
     
@@ -406,8 +437,8 @@ class VulkanSwapChain2 {
 
     // Acquire graphics and present queue handle from device
     VkQueue graphicsQueue, presentQueue;
-    vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0, &graphicsQueue);
-    vkGetDeviceQueue(device, presentQueueFamilyIndex, 0, &presentQueue);
+    vkGetDeviceQueue(device.value, graphicsQueueFamilyIndex, 0, &graphicsQueue);
+    vkGetDeviceQueue(device.value, presentQueueFamilyIndex, 0, &presentQueue);
 		
 		
 		
@@ -416,13 +447,42 @@ class VulkanSwapChain2 {
 
 
 
+	{
+		import std.stdio;
+		writeln("family indides ", graphicsQueueFamilyIndex, " ", presentQueueFamilyIndex);
+	}
+
+
+
+
+
+	// create command pool
+	// TODO LOW< rename >
+	chainContext.vulkan.cmdPool = NonGcHandle!VkCommandPool.createNotInitialized();
+	
+	uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
+
+	VkCommandPoolCreateInfo commandPoolCreateInfo;
+	initCommandPoolCreateInfo(&commandPoolCreateInfo);
+	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+
+	vulkanResult = vkCreateCommandPool(
+		chainContext.vulkan.chosenDevice.logicalDevice,
+		&commandPoolCreateInfo,
+		null,
+		chainContext.vulkan.cmdPool.ptr
+	);
+	if( !vulkanSuccess(vulkanResult) ) {
+		throw new EngineException(true, true, "Couldn't create command pool!");
+	}
+	scope(exit) vkDestroyCommandPool(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
 
 
 
 
 
 
-
 		
 		
 		
@@ -430,34 +490,26 @@ class VulkanSwapChain2 {
 		
 		
 		
-		//VkResult vulkanResult;
-		
-		vulkanResult = createSurface(platformHandle, platformWindow);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't create SwapChain Surface!");
-		}
-
 		
 		
 		
-		
-		assert(!device.isNull() && !surface.isNull());
+		assert(device.isValid && surface.isValid);
 		
 		// Check the surface properties and formats
 	    VkSurfaceCapabilitiesKHR surfaceProperties;
-	    /*fpGetSurfacePropertiesKHR*/fpGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceProperties);
+	    /*fpGetSurfacePropertiesKHR*/fpGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, surface.value, &surfaceProperties);
 	
 	    uint32_t formatCount;
-	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, null);
+	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, null);
 	
 	    VkSurfaceFormatKHR* pSurfFormats = cast(VkSurfaceFormatKHR*)malloc(formatCount * VkSurfaceFormatKHR.sizeof);
-	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, pSurfFormats);
+	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, pSurfFormats);
 	
 	    uint32_t presentModeCount;
-	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, null);
+	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, null);
 	
 	    VkPresentModeKHR* pPresentModes = cast(VkPresentModeKHR*)malloc(presentModeCount * VkPresentModeKHR.sizeof);
-	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, pPresentModes);
+	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, pPresentModes);
 		
 	    VkExtent2D swapchainExtent;
 	    // width and height are either both -1, or both not -1.
@@ -529,7 +581,7 @@ class VulkanSwapChain2 {
 	        VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,    // sType
 	        null,                                           // pNext
 	        0,                                              // flags
-	        surface,                                        // surface
+	        surface.value,                                  // surface
 	        desiredNumberOfSwapchainImages,                 // minImageCount
 	        swapchainFormat,                                // imageFormat
 	        swapchainColorSpace,                            // imageColorSpace
@@ -540,14 +592,14 @@ class VulkanSwapChain2 {
 	        0,                                              // queueFamilyIndexCount
 	        null,                                           // pQueueFamilyIndices
 	        surfaceProperties.currentTransform,             // preTransform
-	        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,             // compositeAlpha
+	        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,             // compositeAlpha
 	        swapchainPresentMode,                           // presentMode
 	        VK_TRUE,                                        // clipped
 	        VK_NULL_HANDLE                                  // oldSwapchain
 	    };
 	
 	    VkSwapchainKHR swapchain;
-	    fpCreateSwapchainKHR(device, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
+	    fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
 	    
 	    
 	    
@@ -557,10 +609,10 @@ class VulkanSwapChain2 {
 	    // Obtaining the persistent images of a swapchain
 	    /////////////////////////////////////////////////
 	    uint32_t swapchainImageCount;
-    	fpGetSwapchainImagesKHR(device, cast(immutable(VkSwapchainCreateInfoKHR)*)swapchain, &swapchainImageCount, null);
+    	fpGetSwapchainImagesKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)swapchain, &swapchainImageCount, null);
 
     	VkImage* pSwapchainImages = cast(VkImage*)malloc(swapchainImageCount * VkImage.sizeof);
-    	fpGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, pSwapchainImages);
+    	fpGetSwapchainImagesKHR(device.value, swapchain, &swapchainImageCount, pSwapchainImages);
 
 	    
 	    
@@ -577,6 +629,25 @@ class VulkanSwapChain2 {
 	    
 	    cmdBuffers.length = swapchainImageCount;
 	    views.length = swapchainImageCount;
+	    
+	    // create command buffers
+	    for (size_t i = 0; i < swapchainImageCount; ++i) {
+			VkCommandBufferAllocateInfo commandBufferAllocationInfo;
+			initCommandBufferAllocateInfo(&commandBufferAllocationInfo);
+			commandBufferAllocationInfo.commandPool = chainContext.vulkan.cmdPool.value;
+			commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			commandBufferAllocationInfo.commandBufferCount = 1; // we just want to allocate one command buffer in the target array
+		
+			// SYNC : this needs to be host synced with a mutex
+			vulkanResult = vkAllocateCommandBuffers(
+				chainContext.vulkan.chosenDevice.logicalDevice,
+				&commandBufferAllocationInfo,
+				&cmdBuffers[i]);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
+			}
+	    }
+	    
 		
 	    for (size_t i = 0; i < swapchainImageCount; ++i)
 	    {
@@ -588,10 +659,12 @@ class VulkanSwapChain2 {
 	            pSwapchainImages[i],                        // image
 	            VK_IMAGE_VIEW_TYPE_2D,                      // viewType
 	            swapchainFormat,                            // format
-	            ///...
+	            {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A}, // components
+	            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}// subresourceRange
 	        };
-	        vkCreateImageView(device, &viewInfo, null, &views[i]);
-	
+	        vkCreateImageView(device.value, &viewInfo, null, &views[i]);
+			
+			
 	        ///...
 	        
 			VkCommandBufferBeginInfo beginInfo;
@@ -667,12 +740,12 @@ class VulkanSwapChain2 {
 	    };
 	
 	    VkSemaphore imageAcquiredSemaphore;
-	    vkCreateSemaphore(device,
+	    vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &imageAcquiredSemaphore);
 	
 	    VkSemaphore renderingCompleteSemaphore;
-	    vkCreateSemaphore(device,
+	    vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &renderingCompleteSemaphore);
 	
@@ -683,7 +756,7 @@ class VulkanSwapChain2 {
 	
 	        // Get the next available swapchain image
 	        result = fpAcquireNextImageKHR(
-	            device,
+	            device.value,
 	            swapchain,
 	            UINT64_MAX,
 	            imageAcquiredSemaphore,
@@ -724,6 +797,9 @@ class VulkanSwapChain2 {
 	        };
 	        
 	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
+	        
+	        assert(false);
+	        
 	    } while (result >= 0);
 
 	    
@@ -738,7 +814,14 @@ class VulkanSwapChain2 {
 	) {
 		VkResult vulkanResult;
 		
-		assert(!instance.isNull());
+		assert(!surface.isValid);
+		
+		{
+			import std.stdio;
+			writeln(vkCreateWin32SurfaceKHR);
+			writeln("instance value is ",instance.value);
+		}
+		
 		
 		// Create surface depending on OS
 		version(Win32) {
@@ -747,7 +830,7 @@ class VulkanSwapChain2 {
 		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 		surfaceCreateInfo.hinstance = platformHandle;
 		surfaceCreateInfo.hwnd = platformWindow;
-		vulkanResult = vkCreateWin32SurfaceKHR(instance, cast(const(VkWin32SurfaceCreateInfoKHR*))&surfaceCreateInfo, null, &surface);
+		vulkanResult = vkCreateWin32SurfaceKHR(instance.value, cast(const(VkWin32SurfaceCreateInfoKHR*))&surfaceCreateInfo, null, &surface);
 		this.surface = surface;
 		}
 //#else

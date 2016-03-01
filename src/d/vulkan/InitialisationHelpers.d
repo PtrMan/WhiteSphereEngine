@@ -59,7 +59,15 @@ public void initializeInstance(string[] layersToLoadGced, string[] extensionsToL
 	
 	instanceCreateInfo.pApplicationInfo = cast(immutable(VkApplicationInfo)*)&appInfo;
 	
-	vulkanResult = vkCreateInstance(&instanceCreateInfo, null, &instance);
+	VkInstance temporaryInstance;
+	vulkanResult = vkCreateInstance(&instanceCreateInfo, null, &temporaryInstance);
+	
+	{
+		import std.stdio;
+		writeln("initializeInstance() instance result is ", temporaryInstance);
+	}
+	
+	instance = temporaryInstance;
 	if( !vulkanSuccess(vulkanResult) ) {
 		throw new EngineException(true, true, "vkCreateInstance failed!");
 	}
