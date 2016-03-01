@@ -28,5 +28,10 @@ class NonGcHandle(Type) : IDisposable {
 		return *protectedPtr;
 	}
 	
+	public final @property Type value(Type newValue) {
+		*protectedPtr = newValue;
+		return newValue;
+	}
+	
 	protected Type* protectedPtr;
 }
