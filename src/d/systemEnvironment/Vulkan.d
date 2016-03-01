@@ -23,6 +23,7 @@ import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
 import vulkan.VulkanPlatform;
+static import vulkan.InitialisationHelpers;
 import Exceptions : EngineException;
 import TypedPointerWithLength : TypedPointerWithLength;
 
@@ -67,6 +68,9 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	string[] deviceExtensionsToLoadGced;
 	deviceExtensionsToLoadGced ~= VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 	
+	
+	// DESTROY THIS
+	// we need it later, but we also need to refactor the code below and put it into a box>
 	TypedPointerWithLength!(immutable(char)*) layersNonGced = TypedPointerWithLength!(immutable(char)*).allocate(layersToLoadGced.length);
 	for( uint i = 0; i < layersNonGced.length; i++ ) {
 		layersNonGced.ptr[i] = toStringz(layersToLoadGced[i]);
@@ -81,36 +85,20 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	for( uint i = 0; i < deviceExtensionsNonGced.length; i++ ) {
 		deviceExtensionsNonGced.ptr[i] = toStringz(deviceExtensionsToLoadGced[i]);
 	}
+	// END DESTROY THIS
 	
 	
 	
-	VkApplicationInfo appInfo;
-	initApplicationInfo(&appInfo);
-	appInfo.pApplicationName = "PtrEngine";
-	appInfo.pEngineName = "PtrEngine";
-	// todo : Use VK_API_VERSION 
-	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 2); // because driver doesn't jet support higher version
-	
-	
-	VkInstanceCreateInfo instanceCreateInfo;
-	initInstanceCreateInfo(&instanceCreateInfo);
-
-	instanceCreateInfo.enabledLayerCount = cast(uint32_t)layersNonGced.length;
-	instanceCreateInfo.ppEnabledLayerNames = layersNonGced.ptr;
-	
-	instanceCreateInfo.enabledExtensionCount = cast(uint32_t)extensionsNonGced.length;
-	instanceCreateInfo.ppEnabledExtensionNames = extensionsNonGced.ptr;
-	
-	instanceCreateInfo.pApplicationInfo = cast(immutable(VkApplicationInfo)*)&appInfo;
 	
 	chainContext.vulkan.instance = NonGcHandle!VkInstance.createNotInitialized();
 	scope(exit) chainContext.vulkan.instance.dispose();
 	
-	vulkanResult = vkCreateInstance(&instanceCreateInfo, null, chainContext.vulkan.instance.ptr);
-	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "vkCreateInstance failed!");
+	{
+		VkInstance instance;
+		vulkan.InitialisationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
+		chainContext.vulkan.instance.value = instance;
 	}
-	scope(exit) vkDestroyInstance(chainContext.vulkan.instance.value, null);
+	scope(exit) vulkan.InitialisationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
 	
 	
 	// init remaining function pointers for debugging
@@ -141,52 +129,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	}
 	
 	
-	
-	
-	// enumerate devices
-	uint32_t physicalDevicesCount;
-	vulkanResult = vkEnumeratePhysicalDevices(chainContext.vulkan.instance.value, &physicalDevicesCount, null);
-	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "vkEnumeratePhysicalDevices failed!");
-	}
-	
-	if( physicalDevicesCount == 0 ) {
-		throw new EngineException(true, true, "vkEnumeratePhysicalDevices returned a device count of zero!");
-	}
-
-
-	// TODO< check if we do this like this in the OpenGL implementation and rewrite this code here if we allocate memory not over the GC
-	VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[physicalDevicesCount];
-	vulkanResult = vkEnumeratePhysicalDevices(chainContext.vulkan.instance.value, &physicalDevicesCount, physicalDevices.ptr);
-	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "vkEnumeratePhysicalDevices failed!");
-	}
-
-	VulkanDevice[] vulkanDevices = new VulkanDevice[physicalDevicesCount];
-	for( uint deviceI = 0; deviceI < physicalDevicesCount; deviceI++ ) {
-		vulkanDevices[deviceI] = new VulkanDevice();
-	}
-
-	// copy
-	for( uint deviceI = 0; deviceI < physicalDevicesCount; deviceI++ ) {
-		vulkanDevices[deviceI].physicalDevice = physicalDevices[deviceI];
-	}
-
-	// invalidate/ free
-	physicalDevices = null;
-	physicalDevicesCount = 0;
-
-
-	// enumerate all properties and queue information of the physical devices for the selection of the best device
-	foreach( VulkanDevice deviceIterator; vulkanDevices ) {
-		vkGetPhysicalDeviceProperties(deviceIterator.physicalDevice, &(deviceIterator.physicalDeviceProperties));
-
-		uint32_t queueFamilyPropertiesCount;
-		vkGetPhysicalDeviceQueueFamilyProperties(deviceIterator.physicalDevice, &queueFamilyPropertiesCount, null);
-
-		deviceIterator.queueFamilyProperties = new VkQueueFamilyProperties[queueFamilyPropertiesCount];
-		vkGetPhysicalDeviceQueueFamilyProperties(deviceIterator.physicalDevice, &queueFamilyPropertiesCount, deviceIterator.queueFamilyProperties.ptr);
-	}
+	VulkanDevice[] vulkanDevices = vulkan.InitialisationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
 	
 	{
 		import std.stdio : writeln;
@@ -195,7 +138,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	}
 	
 	// now we filter for the devices with at least n queue of the given type
-	VulkanDevice[] possibleDevices;
+
 
 	/* TODO
 	final uint minimumNumberOfComputeQueues = 2;
@@ -205,9 +148,10 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		deviceIterator.queueFamilyProperties
 	}
 	*/
-
+	
 	// HACK
 	// for now we just add all devices to possibleDevices
+	VulkanDevice[] possibleDevices;
 	foreach( VulkanDevice currentDevice; vulkanDevices ) {
 		possibleDevices ~= currentDevice;
 	}
@@ -268,16 +212,16 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 	// now we can free the array with the layers and the baked gc memory
-	layersNonGced.dispose();
-	layersNonGced = null; // free memory for gc		
+	//layersNonGced.dispose();
+	//layersNonGced = null; // free memory for gc		
 	layersToLoadGced.length = 0; // release GC memory
 	
-	extensionsNonGced.dispose();
-	extensionsNonGced = null; // free memory for gc		
+	//extensionsNonGced.dispose();
+	//extensionsNonGced = null; // free memory for gc		
 	extensionsToLoadGced.length = 0; // release GC memory
 	
-	deviceExtensionsNonGced.dispose();
-	deviceExtensionsNonGced = null; // free memory for gc		
+	//deviceExtensionsNonGced.dispose();
+	//deviceExtensionsNonGced = null; // free memory for gc		
 	deviceExtensionsToLoadGced.length = 0; // release GC memory
 	
 	
@@ -461,6 +405,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 		}
 	}
 	
+	
 	// not necessary, we did this already
 	//createCommandPool();
 	//scope(exit) vkDestroyCommandPool(chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
@@ -483,6 +428,30 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
 }
+
+
+
+
+// experimental BEGIN
+import vulkan.VulkanSwapChain2;
+
+public void platformVulkan3SwapChain2(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
+	VkResult vulkanResult;
+	
+	VulkanSwapChain2 swapChain = new VulkanSwapChain2();
+
+	swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
+	
+	version(Win32) {
+		swapChain.initSurface(chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
+	}
+	
+	
+}
+// experimental END
+
+
+
 
 /**
  * more specific, does access the swapchain informations 

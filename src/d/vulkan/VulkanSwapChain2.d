@@ -32,6 +32,22 @@ private template GET_DEVICE_PROC_ADDR(string dev, string entrypoint) {
 }
 
 
+
+// HACK
+// belongs finally into InitialisationHelpers.d
+import helpers.Conversion : convertCStringToD;
+
+private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+	import std.stdio;
+	
+	writeln("vulkan debug: layerprefix=", convertCStringToD(pLayerPrefix), " message=", convertCStringToD(pMsg));
+	return 1;
+}
+
+
+
+
+
 /**
  * alternative implementation of swapchain because I had issues with the other implementation
  * (see the code at the time of the first commit)
@@ -79,7 +95,342 @@ class VulkanSwapChain2 {
 		// for windows
 		HINSTANCE platformHandle, HWND platformWindow
 	) {
+		import TypedPointerWithLength : TypedPointerWithLength;
+		import std.string : toStringz;
+		import vulkan.VulkanDevice;
 		VkResult vulkanResult;
+		
+		
+		// hack
+		import systemEnvironment.ChainContext;
+		ChainContext chainContext = new ChainContext();
+			
+
+		import core.memory : GC;
+
+
+
+
+
+
+
+
+
+
+
+
+	// PULLED IN FROM Vulkan.d BEGIN
+
+	
+	bool withDebugReportExtension = true;
+	
+	// we enable the standard debug and validation layers
+	string[] layersToLoadGced = ["VK_LAYER_LUNARG_standard_validation"];
+	
+	string[] extensionsToLoadGced;
+	
+	if( withDebugReportExtension ) {
+		extensionsToLoadGced ~= VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+	}
+	
+	const bool withSurface = true; // do we want to render to a surface?
+	if( withSurface ) {
+		extensionsToLoadGced ~= VK_KHR_SURFACE_EXTENSION_NAME; // required
+		version(Win32) {
+			extensionsToLoadGced ~= VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+		}
+		// TODO< linux >
+	}
+	
+	string[] deviceExtensionsToLoadGced;
+	deviceExtensionsToLoadGced ~= VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+	
+	
+	// DESTROY THIS
+	// we need it later, but we also need to refactor the code below and put it into a box>
+	TypedPointerWithLength!(immutable(char)*) layersNonGced = TypedPointerWithLength!(immutable(char)*).allocate(layersToLoadGced.length);
+	for( uint i = 0; i < layersNonGced.length; i++ ) {
+		layersNonGced.ptr[i] = toStringz(layersToLoadGced[i]);
+	}
+	
+	TypedPointerWithLength!(immutable(char)*) extensionsNonGced = TypedPointerWithLength!(immutable(char)*).allocate(extensionsToLoadGced.length);
+	for( uint i = 0; i < extensionsNonGced.length; i++ ) {
+		extensionsNonGced.ptr[i] = toStringz(extensionsToLoadGced[i]);
+	}
+	
+	TypedPointerWithLength!(immutable(char)*) deviceExtensionsNonGced = TypedPointerWithLength!(immutable(char)*).allocate(deviceExtensionsToLoadGced.length);
+	for( uint i = 0; i < deviceExtensionsNonGced.length; i++ ) {
+		deviceExtensionsNonGced.ptr[i] = toStringz(deviceExtensionsToLoadGced[i]);
+	}
+	// END DESTROY THIS
+	
+	
+	
+	
+	chainContext.vulkan.instance = NonGcHandle!VkInstance.createNotInitialized();
+	scope(exit) chainContext.vulkan.instance.dispose();
+	
+	{
+		VkInstance instance;
+		vulkan.InitialisationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
+		chainContext.vulkan.instance.value = instance;
+	}
+	scope(exit) vulkan.InitialisationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
+	
+	
+	// init remaining function pointers for debugging
+	if( withDebugReportExtension ) {
+		bindVulkanFunctionByInstance(cast(void**)&vkCreateDebugReportCallbackEXT, chainContext.vulkan.instance.value, "vkCreateDebugReportCallbackEXT");
+		bindVulkanFunctionByInstance(cast(void**)&vkDestroyDebugReportCallbackEXT, chainContext.vulkan.instance.value, "vkDestroyDebugReportCallbackEXT");
+		bindVulkanFunctionByInstance(cast(void**)&vkDebugReportMessageEXT, chainContext.vulkan.instance.value, "vkDebugReportMessageEXT");
+	}
+	
+	// init debugging
+	if( withDebugReportExtension ) {
+		VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfoEXT;
+		initDebugReportCallbackCreateInfoEXT(&debugReportCallbackCreateInfoEXT);
+		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback;
+		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT; // enable me | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+	
+		VkDebugReportCallbackEXT debugReportCallback;
+		vulkanResult = vkCreateDebugReportCallbackEXT( chainContext.vulkan.instance.value, cast(const(VkDebugReportCallbackCreateInfoEXT)*)&debugReportCallbackCreateInfoEXT, null, &debugReportCallback );
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "vkCreateDebugReportCallbackEXT failed!");
+		}
+	}
+	
+	scope(exit) {
+		if( withDebugReportExtension ) {
+			// TODO< debug cleanup >
+		}
+	}
+	
+	
+	VulkanDevice[] vulkanDevices = vulkan.InitialisationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
+	
+	{
+		import std.stdio : writeln;
+		writeln("I have ", vulkanDevices.length, " vulkan devices");
+	
+	}
+	
+	// now we filter for the devices with at least n queue of the given type
+
+
+	/* TODO
+	final uint minimumNumberOfComputeQueues = 2;
+
+	foreach( VulkanDevice currentDevice; vulkanDevices ) {
+		// TODO< check for required properties of the queues >
+		deviceIterator.queueFamilyProperties
+	}
+	*/
+	
+	// HACK
+	// for now we just add all devices to possibleDevices
+	VulkanDevice[] possibleDevices;
+	foreach( VulkanDevice currentDevice; vulkanDevices ) {
+		possibleDevices ~= currentDevice;
+	}
+
+	if( possibleDevices.length == 0 ) {
+		throw new EngineException(true, true, "Could not find a vulkan device with the required properties!");
+	}
+
+	// now we select the best device
+	// HACK
+	// < we select the first device >
+	chainContext.vulkan.chosenDevice = possibleDevices[0];
+
+
+	// query memory
+	chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties = cast(VkPhysicalDeviceMemoryProperties*)GC.malloc(VkPhysicalDeviceMemoryProperties.sizeof, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
+	vkGetPhysicalDeviceMemoryProperties(chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties);
+
+
+	// PULLED IN FROM Vulkan.d END
+
+
+
+
+
+
+
+
+
+
+		
+		
+		
+		
+		
+		
+		/////////////
+		// big hack, we do initialize the whole crap device here, just for getting to a black screen, need to work out the correct queue initializing code
+		///////////////
+		
+		
+		uint32_t queueFamilyCount;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, NULL);
+
+    VkQueueFamilyProperties* pMainQueueInfo = cast(VkQueueFamilyProperties*)malloc(queueFamilyCount * VkQueueFamilyProperties.sizeof);
+    VkBool32* pSupportsPresent = cast(VkBool32 *)malloc(queueFamilyCount * VkBool32.sizeof);
+
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, pMainQueueInfo);
+
+    for (uint32_t i = 0; i < queueFamilyCount; ++i)
+        fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &pSupportsPresent[i]);
+
+    // Search for a graphics and a present queue in the array of queue
+    // families, try to find one that supports both
+    uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+    uint32_t presentQueueFamilyIndex  = UINT32_MAX;
+    for (uint32_t i = 0; i < queueFamilyCount; ++i)
+    {
+        if ((pMainQueueInfo[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+        {
+            if (graphicsQueueFamilyIndex == UINT32_MAX)
+                graphicsQueueFamilyIndex = i;
+
+            if (pSupportsPresent[i] == VK_TRUE)
+            {
+                graphicsQueueFamilyIndex = i;
+                presentQueueFamilyIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (presentQueueFamilyIndex == UINT32_MAX)
+    {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < queueFamilyCount; ++i)
+            if (pSupportsPresent[i] == VK_TRUE)
+            {
+                presentQueueFamilyIndex = i;
+                break;
+            }
+    }
+
+    // Free the temporary queue info allocations
+    free(pMainQueueInfo);
+    free(pSupportsPresent);
+
+    // Generate error if could not find both a graphics and a present queue
+    if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX)
+    {
+        throw new EngineException(true, true, "Could not find a graphics and a present queue");
+    }
+
+    // Put together the list of requested queues
+    const float queuePriority = 1.0f;
+    VkDeviceQueueCreateInfo[] requestedQueues =
+    [
+        {
+            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
+            NULL,                                       // pNext
+            0,                                          // flags
+            graphicsQueueFamilyIndex,                   // queueFamilyIndex
+            1,                                          // queueCount
+            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
+        },
+        {
+            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
+            NULL,                                       // pNext
+            0,                                          // flags
+            presentQueueFamilyIndex,                    // queueFamilyIndex
+            1,                                          // queueCount
+            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
+        }
+    ];
+    uint32_t requestedQueueCount = 2;
+
+    if (graphicsQueueFamilyIndex == presentQueueFamilyIndex)
+    {
+        // We need only a single queue if the graphics queue is also the present queue
+        requestedQueueCount = 1;
+    }
+
+    // Create a device and request access to the specified queues
+    /*
+    const VkDeviceCreateInfo deviceCreateInfo =
+    {
+        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,           // sType
+        NULL,                                           // pNext
+        0,                                              // flags
+        requestedQueueCount,                            // queueCreateInfoCount
+        &requestedQueues,                               // pQueueCreateInfos
+        ...
+    };
+
+    VkDevice device;
+    vkCreateDevice(physicalDevice, &deviceCreateInfo, &device);
+    */
+    
+    
+    
+    VkPhysicalDeviceFeatures physicalDeviceFeatures;
+	initPhysicalDeviceFeatures(&physicalDeviceFeatures);
+    
+    VkDeviceCreateInfo deviceCreateInfo;
+	initDeviceCreateInfo(&deviceCreateInfo);
+	deviceCreateInfo.queueCreateInfoCount = requestedQueueCount;
+	deviceCreateInfo.pQueueCreateInfos = cast(immutable(VkDeviceQueueCreateInfo)*)requestedQueues.ptr;
+
+	// we enable the standard debug and validation layers
+	deviceCreateInfo.enabledLayerCount = cast(uint32_t)layersNonGced.length;
+	deviceCreateInfo.ppEnabledLayerNames = layersNonGced.ptr;
+	
+	deviceCreateInfo.enabledExtensionCount = cast(uint32_t)deviceExtensionsNonGced.length;
+	deviceCreateInfo.ppEnabledExtensionNames = deviceExtensionsNonGced.ptr;
+
+	deviceCreateInfo.pEnabledFeatures = cast(immutable(VkPhysicalDeviceFeatures)*)&physicalDeviceFeatures;
+
+	vulkanResult = vkCreateDevice(chainContext.vulkan.chosenDevice.physicalDevice, &deviceCreateInfo, null, &chainContext.vulkan.chosenDevice.logicalDevice);
+	if( !vulkanSuccess(vulkanResult) ) {
+		throw new EngineException(true, true, "Couldn't create vulkan device!");
+	}
+	scope(exit) vkDestroyDevice(chainContext.vulkan.chosenDevice.logicalDevice, null);
+    
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+    // Acquire graphics and present queue handle from device
+    VkQueue graphicsQueue, presentQueue;
+    vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, presentQueueFamilyIndex, 0, &presentQueue);
+		
+		
+		
+		
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+		
+		
+		
+		
+		
+		//VkResult vulkanResult;
 		
 		vulkanResult = createSurface(platformHandle, platformWindow);
 		if( !vulkanSuccess(vulkanResult) ) {
@@ -93,21 +444,21 @@ class VulkanSwapChain2 {
 		assert(!device.isNull() && !surface.isNull());
 		
 		// Check the surface properties and formats
-	    VkSurfacePropertiesKHR surfaceProperties;
-	    /*fpGetSurfacePropertiesKHR*/fpGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &surfaceProperties);
+	    VkSurfaceCapabilitiesKHR surfaceProperties;
+	    /*fpGetSurfacePropertiesKHR*/fpGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceProperties);
 	
 	    uint32_t formatCount;
-	    fpGetSurfaceFormatsKHR(device, surface, &formatCount, null);
+	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, null);
 	
 	    VkSurfaceFormatKHR* pSurfFormats = cast(VkSurfaceFormatKHR*)malloc(formatCount * VkSurfaceFormatKHR.sizeof);
-	    fpGetSurfaceFormatsKHR(device, surface, &formatCount, pSurfFormats);
+	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, pSurfFormats);
 	
 	    uint32_t presentModeCount;
-	    fpGetSurfacePresentModesKHR(device, surface, &presentModeCount, null);
+	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, null);
 	
 	    VkPresentModeKHR* pPresentModes = cast(VkPresentModeKHR*)malloc(presentModeCount * VkPresentModeKHR.sizeof);
-	    fpGetSurfacePresentModesKHR(device, surface, &presentModeCount, pPresentModes);
-	
+	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, pPresentModes);
+		
 	    VkExtent2D swapchainExtent;
 	    // width and height are either both -1, or both not -1.
 	    if (surfaceProperties.currentExtent.width == -1)
@@ -221,8 +572,11 @@ class VulkanSwapChain2 {
 	    // simple rendering nd presenting
 
 	    // Construct command buffers rendering to the presentable images
-	    VkCmdBuffer cmdBuffers[swapchainImageCount];
-	    VkImageView views[swapchainImageCount];
+	    VkCommandBuffer[] cmdBuffers;
+	    VkImageView[] views;
+	    
+	    cmdBuffers.length = swapchainImageCount;
+	    views.length = swapchainImageCount;
 		
 	    for (size_t i = 0; i < swapchainImageCount; ++i)
 	    {
@@ -236,10 +590,12 @@ class VulkanSwapChain2 {
 	            swapchainFormat,                            // format
 	            ///...
 	        };
-	        vkCreateImageView(device, &viewInfo, &views[i]);
+	        vkCreateImageView(device, &viewInfo, null, &views[i]);
 	
 	        ///...
-	
+	        
+			VkCommandBufferBeginInfo beginInfo;
+			initCommandBufferBeginInfo(&beginInfo);
 	        vkBeginCommandBuffer(cmdBuffers[i], &beginInfo);
 	
 	        // Need to transition image from presentable state before being able to render
@@ -253,8 +609,8 @@ class VulkanSwapChain2 {
 	            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,   // newLayout
 	            presentQueueFamilyIndex,                    // srcQueueFamilyIndex
 	            graphicsQueueFamilyIndex,                   // dstQueueFamilyIndex
-	            pSwapchainImages[i].image,                  // image
-	            ///...
+	            pSwapchainImages[i],                        // image
+	            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }   // subresourceRange
 	        };
 	
 	        vkCmdPipelineBarrier(
@@ -262,6 +618,10 @@ class VulkanSwapChain2 {
 	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 	            VK_FALSE,
+	            0,
+	            null,
+	            0,
+	            null,
 	            1,
 	            &acquireImageBarrier);
 	
@@ -278,8 +638,8 @@ class VulkanSwapChain2 {
 	            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // newLayout
 	            graphicsQueueFamilyIndex,                   // srcQueueFamilyIndex
 	            presentQueueFamilyIndex,                    // dstQueueFamilyIndex
-	            pSwapchainImages[i].image,                  // image
-	            ///...
+	            pSwapchainImages[i],                        // image
+	            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }   // subresourceRange
 	        };
 	
 	        vkCmdPipelineBarrier(
@@ -287,6 +647,10 @@ class VulkanSwapChain2 {
 	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 	            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 	            VK_FALSE,
+	            0,
+	            null,
+	            0,
+	            null,
 	            1,
 	            &presentImageBarrier);
 	
@@ -304,12 +668,12 @@ class VulkanSwapChain2 {
 	
 	    VkSemaphore imageAcquiredSemaphore;
 	    vkCreateSemaphore(device,
-	                      &semaphoreCreateInfo,
+	                      &semaphoreCreateInfo, null,
 	                      &imageAcquiredSemaphore);
 	
 	    VkSemaphore renderingCompleteSemaphore;
 	    vkCreateSemaphore(device,
-	                      &semaphoreCreateInfo,
+	                      &semaphoreCreateInfo, null,
 	                      &renderingCompleteSemaphore);
 	
 	    VkResult result;
@@ -337,29 +701,29 @@ class VulkanSwapChain2 {
 	            VK_STRUCTURE_TYPE_SUBMIT_INFO,          // sType
 	            null,                                   // pNext
 	            1,                                      // waitSemaphoreCount
-	            cast(const(immutable(ulong)*))&imageAcquiredSemaphore,                // pWaitSemaphores
-	            cast(const(immutable(ulong)*))&waitDstStageMask,                      // pWaitDstStageMasks
+	            cast(const(immutable(VkSemaphore)*))&imageAcquiredSemaphore,                // pWaitSemaphores
+	            cast(const(immutable(VkPipelineStageFlags)*))&waitDstStageMask,                      // pWaitDstStageMasks
 	            1,                                      // commandBufferCount
-	            &cmdBuffers[imageIndex],                // pCommandBuffers
+	            cast(immutable(VkCommandBuffer)*)&cmdBuffers[imageIndex],                // pCommandBuffers
 	            1,                                      // signalSemaphoreCount
-	            &renderingCompleteSemaphore             // pSignalSemaphores
+	            cast(immutable(VkSemaphore)*)&renderingCompleteSemaphore             // pSignalSemaphores
 	        };
 	        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	
+	        
 	        // Submit present operation to present queue
 	        const VkPresentInfoKHR presentInfo =
 	        {
 	            VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,     // sType
 	            null,                                   // pNext
 	            1,                                      // waitSemaphoreCount
-	            &renderingCompleteSemaphore,            // pWaitSemaphores
+	            cast(immutable(VkSemaphore)*)&renderingCompleteSemaphore,            // pWaitSemaphores
 	            1,                                      // swapchainCount
-	            &swapchain,                             // pSwapchains
-	            &imageIndex,                            // pImageIndices
+	            cast(immutable(VkSwapchainKHR)*)&swapchain,                             // pSwapchains
+	            cast(immutable(uint32_t)*)&imageIndex,                            // pImageIndices
 	            null                                    // pResults
 	        };
-	
-	        result = pfnQueuePresentKHR(presentQueue, &presentInfo);
+	        
+	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
 	    } while (result >= 0);
 
 	    
@@ -379,10 +743,12 @@ class VulkanSwapChain2 {
 		// Create surface depending on OS
 		version(Win32) {
 		VkWin32SurfaceCreateInfoKHR surfaceCreateInfo;
+		VkSurfaceKHR surface;
 		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 		surfaceCreateInfo.hinstance = platformHandle;
 		surfaceCreateInfo.hwnd = platformWindow;
-		vulkanResult = vkCreateWin32SurfaceKHR(instance, &surfaceCreateInfo, null, &surface);
+		vulkanResult = vkCreateWin32SurfaceKHR(instance, cast(const(VkWin32SurfaceCreateInfoKHR*))&surfaceCreateInfo, null, &surface);
+		this.surface = surface;
 		}
 //#else
 //#ifdef __ANDROID__
