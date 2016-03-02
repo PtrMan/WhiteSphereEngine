@@ -699,6 +699,22 @@ class VulkanSwapChain2 {
 	            &acquireImageBarrier);
 	
 	        // ... Render to views[i] ...
+	        {
+	        	VkImageLayout imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	        	VkClearColorValue clearColor;
+	        	VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+	        	
+	        
+	        	vkCmdClearColorImage(
+					cmdBuffers[i],
+					pSwapchainImages[i],
+					imageLayout,
+					&clearColor,
+					1, // range count
+					&range);
+	        }
+	        
+	        
 	
 	        // Need to transition image into presentable state before being able to present
 	        const VkImageMemoryBarrier presentImageBarrier =
@@ -781,7 +797,10 @@ class VulkanSwapChain2 {
 	            1,                                      // signalSemaphoreCount
 	            cast(immutable(VkSemaphore)*)&renderingCompleteSemaphore             // pSignalSemaphores
 	        };
-	        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	        vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	        if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Queue submit failed!");
+			}
 	        
 	        // Submit present operation to present queue
 	        const VkPresentInfoKHR presentInfo =
@@ -797,8 +816,6 @@ class VulkanSwapChain2 {
 	        };
 	        
 	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
-	        
-	        assert(false);
 	        
 	    } while (result >= 0);
 
