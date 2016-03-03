@@ -836,26 +836,46 @@ class VulkanSwapChain2 {
 	        vkEndCommandBuffer(cmdBuffers[i]);
 	        // TODO< error checking >
 	    }
-	
+		
+		// we need a pair of semaphores for each image we display
+		struct SemaphorePair {
+			VkSemaphore imageAcquiredSemaphore;
+			VkSemaphore chainSemaphore;
+			VkSemaphore renderingCompleteSemaphore;
+		}
+		
+		SemaphorePair[] semaphorePairs;
+		semaphorePairs.length = desiredNumberOfSwapchainImages;
+		
 	    const VkSemaphoreCreateInfo semaphoreCreateInfo =
 	    {
 	        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
 	        null,                                       // pNext
 	        0                                           // flags
 	    };
-	
-	    VkSemaphore imageAcquiredSemaphore;
-	    vkCreateSemaphore(device.value,
-	                      &semaphoreCreateInfo, null,
-	                      &imageAcquiredSemaphore);
-	    // TODO< error checking >
-	
-	    VkSemaphore renderingCompleteSemaphore;
-	    vkCreateSemaphore(device.value,
-	                      &semaphoreCreateInfo, null,
-	                      &renderingCompleteSemaphore);
-	    // TODO< error checking >
 		
+		for( uint i = 0; i < semaphorePairs.length; i++ ) {
+			vkCreateSemaphore(device.value,
+	                      &semaphoreCreateInfo, null,
+	                      &semaphorePairs[i].imageAcquiredSemaphore);
+	    	// TODO< error checking >
+	    	
+	    	vkCreateSemaphore(device.value,
+	                      &semaphoreCreateInfo, null,
+	                      &semaphorePairs[i].chainSemaphore);
+	    	// TODO< error checking >
+	    	
+	    	
+	    	
+	
+		    vkCreateSemaphore(device.value,
+	                      &semaphoreCreateInfo, null,
+	                      &semaphorePairs[i].renderingCompleteSemaphore);
+		    // TODO< error checking >
+	
+		}
+		
+		uint semaphorePairIndex = 0;	
 		
 		// HACKINDEX
 		// hack #0000   the dear mister driver ignores the fence given by AquireNextImageKHR
@@ -866,6 +886,10 @@ class VulkanSwapChain2 {
 		
 	    VkResult result;
 	    do {
+	    		
+		
+	    	
+	    	
 	    	{
 	    		import std.stdio;
 	    		writeln("fence inited ", fencesInited[frameIdx]);
@@ -889,12 +913,17 @@ class VulkanSwapChain2 {
 	        
 	        uint32_t imageIndex = UINT32_MAX;
 	
+	
+	  
+	    	
+			
+	
 	        // Get the next available swapchain image
 	        result = fpAcquireNextImageKHR(
 	            device.value,
 	            swapchain,
 	            UINT64_MAX,
-	            imageAcquiredSemaphore,
+	            semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore,
 	            VK_NULL_HANDLE,// HACK #0000  old code:   fences[frameIdx],
 	            
 	            &imageIndex);
@@ -906,6 +935,58 @@ class VulkanSwapChain2 {
 	        // Swapchain cannot be used for presentation if failed to acquired new image.
 	        if (result < 0)
 	            break;
+	        
+	        /*
+	        vulkanResult = vkWaitForFences(device.value, 1, &semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, VK_TRUE, UINT64_MAX);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Wait for fences failed!");
+			}
+			vulkanResult = vkResetFences(device.value, 1, &semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore);
+	        if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Fence reset failed!");
+			}
+*/
+	/*        
+	    {
+	    	VkFenceCreateInfo fenceCreateInfo;
+    		initFenceCreateInfo(&fenceCreateInfo);
+    		fenceCreateInfo.flags = 0;
+    		
+    		vulkanResult = vkCreateFence(
+				device.value,
+				&fenceCreateInfo,
+				null,
+				&additionalFence);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't create fences!");
+			}
+		
+	    }
+	    */
+	        {
+	        	VkSubmitInfo submitInfo;
+	        	initSubmitInfo(&submitInfo);
+	        	submitInfo.waitSemaphoreCount = 1;
+	        	submitInfo.pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+	        	submitInfo.signalSemaphoreCount = 1;
+	        	submitInfo.pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
+	        	
+	        	vulkanResult = vkQueueSubmit(presentQueue, 1, &submitInfo, additionalFence);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Queue submit failed! (2)");
+				}
+	        }
+			vulkanResult = vkWaitForFences(device.value, 1, &additionalFence, VK_TRUE, UINT64_MAX);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Wait for fences failed!");
+			}
+			vulkanResult = vkResetFences(device.value, 1, &additionalFence);
+	        if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Fence reset failed!");
+			}
+
+	        
+	            
 	
 	        // Submit rendering work to the graphics queue
 	        const VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -914,35 +995,29 @@ class VulkanSwapChain2 {
 	            VK_STRUCTURE_TYPE_SUBMIT_INFO,          // sType
 	            null,                                   // pNext
 	            1,                                      // waitSemaphoreCount
-	            cast(const(immutable(VkSemaphore)*))&imageAcquiredSemaphore,                // pWaitSemaphores
+	            cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore,                // pWaitSemaphores
 	            cast(const(immutable(VkPipelineStageFlags)*))&waitDstStageMask,                      // pWaitDstStageMasks
 	            1,                                      // commandBufferCount
 	            cast(immutable(VkCommandBuffer)*)&cmdBuffers[imageIndex],                // pCommandBuffers
 	            1,                                      // signalSemaphoreCount
-	            cast(immutable(VkSemaphore)*)&renderingCompleteSemaphore             // pSignalSemaphores
+	            cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore             // pSignalSemaphores
 	        };
-	        vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	        vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, additionalFence);
 	        if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Queue submit failed! (3)");
 			}
+	    	
+	    	vulkanResult = vkWaitForFences(device.value, 1, &additionalFence, VK_TRUE, UINT64_MAX);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Wait for fences failed!");
+			}
+			vulkanResult = vkResetFences(device.value, 1, &additionalFence);
+	        if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Fence reset failed!");
+			}
+
 	        
-	        // Submit present operation to present queue
-	        const VkPresentInfoKHR presentInfo =
-	        {
-	            VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,     // sType
-	            null,                                   // pNext
-	            1,                                      // waitSemaphoreCount
-	            cast(immutable(VkSemaphore)*)&renderingCompleteSemaphore,            // pWaitSemaphores
-	            1,                                      // swapchainCount
-	            cast(immutable(VkSwapchainKHR)*)&swapchain,                             // pSwapchains
-	            cast(immutable(uint32_t)*)&imageIndex,                            // pImageIndices
-	            null                                    // pResults
-	        };
-	        
-	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
-	        
-	        /* hack #0000
-	         */
+	        /*    
 	        vulkanResult = vkQueueSubmit(graphicsQueue, 0, null, additionalFence);
 			if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Queue submit failed! (2)");
@@ -955,12 +1030,31 @@ class VulkanSwapChain2 {
 	        if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Fence reset failed!");
 			}
+			*/
 			
+	        
+	        // Submit present operation to present queue
+	        const VkPresentInfoKHR presentInfo =
+	        {
+	            VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,     // sType
+	            null,                                   // pNext
+	            1,                                      // waitSemaphoreCount
+	            cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,            // pWaitSemaphores
+	            1,                                      // swapchainCount
+	            cast(immutable(VkSwapchainKHR)*)&swapchain,                             // pSwapchains
+	            cast(immutable(uint32_t)*)&imageIndex,                            // pImageIndices
+	            null                                    // pResults
+	        };
+	        
+	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
+	        
 	        
 	        /* uncommented because hack #0000
 	        frameIdx += 1;
 	        frameIdx %= FRAME_LAG;
 	        */
+	        
+	        semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
 	        
 	    } while (result >= 0);
 
