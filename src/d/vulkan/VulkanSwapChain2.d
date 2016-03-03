@@ -491,25 +491,41 @@ class VulkanSwapChain2 {
 		
 		
 		
-		
+		const string ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS = "Couldn't get physical device surface formats!";
+		const string ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION = "Couldn't get physical device present modes!";
 		
 		assert(device.isValid && surface.isValid);
 		
 		// Check the surface properties and formats
 	    VkSurfaceCapabilitiesKHR surfaceProperties;
-	    /*fpGetSurfacePropertiesKHR*/fpGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, surface.value, &surfaceProperties);
-	
+	    vulkanResult = fpGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, surface.value, &surfaceProperties);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't get physical device surface capabilities!");
+    	}
+		
 	    uint32_t formatCount;
-	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, null);
+	    vulkanResult = fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, null);
+	    if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
+    	}
 	
 	    VkSurfaceFormatKHR* pSurfFormats = cast(VkSurfaceFormatKHR*)malloc(formatCount * VkSurfaceFormatKHR.sizeof);
-	    fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, pSurfFormats);
+	    vulkanResult = fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, pSurfFormats);
+	    if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
+    	}
 	
 	    uint32_t presentModeCount;
-	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, null);
+	    vulkanResult = fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, null);
+	    if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
+    	}
 	
 	    VkPresentModeKHR* pPresentModes = cast(VkPresentModeKHR*)malloc(presentModeCount * VkPresentModeKHR.sizeof);
-	    fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, pPresentModes);
+	    vulkanResult = fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, pPresentModes);
+	    if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
+    	}
 		
 	    VkExtent2D swapchainExtent;
 	    // width and height are either both -1, or both not -1.
@@ -546,6 +562,11 @@ class VulkanSwapChain2 {
 	        // Application must settle for fewer images than desired:
 	        desiredNumberOfSwapchainImages = surfaceProperties.maxImageCount;
 	    }
+	    
+	    {
+	    	import std.stdio;
+	    	writeln("desiredNumberOfSwapchainImages ", desiredNumberOfSwapchainImages);
+	    }
 	
 	    VkFormat swapchainFormat;
 	    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
@@ -573,7 +594,10 @@ class VulkanSwapChain2 {
 	        }
 		
 		// TODO< cut me here >
-		
+		bool forceFifo = true;
+		if( forceFifo ) {
+			swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+		}
 		
 		
 	    const VkSwapchainCreateInfoKHR createInfo =
@@ -599,8 +623,10 @@ class VulkanSwapChain2 {
 	    };
 	
 	    VkSwapchainKHR swapchain;
-	    fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
-	    
+	    vulkanResult = fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
+	    if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create swapchain!");
+    	}
 	    
 	    
 	    
@@ -609,11 +635,16 @@ class VulkanSwapChain2 {
 	    // Obtaining the persistent images of a swapchain
 	    /////////////////////////////////////////////////
 	    uint32_t swapchainImageCount;
-    	fpGetSwapchainImagesKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)swapchain, &swapchainImageCount, null);
+    	vulkanResult = fpGetSwapchainImagesKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)swapchain, &swapchainImageCount, null);
+    	if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't get swapchain images!");
+    	}
 
     	VkImage* pSwapchainImages = cast(VkImage*)malloc(swapchainImageCount * VkImage.sizeof);
-    	fpGetSwapchainImagesKHR(device.value, swapchain, &swapchainImageCount, pSwapchainImages);
-
+    	vulkanResult = fpGetSwapchainImagesKHR(device.value, swapchain, &swapchainImageCount, pSwapchainImages);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't get swapchain images!");
+		}
 	    
 	    
 	    
@@ -629,6 +660,44 @@ class VulkanSwapChain2 {
 	    
 	    cmdBuffers.length = swapchainImageCount;
 	    views.length = swapchainImageCount;
+	    
+	    
+	    {
+	    	import std.stdio;
+	    	writeln(VkFence.sizeof);
+	    }
+	    
+    	// Allow a maximum of two outstanding presentation operations.
+	    const int FRAME_LAG = 2;
+	    
+	    VkFence[FRAME_LAG] fences;
+    	bool[FRAME_LAG] fencesInited;
+    	int frameIdx = 0;
+    	int imageIdx = 0;
+    	int waitFrame;
+    	
+    	void createFences(VkDevice device, out VkFence[FRAME_LAG] fences) {
+    		VkFenceCreateInfo fenceCreateInfo;
+    		initFenceCreateInfo(&fenceCreateInfo);
+    		fenceCreateInfo.flags = 0;
+    		
+    		for( uint i = 0; i < fences.length; i++ ) {
+	    		vulkanResult = vkCreateFence(
+					device,
+					&fenceCreateInfo,
+					null,
+					&fences[i]);
+    			if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Couldn't create fences!");
+				}
+    		}
+    	}
+
+    	createFences(chainContext.vulkan.chosenDevice.logicalDevice, fences);
+		
+		// D does this automatically
+ 	    //for (int i = 0; i < FRAME_LAG; ++i)
+    	//    fencesInited[i] = false;
 	    
 	    // create command buffers
 	    for (size_t i = 0; i < swapchainImageCount; ++i) {
@@ -648,6 +717,24 @@ class VulkanSwapChain2 {
 			}
 	    }
 	    
+	    // see hack #0000
+	    VkFence additionalFence;
+	    {
+	    	VkFenceCreateInfo fenceCreateInfo;
+    		initFenceCreateInfo(&fenceCreateInfo);
+    		fenceCreateInfo.flags = 0;
+    		
+    		vulkanResult = vkCreateFence(
+				device.value,
+				&fenceCreateInfo,
+				null,
+				&additionalFence);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't create fences!");
+			}
+		
+	    }
+	    
 		
 	    for (size_t i = 0; i < swapchainImageCount; ++i)
 	    {
@@ -663,13 +750,14 @@ class VulkanSwapChain2 {
 	            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}// subresourceRange
 	        };
 	        vkCreateImageView(device.value, &viewInfo, null, &views[i]);
-			
+			// TODO< error checking >
 			
 	        ///...
 	        
 			VkCommandBufferBeginInfo beginInfo;
 			initCommandBufferBeginInfo(&beginInfo);
 	        vkBeginCommandBuffer(cmdBuffers[i], &beginInfo);
+	        // TODO< error checking >
 	
 	        // Need to transition image from presentable state before being able to render
 	        const VkImageMemoryBarrier acquireImageBarrier =
@@ -746,6 +834,7 @@ class VulkanSwapChain2 {
 	        ///...
 	
 	        vkEndCommandBuffer(cmdBuffers[i]);
+	        // TODO< error checking >
 	    }
 	
 	    const VkSemaphoreCreateInfo semaphoreCreateInfo =
@@ -759,15 +848,45 @@ class VulkanSwapChain2 {
 	    vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &imageAcquiredSemaphore);
+	    // TODO< error checking >
 	
 	    VkSemaphore renderingCompleteSemaphore;
 	    vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &renderingCompleteSemaphore);
-	
+	    // TODO< error checking >
+		
+		
+		// HACKINDEX
+		// hack #0000   the dear mister driver ignores the fence given by AquireNextImageKHR
+		//              we use a manual fence, [ we use the force :) ]
+		//              see
+		//              https://github.com/Z80Fan/VulkanDemos/blob/fcd9079460d0a2d20a9ab0a45d0ff48602863b7b/01_clearscreen/main.cpp#L1241
+		
+		
 	    VkResult result;
-	    do
-	    {
+	    do {
+	    	{
+	    		import std.stdio;
+	    		writeln("fence inited ", fencesInited[frameIdx]);
+	    	}
+	    	
+	    	/* uncommented because of hack #0000
+	        if (fencesInited[frameIdx]) {
+	            // Ensure no more than FRAME_LAG presentations are outstanding
+	            vulkanResult = vkWaitForFences(device.value, 1, &fences[frameIdx], VK_TRUE, UINT64_MAX);
+	            if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Couldn't wait for fence!");
+				}
+
+	            vulkanResult = vkResetFences(device.value, 1, &fences[frameIdx]);
+	            if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Couldn't reset fence!");
+				}
+
+	        }
+	        */
+	        
 	        uint32_t imageIndex = UINT32_MAX;
 	
 	        // Get the next available swapchain image
@@ -776,8 +895,13 @@ class VulkanSwapChain2 {
 	            swapchain,
 	            UINT64_MAX,
 	            imageAcquiredSemaphore,
-	            VK_NULL_HANDLE,
+	            VK_NULL_HANDLE,// HACK #0000  old code:   fences[frameIdx],
+	            
 	            &imageIndex);
+	        
+	        /* uncommented because hack #0000
+	        fencesInited[frameIdx] = true;
+	        */
 	
 	        // Swapchain cannot be used for presentation if failed to acquired new image.
 	        if (result < 0)
@@ -799,7 +923,7 @@ class VulkanSwapChain2 {
 	        };
 	        vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 	        if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Queue submit failed!");
+				throw new EngineException(true, true, "Queue submit failed! (3)");
 			}
 	        
 	        // Submit present operation to present queue
@@ -816,6 +940,27 @@ class VulkanSwapChain2 {
 	        };
 	        
 	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
+	        
+	        /* hack #0000
+	         */
+	        vulkanResult = vkQueueSubmit(graphicsQueue, 0, null, additionalFence);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Queue submit failed! (2)");
+			}
+			vulkanResult = vkWaitForFences(device.value, 1, &additionalFence, VK_TRUE, UINT64_MAX);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Wait for fences failed!");
+			}
+			vulkanResult = vkResetFences(device.value, 1, &additionalFence);
+	        if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Fence reset failed!");
+			}
+			
+	        
+	        /* uncommented because hack #0000
+	        frameIdx += 1;
+	        frameIdx %= FRAME_LAG;
+	        */
 	        
 	    } while (result >= 0);
 

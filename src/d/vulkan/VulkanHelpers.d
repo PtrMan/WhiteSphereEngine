@@ -99,6 +99,7 @@ mixin(GenVulkanInitFunction!("ImageViewCreateInfo"));
 mixin(GenVulkanInitFunction!("FramebufferCreateInfo"));
 mixin(GenVulkanInitFunction!("SemaphoreCreateInfo"));
 mixin(GenVulkanInitFunction!("SubmitInfo"));
+mixin(GenVulkanInitFunction!("FenceCreateInfo"));
 
 bool vulkanSuccess(VkResult result) {
 	return result == VK_SUCCESS;
