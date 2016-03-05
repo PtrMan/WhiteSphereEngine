@@ -266,3 +266,222 @@ IDisposable loadShader(string fileName, VkDevice device, VkShaderStageFlagBits s
 	return memoryReference;
 }
 
+
+
+
+
+
+
+//////////////////////////////////
+// helper for querying and deciding the used queue families
+//////////////////////////////////
+
+import core.stdc.stdlib : malloc, free;
+import helpers.VariableValidator;
+
+class ExtendedQueueFamilyProperty {
+	public final this(bool graphicsBit, bool computeBit, bool sparseBindingBit, bool supportPresent) {
+		this.graphicsBit = graphicsBit;
+		this.computeBit = computeBit;
+		this.sparseBindingBit = sparseBindingBit;
+		this.supportPresent = supportPresent;
+	}
+	
+	public final this() {
+	}
+	
+	public final bool isEqual(ExtendedQueueFamilyProperty other) {
+		return graphicsBit == other.graphicsBit && computeBit == other.computeBit && sparseBindingBit == other.sparseBindingBit && supportPresent == other.supportPresent;
+	}
+	
+	public bool graphicsBit;
+	public bool computeBit;
+	public bool sparseBindingBit;
+	public bool supportPresent; // special bit, its not directly a queue family bit
+}
+
+
+ExtendedQueueFamilyProperty[] getSupportPresentForAllQueueFamiliesAndQueueInfo(VariableValidator!VkPhysicalDevice physicalDevice, VariableValidator!VkSurfaceKHR surface, PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR) {
+	ExtendedQueueFamilyProperty[] result;
+	
+	uint32_t queueFamilyCount;
+	{
+		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice.value, &queueFamilyCount, null);
+		result.length = queueFamilyCount;
+	}
+	
+	for( uint i = 0; i < result.length; i++ ) {
+		result[i] = new ExtendedQueueFamilyProperty();
+	}
+	
+    VkQueueFamilyProperties* mainQueueInfo = cast(VkQueueFamilyProperties*)malloc(queueFamilyCount * VkQueueFamilyProperties.sizeof);
+    // TODO< catch zero pointer >
+    scope(exit) free(mainQueueInfo);
+    
+	
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice.value, &queueFamilyCount, mainQueueInfo);
+	
+	// transfer properties
+	for( uint i = 0; i < queueFamilyCount; i++ ) {
+		VkBool32 supportsPresent;
+		
+		result[i].graphicsBit = (mainQueueInfo[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
+		result[i].computeBit = (mainQueueInfo[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
+		result[i].sparseBindingBit = (mainQueueInfo[i].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) != 0;
+		
+		fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.value, i, surface.value, &supportsPresent);
+		result[i].supportPresent = supportsPresent == VK_TRUE;
+	}
+	
+	return result;
+}
+
+
+
+class QueryQueueResult {
+	public final this(ExtendedQueueFamilyProperty requiredProperties, uint queueFamilyIndex) {
+		this.requiredProperties = requiredProperties;
+		this.queueFamilyIndex = queueFamilyIndex;
+	}
+	
+	public uint queueFamilyIndex;
+	public ExtendedQueueFamilyProperty requiredProperties;
+}
+
+/**
+ * checks which queue family indices support the required families,
+ * if no match for one entry is found it doesn't appear in the result
+ *
+ * doesn't take the queue count into account!
+ */
+QueryQueueResult[] queryPossibleQueueFamilies(ExtendedQueueFamilyProperty[] availableQueueFamilyProperties, ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties) {
+	bool satisfiesQueue(ExtendedQueueFamilyProperty availableQueue, ExtendedQueueFamilyProperty requested) {
+		bool satisfies(bool available, bool requested) {
+			return available || (available && requested) || !requested;
+		}
+		
+		bool matchesGraphicsBit = satisfies(availableQueue.graphicsBit, requested.graphicsBit);
+		bool matchesComputeBit = satisfies(availableQueue.computeBit, requested.computeBit);
+		bool matchesSparseBindingBit = satisfies(availableQueue.sparseBindingBit, requested.sparseBindingBit);
+		bool matchesSupportPresent = satisfies(availableQueue.supportPresent, requested.supportPresent);
+		
+		return matchesGraphicsBit && matchesComputeBit && matchesSparseBindingBit && matchesSupportPresent;
+	}
+	
+	QueryQueueResult[] queryQueueResult;
+	foreach( ExtendedQueueFamilyProperty currentRequestedQueueFamilyProperty; requestedQueueFamilyProperties ) {
+		for( uint queueFamilyIndex = 0; queueFamilyIndex < availableQueueFamilyProperties.length; queueFamilyIndex++ ) {
+			ExtendedQueueFamilyProperty availablePropertyOfQueueFamily = availableQueueFamilyProperties[queueFamilyIndex];
+			
+			// check if it satisfies all required queue family properties
+			// if this is the case we add it to the result
+			if( satisfiesQueue(availablePropertyOfQueueFamily, currentRequestedQueueFamilyProperty) ) {
+				queryQueueResult ~= new QueryQueueResult(currentRequestedQueueFamilyProperty, queueFamilyIndex);
+				break;
+			} 
+		}
+	}
+	
+	return queryQueueResult;
+}
+
+// test that not satisfied requests get filtered out
+unittest {
+	ExtendedQueueFamilyProperty[] availableQueueFamilyProperties;
+	ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
+	QueryQueueResult[] result;
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	requestedQueueFamilyProperties[0].graphicsBit = true;
+
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 0);
+	
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	requestedQueueFamilyProperties[0].computeBit = true;
+
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 0);
+	
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	requestedQueueFamilyProperties[0].sparseBindingBit = true;
+
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 0);
+	
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	requestedQueueFamilyProperties[0].supportPresent = true;
+
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 0);		
+}
+
+// test that set features which don't care get included in the result
+unittest {
+	ExtendedQueueFamilyProperty[] availableQueueFamilyProperties;
+	ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
+	QueryQueueResult[] result;
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	availableQueueFamilyProperties[0].graphicsBit = true;
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 1);
+	
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	availableQueueFamilyProperties[0].computeBit = true;
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 1);
+	
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	availableQueueFamilyProperties[0].sparseBindingBit = true;
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 1);
+	
+	
+	availableQueueFamilyProperties.length = 0;
+	availableQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	availableQueueFamilyProperties[0].supportPresent = true;
+	
+	requestedQueueFamilyProperties.length = 0;
+	requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty();
+	
+	result = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+	assert(result.length == 1);
+}
+

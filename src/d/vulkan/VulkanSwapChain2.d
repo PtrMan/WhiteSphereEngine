@@ -112,7 +112,9 @@ class VulkanSwapChain2 {
 			
 
 		import core.memory : GC;
-
+		
+		
+		import vulkan.VulkanTools;
 
 
 
@@ -285,103 +287,101 @@ class VulkanSwapChain2 {
 
 
 
-		
-		
-		
-		
+
 		
 		import std.stdio;
 		/////////////
 		// big hack, we do initialize the whole crap device here, just for getting to a black screen, need to work out the correct queue initializing code
 		///////////////
-		writeln("HERE");
 		
-		uint32_t queueFamilyCount;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice.value, &queueFamilyCount, null);
-
-		writeln("HERE 2");
-
-    VkQueueFamilyProperties* pMainQueueInfo = cast(VkQueueFamilyProperties*)malloc(queueFamilyCount * VkQueueFamilyProperties.sizeof);
-    
-    writeln("HERE 3");
-    
-    VkBool32* pSupportsPresent = cast(VkBool32 *)malloc(queueFamilyCount * VkBool32.sizeof);
-
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice.value, &queueFamilyCount, pMainQueueInfo);
-
-    for (uint32_t i = 0; i < queueFamilyCount; ++i)
-        fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.value, i, surface.value, &pSupportsPresent[i]);
-
-    // Search for a graphics and a present queue in the array of queue
-    // families, try to find one that supports both
-    uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
-    uint32_t presentQueueFamilyIndex  = UINT32_MAX;
-    for (uint32_t i = 0; i < queueFamilyCount; ++i)
-    {
-        if ((pMainQueueInfo[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-        {
-            if (graphicsQueueFamilyIndex == UINT32_MAX)
-                graphicsQueueFamilyIndex = i;
-
-            if (pSupportsPresent[i] == VK_TRUE)
-            {
-                graphicsQueueFamilyIndex = i;
-                presentQueueFamilyIndex = i;
-                break;
-            }
-        }
-    }
-
-    if (presentQueueFamilyIndex == UINT32_MAX)
-    {
-        // If didn't find a queue that supports both graphics and present, then
-        // find a separate present queue.
-        for (size_t i = 0; i < queueFamilyCount; ++i)
-            if (pSupportsPresent[i] == VK_TRUE)
-            {
-                presentQueueFamilyIndex = i;
-                break;
-            }
-    }
-
-    // Free the temporary queue info allocations
-    free(pMainQueueInfo);
-    free(pSupportsPresent);
-
-    // Generate error if could not find both a graphics and a present queue
-    if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX)
-    {
-        throw new EngineException(true, true, "Could not find a graphics and a present queue");
-    }
-
-    // Put together the list of requested queues
-    const float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo[] requestedQueues =
-    [
-        {
-            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
-            NULL,                                       // pNext
-            0,                                          // flags
-            graphicsQueueFamilyIndex,                   // queueFamilyIndex
-            1,                                          // queueCount
-            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
-        },
-        {
-            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
-            NULL,                                       // pNext
-            0,                                          // flags
-            presentQueueFamilyIndex,                    // queueFamilyIndex
-            1,                                          // queueCount
-            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
-        }
-    ];
-    uint32_t requestedQueueCount = 2;
-
-    if (graphicsQueueFamilyIndex == presentQueueFamilyIndex)
-    {
-        // We need only a single queue if the graphics queue is also the present queue
-        requestedQueueCount = 1;
-    }
+		
+		// TODO< do logging of chosen queues >
+		
+		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface, fpGetPhysicalDeviceSurfaceSupportKHR);
+		
+		
+		// the best queue would be one with both graphics and present capabilities
+		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
+		
+		ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
+		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicsAndPresentation;
+		
+		// if the is not available, we choose seperate queues
+		requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(false, false, false, true);
+		requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(true, false, false, false);
+		
+		QueryQueueResult[] queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+		
+		uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+	    uint32_t presentQueueFamilyIndex  = UINT32_MAX;
+	    
+	    if( queryQueueResult.length == 0 ) {
+	    	throw new EngineException(true, true, "Couldn't find a suitable queue for graphics and presentation");
+	    }
+	    
+	    if( queryQueueResult[0].requiredProperties.isEqual(queueFamilyPropertyForGraphicsAndPresentation) ) {
+	    	graphicsQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+	    	presentQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+	    }
+	    else {
+	    	foreach( QueryQueueResult iterationQueryQueueResult; queryQueueResult ) {
+	    		if( iterationQueryQueueResult.requiredProperties.isEqual(new ExtendedQueueFamilyProperty(false, false, false, true)) ) {
+	    			presentQueueFamilyIndex = iterationQueryQueueResult.queueFamilyIndex;
+	    		}
+	    		else if( iterationQueryQueueResult.requiredProperties.isEqual(new ExtendedQueueFamilyProperty(true, false, false, false)) ) {
+	    			graphicsQueueFamilyIndex = iterationQueryQueueResult.queueFamilyIndex;
+	    		}
+	    	}
+	    }
+		
+		
+		
+		
+	
+	    // Generate error if could not find both a graphics and a present queue
+	    if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
+	        throw new EngineException(true, true, "Could not find a graphics and a present queue");
+	    }
+	    
+	    
+	    // TODO< log this >
+	    {
+	    	import std.stdio;
+	    	writeln("graphics queue family index is ", graphicsQueueFamilyIndex);
+	    	writeln("present queue family index is ", presentQueueFamilyIndex);
+	    }
+	    
+	    
+	    
+	
+	    // Put together the list of requested queues
+	    const float queuePriority = 1.0f;
+	    VkDeviceQueueCreateInfo[] requestedQueues =
+	    [
+	        {
+	            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
+	            NULL,                                       // pNext
+	            0,                                          // flags
+	            graphicsQueueFamilyIndex,                   // queueFamilyIndex
+	            1,                                          // queueCount
+	            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
+	        },
+	        {
+	            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
+	            NULL,                                       // pNext
+	            0,                                          // flags
+	            presentQueueFamilyIndex,                    // queueFamilyIndex
+	            1,                                          // queueCount
+	            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
+	        }
+	    ];
+	    uint32_t requestedQueueCount = 2;
+	
+	    if (graphicsQueueFamilyIndex == presentQueueFamilyIndex)
+	    {
+	        // We need only a single queue if the graphics queue is also the present queue
+	        requestedQueueCount = 1;
+	    }
 
     // Create a device and request access to the specified queues
     /*
@@ -409,7 +409,6 @@ class VulkanSwapChain2 {
 	deviceCreateInfo.queueCreateInfoCount = requestedQueueCount;
 	deviceCreateInfo.pQueueCreateInfos = cast(immutable(VkDeviceQueueCreateInfo)*)requestedQueues.ptr;
 
-	// we enable the standard debug and validation layers
 	deviceCreateInfo.enabledLayerCount = cast(uint32_t)layersNonGced.length;
 	deviceCreateInfo.ppEnabledLayerNames = layersNonGced.ptr;
 	
@@ -529,8 +528,7 @@ class VulkanSwapChain2 {
 		
 	    VkExtent2D swapchainExtent;
 	    // width and height are either both -1, or both not -1.
-	    if (surfaceProperties.currentExtent.width == -1)
-	    {
+	    if (surfaceProperties.currentExtent.width == -1) {
 	        // If the surface size is undefined, the size is set to
 	        // the size of the images requested, which must fit within the minimum
 	        // and maximum values.
@@ -547,8 +545,7 @@ class VulkanSwapChain2 {
 	        else if (swapchainExtent.height > surfaceProperties.maxImageExtent.height)
 	            swapchainExtent.height = surfaceProperties.maxImageExtent.height;
 	    }
-	    else
-	    {
+	    else {
 	        // If the surface size is defined, the swapchain size must match
 	        swapchainExtent = surfaceProperties.currentExtent;
 	    }
@@ -652,7 +649,6 @@ class VulkanSwapChain2 {
 	    //////////////////////////////////
 	    // simple rendering and presenting
 	    //////////////////////////////////
-	    // simple rendering nd presenting
 
 	    // Construct command buffers rendering to the presentable images
 	    VkCommandBuffer[] cmdBuffers;
@@ -824,10 +820,8 @@ class VulkanSwapChain2 {
 	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 	            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 	            VK_FALSE,
-	            0,
-	            null,
-	            0,
-	            null,
+	            0, null,
+	            0, null,
 	            1,
 	            &presentImageBarrier);
 	
