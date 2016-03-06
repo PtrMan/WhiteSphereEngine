@@ -384,22 +384,6 @@ class VulkanSwapChain2 {
 	    }
 
     // Create a device and request access to the specified queues
-    /*
-    const VkDeviceCreateInfo deviceCreateInfo =
-    {
-        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,           // sType
-        NULL,                                           // pNext
-        0,                                              // flags
-        requestedQueueCount,                            // queueCreateInfoCount
-        &requestedQueues,                               // pQueueCreateInfos
-        ...
-    };
-
-    VkDevice device;
-    vkCreateDevice(physicalDevice, &deviceCreateInfo, &device);
-    */
-    
-    
     
     VkPhysicalDeviceFeatures physicalDeviceFeatures;
 	initPhysicalDeviceFeatures(&physicalDeviceFeatures);
@@ -658,11 +642,6 @@ class VulkanSwapChain2 {
 	    views.length = swapchainImageCount;
 	    
 	    
-	    {
-	    	import std.stdio;
-	    	writeln(VkFence.sizeof);
-	    }
-	    
     	// Allow a maximum of two outstanding presentation operations.
 	    const int FRAME_LAG = 2;
 	    
@@ -691,10 +670,6 @@ class VulkanSwapChain2 {
 
     	createFences(chainContext.vulkan.chosenDevice.logicalDevice, fences);
 		
-		// D does this automatically
- 	    //for (int i = 0; i < FRAME_LAG; ++i)
-    	//    fencesInited[i] = false;
-	    
 	    // create command buffers
 	    for (size_t i = 0; i < swapchainImageCount; ++i) {
 			VkCommandBufferAllocateInfo commandBufferAllocationInfo;
@@ -871,12 +846,6 @@ class VulkanSwapChain2 {
 		
 		uint semaphorePairIndex = 0;	
 		
-		// HACKINDEX
-		// hack #0000   the dear mister driver ignores the fence given by AquireNextImageKHR
-		//              we use a manual fence, [ we use the force :) ]
-		//              see
-		//              https://github.com/Z80Fan/VulkanDemos/blob/fcd9079460d0a2d20a9ab0a45d0ff48602863b7b/01_clearscreen/main.cpp#L1241
-		
 		
 	    VkResult result;
 	    do {
@@ -889,21 +858,6 @@ class VulkanSwapChain2 {
 	    		writeln("fence inited ", fencesInited[frameIdx]);
 	    	}
 	    	
-	    	/* uncommented because of hack #0000
-	        if (fencesInited[frameIdx]) {
-	            // Ensure no more than FRAME_LAG presentations are outstanding
-	            vulkanResult = vkWaitForFences(device.value, 1, &fences[frameIdx], VK_TRUE, UINT64_MAX);
-	            if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Couldn't wait for fence!");
-				}
-
-	            vulkanResult = vkResetFences(device.value, 1, &fences[frameIdx]);
-	            if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Couldn't reset fence!");
-				}
-
-	        }
-	        */
 	        
 	        uint32_t imageIndex = UINT32_MAX;
 	
@@ -918,45 +872,15 @@ class VulkanSwapChain2 {
 	            swapchain,
 	            UINT64_MAX,
 	            semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore,
-	            VK_NULL_HANDLE,// HACK #0000  old code:   fences[frameIdx],
+	            VK_NULL_HANDLE,
 	            
 	            &imageIndex);
 	        
-	        /* uncommented because hack #0000
-	        fencesInited[frameIdx] = true;
-	        */
 	
 	        // Swapchain cannot be used for presentation if failed to acquired new image.
 	        if (result < 0)
 	            break;
 	        
-	        /*
-	        vulkanResult = vkWaitForFences(device.value, 1, &semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, VK_TRUE, UINT64_MAX);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Wait for fences failed!");
-			}
-			vulkanResult = vkResetFences(device.value, 1, &semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore);
-	        if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Fence reset failed!");
-			}
-*/
-	/*        
-	    {
-	    	VkFenceCreateInfo fenceCreateInfo;
-    		initFenceCreateInfo(&fenceCreateInfo);
-    		fenceCreateInfo.flags = 0;
-    		
-    		vulkanResult = vkCreateFence(
-				device.value,
-				&fenceCreateInfo,
-				null,
-				&additionalFence);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't create fences!");
-			}
-		
-	    }
-	    */
 	        {
 	        	VkSubmitInfo submitInfo;
 	        	initSubmitInfo(&submitInfo);
@@ -1011,21 +935,6 @@ class VulkanSwapChain2 {
 			}
 
 	        
-	        /*    
-	        vulkanResult = vkQueueSubmit(graphicsQueue, 0, null, additionalFence);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Queue submit failed! (2)");
-			}
-			vulkanResult = vkWaitForFences(device.value, 1, &additionalFence, VK_TRUE, UINT64_MAX);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Wait for fences failed!");
-			}
-			vulkanResult = vkResetFences(device.value, 1, &additionalFence);
-	        if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Fence reset failed!");
-			}
-			*/
-			
 	        
 	        // Submit present operation to present queue
 	        const VkPresentInfoKHR presentInfo =
@@ -1042,11 +951,6 @@ class VulkanSwapChain2 {
 	        
 	        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
 	        
-	        
-	        /* uncommented because hack #0000
-	        frameIdx += 1;
-	        frameIdx %= FRAME_LAG;
-	        */
 	        
 	        semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
 	        
@@ -1065,13 +969,6 @@ class VulkanSwapChain2 {
 		VkResult vulkanResult;
 		
 		assert(!surface.isValid);
-		
-		{
-			import std.stdio;
-			writeln(vkCreateWin32SurfaceKHR);
-			writeln("instance value is ",instance.value);
-		}
-		
 		
 		// Create surface depending on OS
 		version(Win32) {
