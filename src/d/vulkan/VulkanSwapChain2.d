@@ -16,12 +16,14 @@ import vulkan.VulkanHelpers;
 //static import vulkan.VulkanTools;
 import Exceptions;
 
+/*
 private template GET_INSTANCE_PROC_ADDR(string inst, string entrypoint) {
 	enum GET_INSTANCE_PROC_ADDR = "fp" ~ entrypoint ~ " = cast(PFN_vk" ~ entrypoint ~ ")helperGetVulkanFunctionAdressByInstance(" ~ inst ~ ", \"vk" ~ entrypoint ~ "\");\n" ~
     "if (fp" ~ entrypoint ~ " is null) {\n" ~
     "throw new EngineException(true, true, \"Init of entrypoint for " ~ entrypoint ~ " failed!\");\n" ~
     "}\n";
 }
+*/
 
 // Macro to get a procedure address based on a vulkan device
 private template GET_DEVICE_PROC_ADDR(string dev, string entrypoint) {
@@ -62,10 +64,6 @@ class VulkanSwapChain2 {
 	private VariableValidator!VkSurfaceKHR surface;
 	
 	// Function pointers
-	private PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-	private PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR; 
-	private PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
-	private PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
 	private PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
 	private PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
 	private PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
@@ -80,10 +78,6 @@ class VulkanSwapChain2 {
 		this.instance = instance;
 		this.physicalDevice = physicalDevice;
 		this.device = device;
-		mixin(GET_INSTANCE_PROC_ADDR!("instance", "GetPhysicalDeviceSurfaceSupportKHR"));
-		mixin(GET_INSTANCE_PROC_ADDR!("instance", "GetPhysicalDeviceSurfaceCapabilitiesKHR"));
-		mixin(GET_INSTANCE_PROC_ADDR!("instance", "GetPhysicalDeviceSurfaceFormatsKHR"));
-		mixin(GET_INSTANCE_PROC_ADDR!("instance", "GetPhysicalDeviceSurfacePresentModesKHR"));
 		mixin(GET_DEVICE_PROC_ADDR!("device", "CreateSwapchainKHR"));
 		mixin(GET_DEVICE_PROC_ADDR!("device", "DestroySwapchainKHR"));
 		mixin(GET_DEVICE_PROC_ADDR!("device", "GetSwapchainImagesKHR"));
@@ -297,7 +291,7 @@ class VulkanSwapChain2 {
 		
 		// TODO< do logging of chosen queues >
 		
-		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface, fpGetPhysicalDeviceSurfaceSupportKHR);
+		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface);
 		
 		
 		// the best queue would be one with both graphics and present capabilities
@@ -481,31 +475,31 @@ class VulkanSwapChain2 {
 		
 		// Check the surface properties and formats
 	    VkSurfaceCapabilitiesKHR surfaceProperties;
-	    vulkanResult = fpGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, surface.value, &surfaceProperties);
+	    vulkanResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, surface.value, &surfaceProperties);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't get physical device surface capabilities!");
     	}
 		
 	    uint32_t formatCount;
-	    vulkanResult = fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, null);
+	    vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, null);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
     	}
 	
 	    VkSurfaceFormatKHR* pSurfFormats = cast(VkSurfaceFormatKHR*)malloc(formatCount * VkSurfaceFormatKHR.sizeof);
-	    vulkanResult = fpGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, pSurfFormats);
+	    vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, pSurfFormats);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
     	}
 	
 	    uint32_t presentModeCount;
-	    vulkanResult = fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, null);
+	    vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, null);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
     	}
 	
 	    VkPresentModeKHR* pPresentModes = cast(VkPresentModeKHR*)malloc(presentModeCount * VkPresentModeKHR.sizeof);
-	    vulkanResult = fpGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, pPresentModes);
+	    vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, pPresentModes);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
     	}

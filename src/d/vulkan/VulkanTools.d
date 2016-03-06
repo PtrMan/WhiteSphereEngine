@@ -301,7 +301,7 @@ class ExtendedQueueFamilyProperty {
 }
 
 
-ExtendedQueueFamilyProperty[] getSupportPresentForAllQueueFamiliesAndQueueInfo(VariableValidator!VkPhysicalDevice physicalDevice, VariableValidator!VkSurfaceKHR surface, PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR) {
+ExtendedQueueFamilyProperty[] getSupportPresentForAllQueueFamiliesAndQueueInfo(VariableValidator!VkPhysicalDevice physicalDevice, VariableValidator!VkSurfaceKHR surface) {
 	ExtendedQueueFamilyProperty[] result;
 	
 	uint32_t queueFamilyCount;
@@ -329,7 +329,7 @@ ExtendedQueueFamilyProperty[] getSupportPresentForAllQueueFamiliesAndQueueInfo(V
 		result[i].computeBit = (mainQueueInfo[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0;
 		result[i].sparseBindingBit = (mainQueueInfo[i].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) != 0;
 		
-		fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.value, i, surface.value, &supportsPresent);
+		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice.value, i, surface.value, &supportsPresent);
 		result[i].supportPresent = supportsPresent == VK_TRUE;
 	}
 	
