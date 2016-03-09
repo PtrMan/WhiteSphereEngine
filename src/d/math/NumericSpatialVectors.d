@@ -1,4 +1,4 @@
-module NumericSpatialVectors;
+module math.NumericSpatialVectors;
 
 import std.stdio;
 
