@@ -5,7 +5,7 @@ import std.algorithm : sort;
  
 // query inspired by articles of the AI of AI WAR
 
-struct Y(E...) {
+struct Row(E...) {
    this(E Content) {
       this.Content = Content;
    }
@@ -14,19 +14,19 @@ struct Y(E...) {
 }
  
 class Query(E...) {
-   public Y!(E) []Result;
+   public Row!(E) []Result;
  
-   final public void addElement(E[0] NewElement0, E[1] NewElement1) {
-      Result ~= Y!(E)(NewElement0, NewElement1);
+   final public void addElement(E args) {
+      Result ~= Row!(E)(args);
    }
  
  
-   final public Query!(E) where(bool delegate(ref Y!(E)) FilterFunction) {
+   final public Query!(E) where(bool delegate(ref Row!(E)) FilterFunction) {
       Query!(E) ResultQuery;
  
       ResultQuery = new Query!(E)();
  
-      Y!(E) []OutputResult;
+      Row!(E) []OutputResult;
  
       foreach (Element; this.Result) {
          if( FilterFunction(Element) ) {
@@ -39,12 +39,12 @@ class Query(E...) {
       return ResultQuery;
    }
  
-   final public Query!(E) whereMany(bool delegate(ref Y!(E)) []FilterFunctions) {
+   final public Query!(E) whereMany(bool delegate(ref Row!(E)) []FilterFunctions) {
       Query!(E) ResultQuery;
  
       ResultQuery = new Query!(E)();
  
-      Y!(E) []OutputResult;
+      Row!(E) []OutputResult;
  
       foreach( Element; this.Result ) {
          bool Accept;
@@ -72,7 +72,7 @@ class Query(E...) {
       return this.Result.length;
    }
  
-   final public void foreach_(void delegate(ref Y!(E)) IterationDelegate) {
+   final public void foreach_(void delegate(ref Row!(E)) IterationDelegate) {
       foreach( IterationI; 0..this.Result.length ) {
          IterationDelegate(this.Result[IterationI]);
       }
@@ -97,13 +97,13 @@ void main()
  
    float Z = 6.0f;
  
-   void foreachFunction(ref Y!(bool, float) Z) {
+   void foreachFunction(ref Row!(bool, float) Z) {
       Z.Content[0] = Z.Content[1] < 6.0f;
    }
  
    ax.foreach_(&foreachFunction);
  
-   bool filterFunction0(ref Y!(bool, float) Input) {
+   bool filterFunction0(ref Row!(bool, float) Input) {
       return Input.Content[0];
    }
  
