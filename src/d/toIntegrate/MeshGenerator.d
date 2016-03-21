@@ -1,10 +1,76 @@
 module MeshGenerator;
 
+import std.math : sin, cos;
+
 import Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
 import NumericSpatialVectors;
 
 class MeshGenerator(NumericType) {
-
+	public static Mesh!NumericType generateYCylinder(NumericType heightY, NumericType SizeX, NumericType SizeZ, uint segments, bool caps = true) {
+		Mesh!NumericType resultMesh = new Mesh!NumericType();
+		
+		MeshVertex!NumericType[] vertices;
+		
+		for( uint segmentI = 0; segmentI < segments; segmentI++ ) {
+			NumericType angleInRad = (cast(NumericType)segmentI/cast(NumericType)segments) * cast(NumericType)(2.0*PI);
+			NumericType circleX = cos(angleInRad);
+			NumericType circleZ = sin(angleInRad);
+			
+			vertices ~= new MeshVertex!NumericType(circleX, heightY, circleZ);
+		}
+		
+		for( uint segmentI = 0; segmentI < segments; segmentI++ ) {
+			NumericType angleInRad = (cast(NumericType)segmentI/cast(NumericType)segments) * cast(NumericType)(2.0*PI);
+			NumericType circleX = cos(angleInRad);
+			NumericType circleZ = sin(angleInRad);
+			
+			vertices ~= new MeshVertex!NumericType(circleX, -heightY, circleZ);
+		}
+		
+		foreach( MeshVertex!NumericType iterationVertex; vertices ) {
+			resultMesh.addVertex(vertices);
+		}
+		
+		
+		// add side face
+		for( uint faceI = 0; faceI < segments; faceI++ ) {
+			uint startIndex = faceI;
+			uint endIndex = (faceI+1) % segments;
+			
+			uint vertex0 = endIndex;
+			uint vertex1 = startIndex;
+			uint vertex2 = startIndex + segments;
+			uint vertex3 = endIndex + segments;
+			
+			resultMesh.addFace(new MeshFace!NumericType([vertex0, vertex1, vertex2, vertex3]));
+		}
+		
+		if( caps ) {
+			{
+				uint[] vertexIndices;
+			
+				for( uint faceI = segments - 1; faceI >= 0; faceI-- ) {
+					vertexIndices ~= faceI;
+				}
+				
+				resultMesh.addFace(new MeshFace!NumericType(vertexIndices));
+			}
+			
+			{
+				uint[] vertexIndices;
+			
+				for( uint faceI = 0; faceI < segments; faceI ) {
+					vertexIndices ~= (faceI + segments);
+				}
+				
+				resultMesh.addFace(new MeshFace!NumericType(vertexIndices));
+			}
+		}
+		
+		return resultMesh;
+	}
+	
+	
 	public static Mesh!NumericType generateYPlane(NumericType sizeX, NumericType sizeY, uint segmentsX, uint segmentsY) {
 		// can also be used to add a plane to a mesh
 
