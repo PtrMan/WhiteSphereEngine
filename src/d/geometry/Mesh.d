@@ -1,4 +1,4 @@
-module Mesh;
+module geometry.Mesh;
 
 import NumericSpatialVectors;
 

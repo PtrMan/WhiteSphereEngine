@@ -1,8 +1,8 @@
-module MeshGenerator;
+module geometry.MeshGenerator;
 
 import std.math : sin, cos;
 
-import Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
+import geometry.Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
 import NumericSpatialVectors;
 
 class MeshGenerator(NumericType) {
