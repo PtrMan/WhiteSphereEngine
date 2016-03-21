@@ -3,7 +3,7 @@ module geometry.MeshGenerator;
 import std.math : sin, cos;
 
 import geometry.Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
-import NumericSpatialVectors;
+import math.NumericSpatialVectors;
 
 class MeshGenerator(NumericType) {
 	public static Mesh!NumericType generateYCylinder(NumericType heightY, NumericType SizeX, NumericType SizeZ, uint segments, bool caps = true) {
