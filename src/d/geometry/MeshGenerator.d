@@ -6,23 +6,23 @@ import geometry.Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
 import math.NumericSpatialVectors;
 
 class MeshGenerator(NumericType) {
-	public static Mesh!NumericType generateYCylinder(NumericType heightY, NumericType SizeX, NumericType SizeZ, uint segments, bool caps = true) {
+	public static Mesh!NumericType generateYCylinder(NumericType heightY, NumericType sizeX, NumericType sizeZ, uint segments, bool caps = true) {
 		Mesh!NumericType resultMesh = new Mesh!NumericType();
 		
 		MeshVertex!NumericType[] vertices;
 		
 		for( uint segmentI = 0; segmentI < segments; segmentI++ ) {
 			NumericType angleInRad = (cast(NumericType)segmentI/cast(NumericType)segments) * cast(NumericType)(2.0*PI);
-			NumericType circleX = cos(angleInRad);
-			NumericType circleZ = sin(angleInRad);
+			NumericType circleX = cos(angleInRad) * sizeX;
+			NumericType circleZ = sin(angleInRad) * sizeZ;
 			
 			vertices ~= new MeshVertex!NumericType(circleX, heightY, circleZ);
 		}
 		
 		for( uint segmentI = 0; segmentI < segments; segmentI++ ) {
 			NumericType angleInRad = (cast(NumericType)segmentI/cast(NumericType)segments) * cast(NumericType)(2.0*PI);
-			NumericType circleX = cos(angleInRad);
-			NumericType circleZ = sin(angleInRad);
+			NumericType circleX = cos(angleInRad) * sizeX;
+			NumericType circleZ = sin(angleInRad) * sizeZ;
 			
 			vertices ~= new MeshVertex!NumericType(circleX, -heightY, circleZ);
 		}
