@@ -1,6 +1,6 @@
 module geometry.MeshGenerator;
 
-import std.math : sin, cos;
+import std.math : sin, cos, PI;
 
 import geometry.Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
 import math.NumericSpatialVectors;
@@ -16,7 +16,7 @@ class MeshGenerator(NumericType) {
 			NumericType circleX = cos(angleInRad) * sizeX;
 			NumericType circleZ = sin(angleInRad) * sizeZ;
 			
-			vertices ~= new MeshVertex!NumericType(circleX, heightY, circleZ);
+			vertices ~= new MeshVertex!NumericType(new SpatialVector!(3, NumericType)(circleX, heightY * cast(NumericType)0.5, circleZ));
 		}
 		
 		for( uint segmentI = 0; segmentI < segments; segmentI++ ) {
@@ -24,32 +24,33 @@ class MeshGenerator(NumericType) {
 			NumericType circleX = cos(angleInRad) * sizeX;
 			NumericType circleZ = sin(angleInRad) * sizeZ;
 			
-			vertices ~= new MeshVertex!NumericType(circleX, -heightY, circleZ);
+			vertices ~= new MeshVertex!NumericType(new SpatialVector!(3, NumericType)(circleX, heightY  * cast(NumericType)-0.5, circleZ));
 		}
 		
 		foreach( MeshVertex!NumericType iterationVertex; vertices ) {
-			resultMesh.addVertex(vertices);
+			resultMesh.addVertex(iterationVertex);
 		}
+		
 		
 		
 		// add side face
 		for( uint faceI = 0; faceI < segments; faceI++ ) {
-			uint startIndex = faceI;
-			uint endIndex = (faceI+1) % segments;
+			int startIndex = faceI;
+			int endIndex = (faceI+1) % segments;
 			
-			uint vertex0 = endIndex;
-			uint vertex1 = startIndex;
-			uint vertex2 = startIndex + segments;
-			uint vertex3 = endIndex + segments;
+			int vertex0 = endIndex;
+			int vertex1 = startIndex;
+			int vertex2 = startIndex + segments;
+			int vertex3 = endIndex + segments;
 			
 			resultMesh.addFace(new MeshFace!NumericType([vertex0, vertex1, vertex2, vertex3]));
 		}
 		
 		if( caps ) {
 			{
-				uint[] vertexIndices;
+				int[] vertexIndices;
 			
-				for( uint faceI = segments - 1; faceI >= 0; faceI-- ) {
+				for( int faceI = segments - 1; faceI >= 0; faceI-- ) {
 					vertexIndices ~= faceI;
 				}
 				
@@ -57,9 +58,9 @@ class MeshGenerator(NumericType) {
 			}
 			
 			{
-				uint[] vertexIndices;
+				int[] vertexIndices;
 			
-				for( uint faceI = 0; faceI < segments; faceI ) {
+				for( int faceI = 0; faceI < segments; faceI++ ) {
 					vertexIndices ~= (faceI + segments);
 				}
 				
@@ -96,8 +97,7 @@ class MeshGenerator(NumericType) {
 				NumericType absoluteX = relativeX * sizeX;
 				NumericType absoluteY = relativeY * sizeY;
 
-				MeshVertex!NumericType createdVertex = new MeshVertex!NumericType();
-				createdVertex.position = new SpatialVector!(3, NumericType)(absoluteX, absoluteY, cast(NumericType)0.0);
+				MeshVertex!NumericType createdVertex = new MeshVertex!NumericType(new SpatialVector!(3, NumericType)(absoluteX, absoluteY, cast(NumericType)0.0));
 				vertices ~= createdVertex;
 			}
 		}

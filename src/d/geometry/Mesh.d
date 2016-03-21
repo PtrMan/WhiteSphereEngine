@@ -35,6 +35,10 @@ class MeshVertex(NumericType) {
 			return cloned;
 		}
 	}
+	
+	public this(SpatialVector!(3, NumericType) position) {
+		this.position = position;
+	}
 
 	public SpatialVector!(3, NumericType) position;
 
@@ -42,8 +46,7 @@ class MeshVertex(NumericType) {
 
 	// index and refcounts dont get cloned
 	public final MeshVertex!NumericType clone() {
-		MeshVertex!NumericType cloned = new MeshVertex!NumericType();
-		cloned.position = position.clone();
+		MeshVertex!NumericType cloned = new MeshVertex!NumericType(position.clone());
 		if( helperAttributes !is null ) {
 			cloned.helperAttributes = helperAttributes.clone();
 		}
