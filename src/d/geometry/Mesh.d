@@ -1,6 +1,6 @@
 module geometry.Mesh;
 
-import NumericSpatialVectors;
+import math.NumericSpatialVectors;
 
 mixin template Refcount() {
 	public uint referenceCounter;
