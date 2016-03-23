@@ -25,41 +25,36 @@ import std.stdio;
  * only for compiletime
  */
 // NOTE< for testing public, actually package >
-public class InstructionTranslator
-{
+public class InstructionTranslator {
 	// target can be either extreme speed
 	// or a tradeoff
 	// or a most compact representation of the code
-	enum EnumPerformanceTarget
-	{
+	enum EnumPerformanceTarget {
 		EXTREMESPEED,
 		TRADEOFF,
 		COMPACT
 	}
 
 	// is the prefered resulting instructionsetTarget
-	enum EnumInstructionSetTarget
-	{
+	enum EnumInstructionSetTarget {
 		DUMMY, // No code output, just for testing of the library
 		FUNCTIONCALLS, // only function calls to internal methods
-		FPU,
+		/*FPU,
 		SSE1,
 		SSE2,
 		SSSE3,
 		SSE4,
 		SSE41,
 		AVX,
-		AVX2
+		AVX2*/
 	}
 
-	final public this(EnumPerformanceTarget performanceTarget, EnumInstructionSetTarget instructionSetTarget)
-	{
+	final public this(EnumPerformanceTarget performanceTarget, EnumInstructionSetTarget instructionSetTarget) {
 		this.performanceTarget = performanceTarget;
 		this.instructionSetTarget = instructionSetTarget;
 	}
 
-	final public void multiplyMatrix(CompiletimeMatrixDescriptor matrixA, CompiletimeMatrixDescriptor matrixB, CompiletimeMatrixDescriptor resultMatrix, ref ResultDescriptor result)
-	{
+	final public void multiplyMatrix(CompiletimeMatrixDescriptor matrixA, CompiletimeMatrixDescriptor matrixB, CompiletimeMatrixDescriptor resultMatrix, ref ResultDescriptor result) {
 		MathematicalOperationVectorScalarMatrices scalarOperation;
 
 		result.reset();
@@ -68,21 +63,18 @@ public class InstructionTranslator
 		(
 			(matrixA.dimensions[0] != matrixB.dimensions[1]) ||
 			(matrixA.dimensions[1] != matrixB.dimensions[0])
-		)
-		{
+		) {
 			result.errorMessage = "marices " ~ matrixA.pointerName ~ " and " ~ matrixB.pointerName ~ " are of incompatible size for multiplication";
 			return;
 		}
 
 		// emit instructions for the multiplication of the matrices
 
-		if( performanceTarget == EnumPerformanceTarget.TRADEOFF )
-		{
+		if( performanceTarget == EnumPerformanceTarget.TRADEOFF ) {
 			// code gen
 			executor.emitOpenForLoop("resultY", 0, matrixA.dimensions[1]);
 			
-			foreach( resultX; 0..matrixB.dimensions[0] )
-			{
+			foreach( resultX; 0..matrixB.dimensions[0] ) {
 				executor.emitMathematicalOperation(
 					new MathematicalOperationVectorScalarMatrices(
 						matrixA,
@@ -101,13 +93,10 @@ public class InstructionTranslator
 			
 			executor.emitCloseForLoop();
 		}
-		else if( performanceTarget == EnumPerformanceTarget.EXTREMESPEED )
-		{
+		else if( performanceTarget == EnumPerformanceTarget.EXTREMESPEED ) {
 			// code gen
-			foreach( resultY; 0..matrixA.dimensions[1] )		
-			{
-				foreach( resultX; 0..matrixB.dimensions[0] )
-				{
+			foreach( resultY; 0..matrixA.dimensions[1] )		 {
+				foreach( resultX; 0..matrixB.dimensions[0] ) {
 					executor.emitMathematicalOperation(
 						new MathematicalOperationVectorScalarMatrices(
 							matrixA,
@@ -136,18 +125,15 @@ public class InstructionTranslator
 	 *
 	 *
 	 */
-	final public string emitDSource()
-	{
+	final public string emitDSource() {
 		string resultDString;
 
 		resultDString = "{";
 
 		// TODO< import >
 
-		foreach( iterationOperation; executor.operations )
-		{
-			switch(iterationOperation.type)
-			{
+		foreach( iterationOperation; executor.operations ) {
+			final switch(iterationOperation.type) {
 				case MathematicalOperation.EnumInstructionType.VECTORSCALARMATRICES:
 				resultDString ~= emitStringForVectorScalarMatrices(cast(MathematicalOperationVectorScalarMatrices) iterationOperation);
 				break;
@@ -167,8 +153,7 @@ public class InstructionTranslator
 		return resultDString;
 	}
 
-	final private string emitStringForOpenForLoop(OpenForLoopOperation operation)
-	{
+	final private string emitStringForOpenForLoop(OpenForLoopOperation operation) {
 		string result;
 
 		result = "foreach(" ~ operation.variable ~ ";" ~ to!string(operation.startValue) ~ ".." ~ to!string(operation.endValue) ~ ")\n";
@@ -177,79 +162,50 @@ public class InstructionTranslator
 		return result;
 	}
 
-	final private string emitStringForCloseForLoop(CloseForLoopOperation operation)
-	{
+	final private string emitStringForCloseForLoop(CloseForLoopOperation operation) {
 		return "}\n";
 	}
 
-	final private string emitStringForVectorScalarMatrices(MathematicalOperationVectorScalarMatrices operation)
-	{
-		string getStringForArrayAccess(CompiletimeMatrixDescriptor matrixDescriptor, CompiletimeVector2Ui index)
-		{
-			string result;
-			string accessInsideSrc;
-
-			if( index.x.type == CompiletimeStaticOrVariableValueUi.EnumType.VARIABLE )
-			{
-				accessInsideSrc ~= index.x.variableName;
+	final private string emitStringForVectorScalarMatrices(MathematicalOperationVectorScalarMatrices operation) {
+		string getStringForMatrixAccess(CompiletimeMatrixDescriptor matrixDescriptor, CompiletimeVector2Ui index) {
+			string stringOfRow, stringOfColumn;
+			
+			if( index.x.type == CompiletimeStaticOrVariableValueUi.EnumType.VARIABLE ){
+				stringOfColumn = index.x.variableName;
 			}
-			else if( index.x.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC )
-			{
-				accessInsideSrc ~= to!string(index.x.value);
+			else if( index.x.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC ) {
+				stringOfColumn = to!string(index.x.value);
 			}
-			else
-			{
+			else {
 				assert(false);
 			}
-
-			accessInsideSrc ~= " + ";
-			accessInsideSrc ~= to!string(matrixDescriptor.dimensions[0]) ~ "*";
-
-			if( index.y.type == CompiletimeStaticOrVariableValueUi.EnumType.VARIABLE )
-			{
-				accessInsideSrc ~= index.x.variableName;
+			
+			if( index.y.type == CompiletimeStaticOrVariableValueUi.EnumType.VARIABLE ){
+				stringOfRow = index.x.variableName;
 			}
-			else if( index.y.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC )
-			{
-				accessInsideSrc ~= to!string(index.x.value);
+			else if( index.y.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC ) {
+				stringOfRow = to!string(index.y.value);
 			}
-			else
-			{
+			else {
 				assert(false);
 			}
-
-			if( index.x.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC && index.y.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC )
-			{
-				// everything is constant, so we can calculate the index *at compiletime*
-
-				return matrixDescriptor.pointerName ~ "[" ~ to!string(index.x.value + operation.descriptorMatrixA.dimensions[0] * index.y.value) ~ "]";
-			}
-			else
-			{
-				// something is constant, we let the compile optimize the cases
-
-				return matrixDescriptor.pointerName ~ "[" ~ accessInsideSrc ~ "]";
-			}
+			
+			return matrixDescriptor.pointerName ~ "[" ~ stringOfRow ~ "," ~ stringOfColumn ~ "]";
 		}
 
 		string result;
 
 		// TODO< string of datatype >
 		
-		result = getStringForArrayAccess(operation.descriptorResult, operation.resultIndex) ~ " = " ~ "AlgebraLib.Utilities.vectorScalar(";
-
-		// this is the nonpointer form, not optimal
-
+		result = getStringForMatrixAccess(operation.descriptorResult, operation.resultIndex) ~ " = " ~ "AlgebraLib.Utilities.vectorScalar(";
 
 		// input A
 
-		if( operation.directionA == [1, 0] )
-		{
+		if( operation.directionA == [1, 0] ) {
 			assert(operation.startIndexA.x.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC);
 
-			foreach( indexX; operation.startIndexA.x.value..operation.descriptorMatrixA.dimensions[0] )
-			{
-				result ~= getStringForArrayAccess(
+			foreach( indexX; operation.startIndexA.x.value..operation.descriptorMatrixA.dimensions[0] ) {
+				result ~= getStringForMatrixAccess(
 					operation.descriptorMatrixA,
 					CompiletimeVector2Ui(
 						CompiletimeStaticOrVariableValueUi(indexX),
@@ -259,13 +215,11 @@ public class InstructionTranslator
 				result ~= ", ";
 			}
 		}
-		else if( operation.directionA == [0, 1] )
-		{
+		else if( operation.directionA == [0, 1] ) {
 			assert(operation.startIndexA.y.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC);
 
-			foreach( indexY; operation.startIndexA.y.value..operation.descriptorMatrixA.dimensions[1] )
-			{
-				result ~= getStringForArrayAccess(
+			foreach( indexY; operation.startIndexA.y.value..operation.descriptorMatrixA.dimensions[1] ) {
+				result ~= getStringForMatrixAccess(
 					operation.descriptorMatrixA,
 					CompiletimeVector2Ui(
 						operation.startIndexA.x,
@@ -275,21 +229,18 @@ public class InstructionTranslator
 				result ~= ", ";
 			}
 		}
-		else
-		{
+		else {
 			assert(false);
 		}
 
 
 		// input B
 
-		if( operation.directionB == [1, 0] )
-		{
+		if( operation.directionB == [1, 0] ) {
 			assert(operation.startIndexB.x.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC);
 
-			foreach( indexX; operation.startIndexB.x.value..operation.descriptorMatrixB.dimensions[0] )
-			{
-				result ~= getStringForArrayAccess(
+			foreach( indexX; operation.startIndexB.x.value..operation.descriptorMatrixB.dimensions[0] ) {
+				result ~= getStringForMatrixAccess(
 					operation.descriptorMatrixB,
 					CompiletimeVector2Ui(
 						CompiletimeStaticOrVariableValueUi(indexX),
@@ -297,19 +248,16 @@ public class InstructionTranslator
 					)
 				);
 
-				if( indexX != operation.descriptorMatrixB.dimensions[0]-1 )
-				{
+				if( indexX != operation.descriptorMatrixB.dimensions[0]-1 ) {
 					result ~= ", ";
 				}
 			}
 		}
-		else if( operation.directionB == [0, 1] )
-		{
+		else if( operation.directionB == [0, 1] ) {
 			assert(operation.startIndexB.y.type == CompiletimeStaticOrVariableValueUi.EnumType.STATIC);
 
-			foreach( indexY; operation.startIndexB.y.value..operation.descriptorMatrixB.dimensions[1] )
-			{
-				result ~= getStringForArrayAccess(
+			foreach( indexY; operation.startIndexB.y.value..operation.descriptorMatrixB.dimensions[1] ) {
+				result ~= getStringForMatrixAccess(
 					operation.descriptorMatrixB,
 					CompiletimeVector2Ui(
 						operation.startIndexB.x,
@@ -317,14 +265,12 @@ public class InstructionTranslator
 					)
 				);
 
-				if( indexY != operation.descriptorMatrixB.dimensions[1]-1 )
-				{
+				if( indexY != operation.descriptorMatrixB.dimensions[1]-1 ) {
 					result ~= ", ";
 				}
 			}
 		}
-		else
-		{
+		else {
 			assert(false);
 		}
 
