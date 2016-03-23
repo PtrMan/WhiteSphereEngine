@@ -30,6 +30,27 @@ auto forwardPair(InputRange)(InputRange data) pure nothrow
     return ForwardPair(data);
 }
 
+
+// creates pairs of the neightbor elements with warparound
+auto backwardPair(InputRange)(InputRange data) pure nothrow
+{
+    static struct BackwardPair {
+        InputRange r;
+        uint currentIndex = 0;
+        
+        @property bool empty() {
+        	return currentIndex == r.length;
+        }
+        @property auto front() {
+            return Pair!(typeof(r[currentIndex]))(r[(currentIndex-1 + r.length) %r.length], r[currentIndex]);
+        }
+        void popFront() {
+            currentIndex++;
+        }
+    }
+    return BackwardPair(data);
+}
+
 unittest {
 	import std.array : array;
 	
