@@ -88,11 +88,11 @@ private template generateDOfMatrixMultiplyForVectorTemplate(uint[] dimensions, s
 	const char[] generateDOfMatrixMultiplyForVectorTemplate = generateDOfMatrixMultiplyForVector(dimensions, matrixnameA, matrixnameB, resultMatrixName);
 }
 
-public void mul(uint width, uint height)(Matrix!(double, width, height) a, Matrix!(double, width, height) b, Matrix!(double, width, height) result) {
+public void mul(NumericType, uint width, uint height)(Matrix!(NumericType, width, height) a, Matrix!(NumericType, width, height) b, Matrix!(NumericType, width, height) result) {
 	mixin(generateDOfMatrixMultiplyForMatrixTemplate!([width, height], "a", "b", "result"));
 }
 
-public void mulVector(uint width, uint height)(Matrix!(double, width, height) a, Matrix!(double, 1, height) b, Matrix!(double, 1, height) result) {
+public void mulVector(NumericType, uint width, uint height)(Matrix!(NumericType, width, height) a, Matrix!(NumericType, 1, height) b, Matrix!(NumericType, 1, height) result) {
 	mixin(generateDOfMatrixMultiplyForVectorTemplate!([width, height], "a", "b", "result"));
 }
 	
