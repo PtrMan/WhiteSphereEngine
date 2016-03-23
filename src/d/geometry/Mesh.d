@@ -178,4 +178,22 @@ class Mesh(NumericType) {
 		vertex.index = vertices.length;
 		vertices ~= vertex;
 	}
+	
+	public final void recalculateNormals() {
+		foreach( iterationFace; faces ) {
+			int vertexIndex0 = iterationFace.verticesIndices[0];
+			int vertexIndex1 = iterationFace.verticesIndices[1];
+			int vertexIndex2 = iterationFace.verticesIndices[$-1];
+			
+			SpatialVector!(3, NumericType) vertexPosition0 = vertices[vertexIndex0].position;
+			SpatialVector!(3, NumericType) vertexPosition1 = vertices[vertexIndex1].position;
+			SpatialVector!(3, NumericType) vertexPosition2 = vertices[vertexIndex2].position;
+			
+			SpatialVector!(3, NumericType) a = vertexPosition1 - vertexPosition0;
+			SpatialVector!(3, NumericType) b = vertexPosition2 - vertexPosition0;
+			
+			SpatialVector!(3, NumericType) unnormalizedNormal = crossProduct(a, b);
+			iterationFace.normalizedNormal = unnormalizedNormal.normalized();
+		}
+	}
 }
