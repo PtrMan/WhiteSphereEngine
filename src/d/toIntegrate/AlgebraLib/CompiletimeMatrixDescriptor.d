@@ -5,19 +5,18 @@ module AlgebraLib.CompiletimeMatrixDescriptor;
  * 
  * used only at compile time!
  */
-final package class CompiletimeMatrixDescriptor
-{
-	public enum EnumDatatype
-	{
+final package class CompiletimeMatrixDescriptor {
+	/*
+	public enum EnumDatatype {
 		FLOAT,   // 32 bit
 		DOUBLE,  // 64 bit
 		EXTENDED // 80 bit, not implemented
-	}
+	}*/
 
 	// has no constructor because the constructor has too many parameters
 
-	public uint alignment;
+	//public uint alignment;
 	public uint[] dimensions;
 	public string pointerName;
-	public EnumDatatype datatype;
+	//public EnumDatatype datatype;
 }
