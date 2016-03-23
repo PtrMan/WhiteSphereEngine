@@ -1,4 +1,4 @@
-module helpers.ranges.ForwardPair;
+module helpers.ranges.IterationPair;
 
 static struct Pair(Type) {
 	this(Type first, Type second) {
