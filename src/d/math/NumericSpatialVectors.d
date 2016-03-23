@@ -156,6 +156,18 @@ SpatialVector!(Size, Type) scale(uint Size, Type)(SpatialVector!(Size, Type) vec
     return cast(SpatialVector!(Size, Type))(vector * magnitude);
 }
 
+import std.math : sqrt;
+
+// TODO< implement for general case >
+Type magnitude(Type)(SpatialVector!(3, Type) vector) {
+	return cast(Type)sqrt(vector.x*vector.x + vector.y*vector.y + vector.z*vector.z);
+}
+
+SpatialVector!(Size, Type) normalized(uint Size, Type)(SpatialVector!(Size, Type) vector) {
+	Type length = magnitude(vector);
+	return vector.scale(cast(Type)1.0 / length);
+}
+
 Type dot(uint Size, Type)(SpatialVector!(Size, Type) a, SpatialVector!(Size, Type) b) {
     Type result = cast(Type)0;
 
@@ -177,6 +189,12 @@ Type dot(uint Size, Type)(SpatialVector!(Size, Type) a, SpatialVector!(Size, Typ
     return result;
 }
 
+SpatialVector!(3, Type) crossProduct(Type)(SpatialVector!(3, Type) a, SpatialVector!(3, Type) b) {
+	Type x = a.data[1] * b.data[2] - a.data[2] * b.data[1];
+	Type y = a.data[2] * b.data[0] - a.data[0] * b.data[2];
+	Type z = a.data[0] * b.data[1] - a.data[1] * b.data[0];
+	return new SpatialVector!(3, Type)(x, y, z);
+}
 
 
 /*
