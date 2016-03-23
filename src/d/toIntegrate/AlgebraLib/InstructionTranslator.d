@@ -59,10 +59,10 @@ public class InstructionTranslator {
 
 		result.reset();
 
-		if
-		(
+		if (
 			(matrixA.dimensions[0] != matrixB.dimensions[1]) ||
-			(matrixA.dimensions[1] != matrixB.dimensions[0])
+			(matrixA.dimensions[1] != resultMatrix.dimensions[1]) ||
+			(matrixB.dimensions[0] != resultMatrix.dimensions[0])
 		) {
 			result.errorMessage = "marices " ~ matrixA.pointerName ~ " and " ~ matrixB.pointerName ~ " are of incompatible size for multiplication";
 			return;
