@@ -9,7 +9,7 @@ import AlgebraLib.CloseForLoopOperation;
  *
  *
  */
-package class MathExecutor
+package struct MathExecutor
 {
 	public MathematicalOperation[] operations;
 

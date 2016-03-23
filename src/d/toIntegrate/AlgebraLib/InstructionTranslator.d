@@ -130,7 +130,7 @@ public class InstructionTranslator {
 
 		resultDString = "{";
 
-		// TODO< import >
+		resultDString ~= "import AlgebraLib.Utilities;\n\n";
 
 		foreach( iterationOperation; executor.operations ) {
 			final switch(iterationOperation.type) {
@@ -279,7 +279,7 @@ public class InstructionTranslator {
 		return result;
 	}
 
-	private MathExecutor executor = new MathExecutor();
+	private MathExecutor executor;
 	private EnumPerformanceTarget performanceTarget;
 	private EnumInstructionSetTarget instructionSetTarget;
 }
