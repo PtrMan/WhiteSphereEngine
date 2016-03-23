@@ -8,6 +8,10 @@ template Matrix(Type, uint width, uint height) {
 		public this() {
 			data = new SpatialVector!(width*height, Type, false)();
 		}
+		
+		public this(Type[width*height] content ...) {
+			this.data = new SpatialVector!(width*height, Type, false)(content);
+		}
 
 		public final Type opIndexAssign(Type value, size_t row, size_t column) {
 			return data.data[row*width + column] = value;
