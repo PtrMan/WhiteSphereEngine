@@ -1,6 +1,6 @@
-module Matrix;
+module math.Matrix;
 
-import NumericSpatialVectors;
+import math.NumericSpatialVectors;
 
 // TODO< for more than two dimensions! >
 template Matrix(Type, uint width, uint height) {
