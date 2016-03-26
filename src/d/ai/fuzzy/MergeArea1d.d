@@ -293,28 +293,6 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 			return;
 		}
 
-		/+
-		//if( cutCases.cutCase == CutCases.EnumCutCase.BCONTAINED )
-		if( transferedBx0 < ax0 ) {
-			result ~= new PointDescriptor(transferedBx0, max(ay0, transferedBy0));
-
-			{
-				import std.stdio;
-				writeln("+ x=", transferedBx0, " y=", max(ay0, transferedBy0));
-			}
-
-		}
-		else {
-			result ~= new PointDescriptor(ax0, max(ay0, transferedBy0));
-
-			{
-				import std.stdio;
-				writeln("+ x=", ax0, " y=", max(ay0, transferedBy0));
-			}
-
-		}
-		+/
-
 		addPointsBeforeIntersection();
 
 		// intersection check
@@ -322,21 +300,9 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 			
 		}
 		else {
-			/*
-			{
-				import std.stdio;
-				writeln("+ x=", transferedBx0, " y=", max(ay0, transferedBy0));
-			}
-
-			result ~= new PointDescriptor(transferedBx0, max(ay0, transferedBy0));
-			*/
-
 			// calculate and check intersection
 			float intersectionX, intersectionY;
 			calculateIntersection(ax0, ay0, ax1, ay1, transferedBx0, transferedBy0, transferedBx1, transferedBy1, intersectionX, intersectionY);
-			
-			//MinMax ayMinMax = MinMax.createByValues(ay0, ay1);
-			//MinMax byMinMax = MinMax.createByValues(transferedBy0, transferedBy1);
 			
 			MinMax axMinMax = MinMax.createByValues(ax0, ax1);
 			MinMax bxMinMax = MinMax.createByValues(transferedBx0, transferedBx1);
@@ -453,43 +419,6 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 		}
 	}
 
-	// old code
-	// TODO< modernize >
-	/+
-	if( isMZero(ay0, ay1) && isMZero(by0, by1) ) {
-		result ~= (ax1, ay1);
-	}
-	else {
-		// calculate and check intersection
-		float intersectionX, intersectionY;
-
-
-		calculateIntersection(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1, intersectionX, intersectionY);
-		
-		MinMax ayMinMax = MinMax.createByValues(ay0, ay1);
-		MinMax byMinMax = MinMax.createByValues(by0, by1);
-		if( isInRange(ax0, ax1, intersectionX) && isInRange(bx0, bx1, intersectionX) && ayMinMax.isInRange(intersectionY) && byMinMax.isInRange(intersectionY) ) {
-			// we have to split it into two parts
-
-			float am = calculateM(ax0, ay0, ax1, ay1);
-			float bm = calculateM(bx0, by0, bx1, by1);
-		
-
-			result ~= (intersectionX, intersectionY);
-			
-			//if( bm > am ) {
-			//	result ~= (bx1, by1);
-			//}
-			//else {
-			//	result ~= (ax1, ay1);
-			//}
-		}
-		else {
-			result ~= (ax1, ay1);
-		}
-	}
-	+/
-
 	return result;
 }
 
@@ -542,9 +471,6 @@ private void calculateIntersection(float ax0, float ay0, float ax1, float ay1, f
 
 	float bm = calculateM(bx0, by0, bx1, by1);
 	float bn = calculateN(bm, bx0, by0);
-
-	// am*x + an = bm*x + bn
-	// an - bn = (bm - am)*x
 
 	x = (an - bn) / (bm - am);
 	y = am * x + an;
