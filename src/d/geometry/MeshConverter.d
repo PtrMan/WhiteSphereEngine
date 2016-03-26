@@ -3,16 +3,16 @@ module geometry.MeshConverter;
 import geometry.Mesh : Mesh, MeshEdge, MeshEdgeStruct, MeshFace, MeshVertex;
 import math.NumericSpatialVectors;
 
-public Mesh!NumericTypeB convert(NumericTypeA, NumericTypeB)(Mesh!NumericTypeA source) {
-	Mesh!NumericTypeB destination = new Mesh!NumericTypeB();
+public MeshTypeDestination convert(MeshTypeSource, MeshTypeDestination)(MeshTypeSource source) {
+	MeshTypeDestination destination = new MeshTypeDestination();
 	
-	foreach( MeshFace!NumericTypeA iterationFace; source.faces ) {
-		destination.addFace(new MeshFace!NumericTypeB(iterationFace.verticesIndices));
+	foreach( iterationFace; source.faces ) {
+		destination.addFace(new destination.FaceType(iterationFace.meshFace.verticesIndices));
 	}
 	
-	foreach( MeshVertex!NumericTypeA iterationVertex; source.vertices ) {
-		SpatialVector!(3, NumericTypeB) convertedVector = new SpatialVector!(3, NumericTypeB)(cast(NumericTypeB)iterationVertex.position.x, cast(NumericTypeB)iterationVertex.position.y, cast(NumericTypeB)iterationVertex.position.z);
-		destination.addVertex(new MeshVertex!NumericTypeB(convertedVector));
+	foreach( iterationVertex; source.vertices ) {
+		SpatialVector!(3, destination.NumericType) convertedVector = new SpatialVector!(3, destination.NumericType)(cast(MeshTypeDestination.NumericType)iterationVertex.position.x, cast(MeshTypeDestination.NumericType)iterationVertex.position.y, cast(MeshTypeDestination.NumericType)iterationVertex.position.z);
+		destination.addVertex(new MeshVertex!(destination.NumericType)(convertedVector));
 	}
 	
 	return destination;

@@ -43,7 +43,7 @@ class MeshGenerator(NumericType) {
 			int vertex2 = startIndex + segments;
 			int vertex3 = endIndex + segments;
 			
-			resultMesh.addFace(new MeshFace!NumericType([vertex0, vertex1, vertex2, vertex3]));
+			resultMesh.addFace(new resultMesh.FaceType([vertex0, vertex1, vertex2, vertex3]));
 		}
 		
 		if( caps ) {
@@ -54,7 +54,7 @@ class MeshGenerator(NumericType) {
 					vertexIndices ~= faceI;
 				}
 				
-				resultMesh.addFace(new MeshFace!NumericType(vertexIndices));
+				resultMesh.addFace(new resultMesh.FaceType(vertexIndices));
 			}
 			
 			{
@@ -64,7 +64,7 @@ class MeshGenerator(NumericType) {
 					vertexIndices ~= (faceI + segments);
 				}
 				
-				resultMesh.addFace(new MeshFace!NumericType(vertexIndices));
+				resultMesh.addFace(new resultMesh.FaceType(vertexIndices));
 			}
 		}
 		
@@ -114,7 +114,7 @@ class MeshGenerator(NumericType) {
 				MeshVertex!NumericType vertexBottomRight = getGridVertex(segmentX+1, segmentY+1);
 				MeshVertex!NumericType vertexBottomLeft = getGridVertex(segmentX, segmentY+1);
 
-				resultMesh.addFace(new MeshFace!NumericType([vertexTopLeft.index, vertexBottomLeft.index, vertexBottomRight.index, vertexTopRight.index]));
+				resultMesh.addFace(new resultMesh.FaceType([vertexTopLeft.index, vertexBottomLeft.index, vertexBottomRight.index, vertexTopRight.index]));
 			}
 		}
 
