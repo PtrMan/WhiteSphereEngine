@@ -1,5 +1,6 @@
 module ai.fuzzy.MergeArea1dUnittests;
 
+import ai.fuzzy.Area1d;
 import ai.fuzzy.MergeArea1d;
 
 // exact overlapping case

@@ -10,86 +10,9 @@ class Trapezoid {
 	public float x3;
 }
 
-
-class PointDescriptor {
-	public float x, y;
-
-	public final this(float x, float y) {
-		this.x = x;
-		this.y = y;
-	}
-}
-
-class Area1d {
-	// succeeding points witht the same x and y coordinates are allowed
-	PointDescriptor[] points;
-
-	public final this(PointDescriptor[] points) {
-		this.points = points;
-	}
-
-	public final @property float minX() {
-		return points[0].x;
-	}
-
-	public final @property float maxX() {
-		return points[$-1].x;
-	}
-
-}
-
-public float calcArea(Area1d area1d) {
-	float calcAreaOfPoints(PointDescriptor[] points) {
-		float area = 0.0f;
-
-		foreach( i; 0..points.length-1 ) {
-			float x0 = points[i].x;
-			float y0 = points[i].y;
-			float x1 = points[i+1].x;
-			float y1 = points[i+1].y;
-
-			assert( x1 >= x0 );
-
-			float xDiff = x1 - x0;
-			float yDiff = y1 - y0;
-
-			float rectangularArea = y0 * xDiff;
-			float triangularArea = 0.5f * xDiff * yDiff;
-
-			float areaOfSegment = rectangularArea + triangularArea;
-
-			area += areaOfSegment;
-		}
-
-		return area;
-	}
-
-	return calcAreaOfPoints(area1d.points);
-}
-
-public Area1d merge(Area1d a, Area1d b) {
-	Area1d minXArea, maxXArea;
-
-	if( a.minX < b.minX ) {
-		minXArea = a;
-		maxXArea = b;
-	}
-	else {
-		minXArea = b;
-		maxXArea = a;
-	}
-
-	bool doOverlap = isInRangeInclusive(minXArea.minX, minXArea.maxX, maxXArea.minX);
-	if( doOverlap ) {
-		return new Area1d(mergeSlopeDescriptorsWhenOverlap(minXArea.points, maxXArea.points));
-	}
-	else {
-		return new Area1d(minXArea.points ~ maxXArea.points);
-	}
-}
-
-
 import std.algorithm : min, max;
+
+import ai.fuzzy.Area1d;
 
 // we scan a for the intersections with b and iterate from there over a
 
@@ -109,7 +32,7 @@ import std.algorithm : min, max;
 // after this is done for each a segment the intersections have to be checked and the result calculated
 
 // invariants : a is in front of b on the x axis
-private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, PointDescriptor[] b) {
+public PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, PointDescriptor[] b) {
 	bool doesntIntersect = a[$-1].x < b[0].x;
 	assert(!doesntIntersect);
 
@@ -399,7 +322,7 @@ private bool isInRange(float x0, float x1, float x) {
 	return x0 < x && x < x1;
 }
 
-private bool isInRangeInclusive(float x0, float x1, float x) {
+public bool isInRangeInclusive(float x0, float x1, float x) {
 	assert(x0 < x1);
 
 	return x0 <= x && x <= x1;
@@ -423,11 +346,11 @@ struct MinMax {
 
 
 
-private float calculateM(float x0, float y0, float x1, float y1) {
+public float calculateM(float x0, float y0, float x1, float y1) {
 	return (y1 - y0) / (x1 - x0);
 }
 
-private float calculateN(float m, float x, float y) {
+public float calculateN(float m, float x, float y) {
 	return (-m * x) + y;
 }
 
