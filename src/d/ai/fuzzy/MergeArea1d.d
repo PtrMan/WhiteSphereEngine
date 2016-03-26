@@ -2,16 +2,10 @@ module ai.fuzzy.MergeArea1d;
 
 // centroid for generalized trapezoid
 
-// not used here, belongs into other Fuzzy logic file/class
-class Trapezoid {
-	public float x0;
-	public float x1, y1;
-	public float x2, y2;
-	public float x3;
-}
-
 import std.algorithm : min, max;
 
+import math.Range;
+import math.LinearEquation;
 import ai.fuzzy.Area1d;
 
 // we scan a for the intersections with b and iterate from there over a
@@ -316,18 +310,6 @@ public PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, P
 }
 
 
-private bool isInRange(float x0, float x1, float x) {
-	assert(x0 < x1);
-
-	return x0 < x && x < x1;
-}
-
-public bool isInRangeInclusive(float x0, float x1, float x) {
-	assert(x0 < x1);
-
-	return x0 <= x && x <= x1;
-}
-
 struct MinMax {
 	public float min, max;
 
@@ -341,30 +323,4 @@ struct MinMax {
 	public final bool isInRange(float value) {
 		return min < value && value < max;
 	}
-}
-
-
-
-
-public float calculateM(float x0, float y0, float x1, float y1) {
-	return (y1 - y0) / (x1 - x0);
-}
-
-public float calculateN(float m, float x, float y) {
-	return (-m * x) + y;
-}
-
-private bool isMZero(float y1, float y2) {
-	return y1 == y2;
-}
-
-private void calculateIntersection(float ax0, float ay0, float ax1, float ay1, float bx0, float by0, float bx1, float by1, out float x, out float y) {
-	float am = calculateM(ax0, ay0, ax1, ay1);
-	float an = calculateN(am, ax0, ay0);
-
-	float bm = calculateM(bx0, by0, bx1, by1);
-	float bn = calculateN(bm, bx0, by0);
-
-	x = (an - bn) / (bm - am);
-	y = am * x + an;
 }
