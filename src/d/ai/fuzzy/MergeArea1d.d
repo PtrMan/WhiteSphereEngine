@@ -146,12 +146,6 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 			bool caseBIncludesA = bx0 <= ax0 && ax1 <= bx1;
 			bool caseBExternal = bx0 >= ax1;
 
-			{
-				import std.stdio;
-				writeln(ax0, " ", ax1);
-				writeln(bx0, " ", bx1);
-			}
-
 			assert(caseBCutLow || caseBCutHigh || caseBContained || caseEqualOverlap || caseBIncludesA || caseBExternal );
 
 			if( caseBCutLow ) {
@@ -190,11 +184,6 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 
 		void addPoint(float x, float y) {
 			result ~= new PointDescriptor(x, y);
-
-			{
-				import std.stdio;
-				writeln("+ x=", x, " y=", y);
-			}
 		}
 
 		void addPointsBeforeIntersection() {
@@ -336,17 +325,6 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 	// add the beginning of a
 	result ~= a[0..aStartIndex+1];
 
-	{
-		import std.stdio;
-		writeln("before");
-
-		foreach( coordinate; a[0..aStartIndex+1] ) {
-			writeln("   x=", coordinate.x, " y=", coordinate.y);
-		}
-
-		writeln("before end");
-	}
-
 	uint aIndex = aStartIndex;
 	uint bIndex = 0;
 
@@ -369,14 +347,6 @@ private PointDescriptor[] mergeSlopeDescriptorsWhenOverlap(PointDescriptor[] a, 
 
 		CutCases cutCases;
 		cutCases.calculate(ax0, ax1, bx0, bx1);
-		
-		// debug cut case
-		{
-			import std.stdio;
-			writeln("aIndex=", aIndex, " bIndex=", bIndex);
-			writeln("cutCase=", cutCases.getCaseAsString());
-		}
-
 
 		calcPointsToAddToResult(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1, cutCases);
 
