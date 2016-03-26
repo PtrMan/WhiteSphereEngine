@@ -84,6 +84,10 @@ public float calcWeightedX(Area1d area1d) {
 	return result;
 }
 
+public float calcCentroid(Area1d area1d) {
+	return calcWeightedX(area1d) / calcArea(area1d);
+}
+
 
 public Area1d merge(Area1d a, Area1d b) {
 	Area1d minXArea, maxXArea;
