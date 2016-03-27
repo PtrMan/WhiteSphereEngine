@@ -22,6 +22,11 @@ class FuzzyControl {
 		OR
 	}
 	
+	public enum EnumValueOperation {
+		MIN,
+		MAX
+	}
+	
 	public enum EnumDefuzzificationType {
 		CENTEROFGRAVITY
 	}
@@ -52,9 +57,9 @@ class FuzzyControl {
 		public bool set;
 		public float activation = 0.0f;
 		
-		public final void combine(EnumRuleType globalCombinatorRule, float otherActivation) {
+		public final void combine(EnumValueOperation globalCombinatorRule, float otherActivation) {
 			if( set ) {
-				activation = FuzzyControl.combineAfterRuleType(globalCombinatorRule, activation, otherActivation);
+				activation = FuzzyControl.applyValueOperation(globalCombinatorRule, activation, otherActivation);
 			}
 			else {
 				set = true;
@@ -67,7 +72,7 @@ class FuzzyControl {
 	public EnumDefuzzificationType defuzzificationType;
 	
 	// TODO< avergage of membership >
-	public EnumRuleType globalCombinatorRule;
+	public EnumValueOperation globalCombinatorRule;
 
 	public ValueMatrix!RuleElement ruleMatrix;
 	
@@ -221,18 +226,33 @@ class FuzzyControl {
 		combinedValue = combineAfterRuleType(lookedupRule.ruleType, rowValue, columnValue);
 	}
 	
-	// this is part of inference, combines multiple results of the rule table after a(global) rule
-	protected final float combineResult(float a, float b) {
-		return combineAfterRuleType(globalCombinatorRule, a, b);
-	}
-	
 	protected static float combineAfterRuleType(EnumRuleType ruleType, float a, float b) {
+		EnumValueOperation valueOperation = translateRuleTypeToValueOperation(ruleType);
+		return applyValueOperation(valueOperation, a, b);
+		
 		final switch( ruleType ) {
 			case EnumRuleType.AND:
 			return min(a, b); // AND combination is realized by minimum of the two inputs
 			
 			case EnumRuleType.OR: // OR combination is realized by maximum of the two inputs
 			return max(a, b);
+		}
+	}
+	
+	protected static EnumValueOperation translateRuleTypeToValueOperation(EnumRuleType ruleType) {
+		final switch( ruleType ) {
+			case EnumRuleType.AND: // AND combination is realized by minimum of the two inputs
+			return EnumValueOperation.MIN;
+			
+			case EnumRuleType.OR: // OR combination is realized by maximum of the two inputs
+			return EnumValueOperation.MAX;
+		}
+	}
+	
+	protected static float applyValueOperation(EnumValueOperation valueOperation, float a, float b) {
+		final switch( valueOperation ) {
+			case EnumValueOperation.MIN: return min(a, b);
+			case EnumValueOperation.MAX: return max(a, b);
 		}
 	}
 	

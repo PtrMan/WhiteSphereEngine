@@ -13,8 +13,8 @@ void main(string[] args) {
 	FuzzyControl fuzzyControl = new FuzzyControl();
 	
 	fuzzyControl.defuzzificationType = FuzzyControl.EnumDefuzzificationType.CENTEROFGRAVITY;
-	fuzzyControl.globalCombinatorRule = FuzzyControl.EnumRuleType.OR; // TODO< rename to MAX >
-	
+	fuzzyControl.globalCombinatorRule = FuzzyControl.EnumValueOperation.MAX;
+		
 	fuzzyControl.ruleMatrix = new ValueMatrix!(FuzzyControl.RuleElement)(2, 3);
 	fuzzyControl.ruleMatrix[0, 0] = new FuzzyControl.RuleElement(1, FuzzyControl.EnumRuleType.AND);
 	fuzzyControl.ruleMatrix[1, 0] = new FuzzyControl.RuleElement(1, FuzzyControl.EnumRuleType.AND);
