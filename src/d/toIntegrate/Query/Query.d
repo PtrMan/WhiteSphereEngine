@@ -1,84 +1,77 @@
-import std.stdio : writeln;
- 
+
 import std.stdio;
 import std.algorithm : sort;
- 
+
 // query inspired by articles of the AI of AI WAR
 
 struct Row(E...) {
-   this(E Content) {
-      this.Content = Content;
-   }
+	this(E content) {
+    	this.content = content;
+   	}
  
-   E Content;
+   	E content;
 }
  
 class Query(E...) {
-   public Row!(E) []Result;
+	public alias Row!(E) RowType;
+	
+   	public RowType[] result;
+   	
+   	final public void addElement(E args) {
+      	result ~= RowType(args);
+   	}
+   	
+   	final public Query!(E) where(bool delegate(ref RowType) filterFunction) {
+      	Query!(E) resultQuery = new Query!(E)();
  
-   final public void addElement(E args) {
-      Result ~= Row!(E)(args);
-   }
+      	RowType[] outputResult;
  
+      	foreach( element; this.result ) {
+         	if( filterFunction(element) ) {
+            	outputResult ~= element;
+         	}
+      	}
  
-   final public Query!(E) where(bool delegate(ref Row!(E)) FilterFunction) {
-      Query!(E) ResultQuery;
+      	resultQuery.Result = outputResult;
  
-      ResultQuery = new Query!(E)();
+      	return resultQuery;
+   	}
  
-      Row!(E) []OutputResult;
+   	final public Query!(E) whereMany(bool delegate(ref RowType)[] filterFunctions) {
+      	Query!(E) resultQuery = new Query!(E)();
  
-      foreach (Element; this.Result) {
-         if( FilterFunction(Element) ) {
-            OutputResult ~= Element;
-         }
-      }
+      	RowType[] outputResult;
  
-      ResultQuery.Result = OutputResult;
+      	foreach( element; this.result ) {
+         	bool accept = true;
  
-      return ResultQuery;
-   }
+         	foreach( currentFilterFunction; filterFunctions ) {
+            	if( !currentFilterFunction(element) ) {
+               		accept = false;
+               		break;
+            	}
+         	}
  
-   final public Query!(E) whereMany(bool delegate(ref Row!(E)) []FilterFunctions) {
-      Query!(E) ResultQuery;
+         	if( accept ) {
+            	outputResult ~= element;
+         	}
+      	}
  
-      ResultQuery = new Query!(E)();
+      	resultQuery.result = outputResult;
+      	return resultQuery;
+   	}
  
-      Row!(E) []OutputResult;
+   	final public @property uint length() {
+      	return this.result.length;
+   	}
  
-      foreach( Element; this.Result ) {
-         bool Accept;
+   	final public void apply(void delegate(ref RowType) iterationDelegate) {
+      	foreach( iterationI; 0..this.result.length ) {
+         	iterationDelegate(this.result[iterationI]);
+      	}
+   	}
  
-         Accept = true;
- 
-         foreach( CurrentFilterFunction; FilterFunctions ) {
-            if( !CurrentFilterFunction(Element) ) {
-               Accept = false;
-               break;
-            }
-         }
- 
-         if( Accept ) {
-            OutputResult ~= Element;
-         }
-      }
- 
-      ResultQuery.Result = OutputResult;
- 
-      return ResultQuery;
-   }
- 
-   final public uint count() {
-      return this.Result.length;
-   }
- 
-   final public void foreach_(void delegate(ref Row!(E)) IterationDelegate) {
-      foreach( IterationI; 0..this.Result.length ) {
-         IterationDelegate(this.Result[IterationI]);
-      }
-   }
- 
-   /*
+   	/*
     final public Query!(Type) sortBy() {
         sort!("a.A < b.A")(this.Result);
  
@@ -86,6 +79,9 @@ class Query(E...) {
     }
     */
 }
+
+import std.stdio : writeln;
+
  
 void main()
 {
@@ -97,16 +93,15 @@ void main()
  
    float Z = 6.0f;
  
-   void foreachFunction(ref Row!(bool, float) Z) {
+   void foreachFunction(ref ax.RowType Z) {
       Z.Content[0] = Z.Content[1] < 6.0f;
    }
  
-   ax.foreach_(&foreachFunction);
+   ax.apply(&foreachFunction);
  
-   bool filterFunction0(ref Row!(bool, float) Input) {
+   bool filterFunction0(ref ax.RowType Input) {
       return Input.Content[0];
    }
  
-   writeln(ax.where(&filterFunction0).count());
- 
+   writeln(ax.where(&filterFunction0).length);
 }
