@@ -8,7 +8,7 @@ import math.LinearEquation;
 import ai.fuzzy.Area1d;
 import ai.fuzzy.FuzzySet;
 import ai.fuzzy.FuzzyElement;
-import common.ValueMatrix;
+import ai.fuzzy.IRuleLookup;
 
 
 // TODO< the rule table can be either a matrix or a function which does the decision >
@@ -42,7 +42,7 @@ class FuzzyControl {
 	}
 		
 	// one element of the rule matrix can have either a and or a or combination
-	static class RuleElement {
+	public static class RuleElement {
 		public final this(RuleSelector ruleSelector, EnumRuleType ruleType) {
 			this.ruleSelector = ruleSelector;
 			this.ruleType = ruleType;
@@ -74,7 +74,7 @@ class FuzzyControl {
 	// TODO< avergage of membership >
 	public EnumValueOperation globalCombinatorRule;
 
-	public ValueMatrix!RuleElement ruleMatrix;
+	public IRuleLookup ruleLookup;
 	
 	public FuzzySet[] inputFuzzySets;
 	
@@ -220,23 +220,22 @@ class FuzzyControl {
 		
 	// lookup the rule and calculates the combined value by the rule table
 	protected final void calcCombination(uint row, uint column, float rowValue, float columnValue, out RuleSelector resultRuleSelector, out float combinedValue) {
-		RuleElement lookedupRule = lookupRule(row, column);
+		RuleElement lookedupRule = ruleLookup.lookupRule([row, column]);
 		
 		resultRuleSelector = lookedupRule.ruleSelector;
-		combinedValue = combineAfterRuleType(lookedupRule.ruleType, rowValue, columnValue);
+		combinedValue = combineAfterRuleType(lookedupRule.ruleType, [rowValue, columnValue]);
 	}
 	
-	protected static float combineAfterRuleType(EnumRuleType ruleType, float a, float b) {
+	protected static float combineAfterRuleType(EnumRuleType ruleType, float[] values) {
 		EnumValueOperation valueOperation = translateRuleTypeToValueOperation(ruleType);
-		return applyValueOperation(valueOperation, a, b);
 		
-		final switch( ruleType ) {
-			case EnumRuleType.AND:
-			return min(a, b); // AND combination is realized by minimum of the two inputs
-			
-			case EnumRuleType.OR: // OR combination is realized by maximum of the two inputs
-			return max(a, b);
-		}
+		float carryValue = values[0];
+		
+		foreach( iterationValue; values[1..$] ) {
+			carryValue = applyValueOperation(valueOperation, carryValue, iterationValue);
+		} 
+		
+		return carryValue;
 	}
 	
 	protected static EnumValueOperation translateRuleTypeToValueOperation(EnumRuleType ruleType) {
@@ -254,9 +253,5 @@ class FuzzyControl {
 			case EnumValueOperation.MIN: return min(a, b);
 			case EnumValueOperation.MAX: return max(a, b);
 		}
-	}
-	
-	protected final RuleElement lookupRule(uint row, uint column) {
-		return ruleMatrix[row, column];
 	}
 }
