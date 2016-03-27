@@ -30,12 +30,14 @@ class RungeKutta4(Vectortype) {
 	
 	void integrate(ref RungeKutta4State!Vectortype state, float t, float dt) {
 		Derivative a,b,c,d, dummy;
+		dummy.dx = new Vectortype(0.0, 0.0, 0.0);
+		dummy.dv = new Vectortype(0.0, 0.0, 0.0);
 
 		a = evaluate( state, t, 0.0f, dummy );
 		b = evaluate( state, t, dt*0.5f, a );
 		c = evaluate( state, t, dt*0.5f, b );
 		d = evaluate( state, t, dt, c );
-
+		
 		Vectortype dxdt = ( a.dx + (b.dx + c.dx)*2.0f + d.dx ) * (1.0f / 6.0f);
 		Vectortype dvdt = ( a.dv + (b.dv + c.dv)*2.0f + d.dv ) * (1.0f / 6.0f);
 

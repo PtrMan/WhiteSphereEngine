@@ -32,7 +32,7 @@ class DynamicSimulator {
 			RungeKutta4State!VectorType rungeKutta4State;
 	        rungeKutta4State.x = iterationDynamicObject.relativePosition;
 	        rungeKutta4State.v = iterationDynamicObject.velocity;
-	
+	        
 	        rungeKuttaAccelerationCalculator.currentDynamicObjectInvMass = iterationDynamicObject.invMass;
 	
 	        rungeKutta4.integrate(rungeKutta4State, 0.0f, deltaTime);
@@ -62,7 +62,7 @@ class DynamicSimulator {
     	}
 
     	VectorType acceleration = forceSum * invMass;
-
+    	
     	return acceleration;
     }
 
