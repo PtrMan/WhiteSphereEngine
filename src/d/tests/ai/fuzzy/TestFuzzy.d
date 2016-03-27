@@ -5,8 +5,6 @@ import ai.fuzzy.Area1d;
 import ai.fuzzy.Trapezoid;
 import ai.fuzzy.ValueMatrix2dRuleLookup;
 
-import common.ValueMatrix;
-
 void main(string[] args) {
 	import std.stdio;
 	
