@@ -1,6 +1,8 @@
 module ai.fuzzy.Area1d;
 
 import ai.fuzzy.MergeArea1d;
+import math.LinearEquation;
+import math.Range;
 
 class PointDescriptor {
 	public float x, y;
@@ -72,8 +74,13 @@ public float calcWeightedX(Area1d area1d) {
 		float y0 = area1d.points[i].y;
 		float x1 = area1d.points[i+1].x;
 		float y1 = area1d.points[i+1].y;
+		
+		// we ignore this else we get mathematical errors
+		if( x0 == x1 ) {
+			continue;
+		}
 
-		assert( x1 >= x0 );
+		assert( x1 > x0 );
 
 		float m = calculateM(x0, y0, x1, y1);
 		float n = calculateN(m, x0, y0);
