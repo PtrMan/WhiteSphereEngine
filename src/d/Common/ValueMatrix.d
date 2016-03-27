@@ -10,11 +10,11 @@ template ValueMatrix(Type) {
     	}
     	
 		public final Type opIndexAssign(Type value, size_t row, size_t column) {
-			return data.data[row*protectedWidth + column] = value;
+			return data[row*protectedWidth + column] = value;
 		}
 
 		public final Type opIndex(size_t row, size_t column) {
-			return data.data[row*protectedWidth + column];
+			return data[row*protectedWidth + column];
 		}
     	
         public final @property uint width() {
