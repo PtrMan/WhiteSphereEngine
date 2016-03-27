@@ -16,6 +16,10 @@ float calcY(float m, float n, float x) {
 	return m*x + n;
 }
 
+float calcX(float m, float n, float y) {
+	return (1.0f/m) * (y - n);
+}
+
 void calculateIntersection(float ax0, float ay0, float ax1, float ay1, float bx0, float by0, float bx1, float by1, out float x, out float y) {
 	float am = calculateM(ax0, ay0, ax1, ay1);
 	float an = calculateN(am, ax0, ay0);
