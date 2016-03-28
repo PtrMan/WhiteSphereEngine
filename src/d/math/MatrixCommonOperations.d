@@ -1,10 +1,59 @@
 module math.MatrixCommonOperations;
 
 import math.Matrix;
+import math.GaussElimination : standardGaussElimination;
 
 import AlgebraLib.InstructionTranslator;
 import AlgebraLib.CompiletimeMatrixDescriptor;
 import AlgebraLib.ResultDescriptor;
+
+public Matrix!(NumericType, size, size) inverse(NumericType, uint size)(Matrix!(NumericType, size, size) input) {
+	Matrix!(NumericType, size*2, size) internalMatrix = new Matrix!(NumericType, size*2, size)();
+	
+	// transfer input to internal matrix
+	foreach( row; 0..size ) {
+		foreach( column; 0..size ) {
+			internalMatrix[row, column] = input[row, column];
+		}
+	}
+	// transfer identity to internal matrix
+	foreach( row; 0..size ) {
+		foreach( column; 0..size ) {
+			internalMatrix[row, column+size] = cast(NumericType)0.0;
+		}
+	}
+	foreach( i; 0..size ) {
+		internalMatrix[i, i+size] = cast(NumericType)1.0;
+	}
+	
+	standardGaussElimination(internalMatrix);
+	
+	Matrix!(NumericType, size, size) result = new Matrix!(NumericType, size, size)();
+	// transfer result from matrix to result
+	foreach( row; 0..size ) {
+		foreach( column; 0..size ) {
+			result[row, column] = internalMatrix[row, column+size];
+		}
+	}
+	
+	return result;
+}
+
+unittest {
+	import std.math : abs;
+	
+	Matrix!(float, 2, 2) toInverseMatrix = new Matrix!(float, 2, 2)();
+	toInverseMatrix[0, 0] = 2.0f;
+	toInverseMatrix[0, 1] = 1.0f;
+	toInverseMatrix[1, 0] = 2.0f;
+	toInverseMatrix[1, 1] = 2.0f;
+	
+	Matrix!(float, 2, 2) inversedMatrix = toInverseMatrix.inverse();
+	assert(abs(inversedMatrix[0, 0] - 1.0f) < 0.001f);
+	assert(abs(inversedMatrix[0, 1] - -0.5f) < 0.001f);
+	assert(abs(inversedMatrix[1, 0] - -1.0f) < 0.001f);
+	assert(abs(inversedMatrix[1, 1] - 1.0f) < 0.001f);
+}
 
 private string generateDOfMatrixMultiplyForMatrix(uint[] dimensions, string matrixnameA, string matrixnameB, string resultMatrixName) {
 	InstructionTranslator instructionTranslator;
