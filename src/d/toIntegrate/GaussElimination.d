@@ -1,9 +1,9 @@
 module GaussElimination;
 
-import Matrix : Matrix;
+import math.Matrix : Matrix;
 
 // modifies the table
-void gaussElimination(Type, uint width, uint height, StepType)(Matrix!(Type, width, height) matrix) {
+void gaussElimination(Type, uint width, uint height, StepType, bool withGaussJordan = true)(Matrix!(Type, width, height) matrix) {
 	void rowOperation(uint iRow, uint kRow) {
 		// split into two loops because we can't touch the value at [iRow, iRow], because we divide by it
 
@@ -17,58 +17,40 @@ void gaussElimination(Type, uint width, uint height, StepType)(Matrix!(Type, wid
 
 		StepType.doOperationForRowsAndColumn(matrix, iRow, kRow, iRow);
 	}
-
+	
 	// bring into echelon form
 
 	foreach( uint iterationRow; 0..height ) {
 		foreach( uint kRow; iterationRow+1..height ) {
-			{
-				import std.stdio;
-				writeln("row operation for iterationRow = ", iterationRow, " kRow = ", kRow);
-			}
-
 			rowOperation(iterationRow, kRow);
-		}
-
-
-		{
-			import std.stdio;
-			writeln("MATRIX");
-
-			for( int row = 0; row < 3; row++ ) {
-				for( int column = 0; column < 4; column++ ) {
-					write(matrix[row, column], " ");
-				}
-
-				writeln("");
-			}
-
-			writeln("");
 		}
 	}
 
 	// calculate result matrix
-
-	{
-		import std.stdio;
-		writeln("calculate result matrix");
+	// this is the extension called gauss-jordan elimination
+	if( withGaussJordan ) {
+		void multipleRowBy(uint row, Type value) {
+			foreach( i; 0..width ) {
+				matrix[row, i] = matrix[row, i] * value;
+			}
+		}
+		
+		foreach_reverse( bottomRow; 0..height ) {
+			multipleRowBy(bottomRow, cast(Type)1.0 / matrix[bottomRow, bottomRow]);
+			
+			foreach( iterationRow; 0..bottomRow ) {
+				import std.stdio;
+				writeln(iterationRow);
+				rowOperation(bottomRow, iterationRow);
+			}
+		}
 	}
-	
-	// TODO
-
 }
 
 template DefaultStep(Type, uint width, uint height) {
 	struct DefaultStep {
 		public static doOperationForRowsAndColumn(Matrix!(Type, width, height) matrix, uint iRow, uint kRow, uint j) {
 			Type divFactor = matrix[kRow, iRow] / matrix[iRow, iRow];
-
-			{
-				import std.stdio;
-
-				writeln( matrix[kRow, iRow] ," / ",matrix[iRow, iRow], " = ", divFactor);
-			}
-
 			matrix[kRow, j] = matrix[kRow, j] - divFactor*matrix[iRow, j];			
 		}
 	}
