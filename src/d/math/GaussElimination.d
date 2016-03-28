@@ -1,4 +1,4 @@
-module GaussElimination;
+module math.GaussElimination;
 
 import math.Matrix : Matrix;
 
