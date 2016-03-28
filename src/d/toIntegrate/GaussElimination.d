@@ -39,8 +39,6 @@ void gaussElimination(Type, uint width, uint height, StepType, bool withGaussJor
 			multipleRowBy(bottomRow, cast(Type)1.0 / matrix[bottomRow, bottomRow]);
 			
 			foreach( iterationRow; 0..bottomRow ) {
-				import std.stdio;
-				writeln(iterationRow);
 				rowOperation(bottomRow, iterationRow);
 			}
 		}
