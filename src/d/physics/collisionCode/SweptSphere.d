@@ -299,3 +299,58 @@ unittest {
 	assert( false == collideSweptSpheres(a, b) );
 	assert( false == collideSweptSpheres(b, a) );
 }
+
+
+import math.QuadraticSolver;
+
+
+// determines the start and end times of a potential intersection
+// generalizes well to a raytest
+// doesn't limit the range of t to [0, 1.0]
+// see http://www.gamasutra.com/view/feature/131790/simple_intersection_tests_for_games.php?page=2
+public void sweptSpheresTouchTimes(NumericType)(ref SweptSphere!NumericType sweptSphereA, ref SweptSphere!NumericType sweptSphereB, out NumericType startT, out NumericType endT, out bool solutionExists) {
+	assert( !sweptSphereA.isSingular && !sweptSphereB.isSingular );
+	
+	// translate
+	NumericType ra = sweptSphereA.radius;
+	NumericType rb = sweptSphereB.radius;
+	
+	SpatialVector!(3, NumericType) vAb = sweptSphereB.cachedDiff - sweptSphereA.cachedDiff;
+	SpatialVector!(3, NumericType) ab = sweptSphereB.a - sweptSphereA.a;
+	
+	// calculate a, b and c for the quadratic equation
+	NumericType
+		a = dot(vAb, vAb),
+		b = dot(vAb, ab)*cast(NumericType)2.0,
+		c = dot(ab, ab) - (ra+rb)*(ra+rb);
+	
+	// calculate quadration equation	
+	quadraticSolve(a, b, c, solutionExists, startT, endT);
+}
+
+unittest {
+	import std.math : abs;
+	
+	SweptSphere!double a, b;
+	
+	a.isSingular = false;
+	a.a = new SpatialVector!(3, double)(0.0, -5.0, 1.0);
+	a.b = new SpatialVector!(3, double)(0.0, 5.0, 1.0);
+	a.radius = 1.0;
+	a.update();
+	
+	// this is one tiny distance closer, so the result should be roughtly in the expected middle
+	b.isSingular = false;
+	b.a = new SpatialVector!(3, double)(-10.0, 0.0, -1.0+0.001);
+	b.b = new SpatialVector!(3, double)(10.0, 0.0, -1.0+0.001);
+	b.radius = 1.0;
+	b.update();
+	
+	double startT, endT;
+	bool solutionExists;
+	sweptSpheresTouchTimes(a, b, startT, endT, solutionExists);
+	
+	assert(solutionExists);
+	assert(abs(startT - 0.5) < 0.1);
+	assert(abs(endT - 0.5) < 0.1);
+}
