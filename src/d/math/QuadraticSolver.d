@@ -19,7 +19,7 @@ public void quadraticSolve(Type)(Type a, Type b, Type c, out bool existSolutions
  		return;
 	}
 		
-	Type toSquareRoot = B*B - cast(Type)4.0*a*c;
+	Type toSquareRoot = b*b - cast(Type)4.0*a*c;
 	existSolutions = toSquareRoot > 0;
 	if( existSolutions ) {
 		Type squareRooted = sqrt(toSquareRoot);
