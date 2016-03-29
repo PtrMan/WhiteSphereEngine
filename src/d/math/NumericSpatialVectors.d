@@ -160,8 +160,14 @@ import std.math : sqrt;
 
 // TODO< implement for general case >
 Type magnitude(Type)(SpatialVector!(3, Type) vector) {
-	return cast(Type)sqrt(vector.x*vector.x + vector.y*vector.y + vector.z*vector.z);
+	return cast(Type)sqrt(vector.magnitudeSquared());
 }
+
+// TODO< implement for general case >
+Type magnitudeSquared(Type)(SpatialVector!(3, Type) vector) {
+	return vector.x*vector.x + vector.y*vector.y + vector.z*vector.z;
+}
+
 
 SpatialVector!(Size, Type) normalized(uint Size, Type)(SpatialVector!(Size, Type) vector) {
 	Type length = magnitude(vector);
