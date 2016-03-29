@@ -1,4 +1,4 @@
-module Hashtable;
+module common.Hashtable;
 
 class Hashtable(Type, uint Buckets) {
 	protected static struct Bucket {
