@@ -14,8 +14,10 @@ class Hashtable(Type, uint Buckets) {
 		public Type element;
 		public uint hash;
 	}
+	
+	public alias uint function(Type element) HashFunctionType;
 
-	final this(uint function(Type element) calcHash) {
+	final this(HashFunctionType calcHash) {
 		this.calcHash = calcHash;
 	}
 
@@ -37,7 +39,21 @@ class Hashtable(Type, uint Buckets) {
 
 		return false;
 	}
+	
+	final public Type[] get(uint hash) {
+		Type[] result;
+		
+		uint bucketIndex = hash % Buckets;
+		
+		foreach( BucketElement iterationBucketElement; buckets[bucketIndex].content ) {
+			if( iterationBucketElement.hash == hash ) {
+				result ~= iterationBucketElement;
+			}
+		}
+		
+		return result;
+	}
 
 	protected Bucket[Buckets] buckets;
-	protected uint function(Type element) calcHash;
+	protected HashFunctionType calcHash;
 }
