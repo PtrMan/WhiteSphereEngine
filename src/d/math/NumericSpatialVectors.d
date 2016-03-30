@@ -151,6 +151,10 @@ template SpatialVector(uint Size, Type, bool Scalable = true) {
     }
 }
 
+SpatialVector!(Size, Type) componentDivision(uint Size, Type)(SpatialVector!(Size, Type) vector, SpatialVector!(Size, Type) divisorVector) {
+	return new SpatialVector!(Size, Type)(vector.x / divisorVector.x, vector.y / divisorVector.y, vector.z / divisorVector.z);
+}
+
 // method for better readability
 SpatialVector!(Size, Type) scale(uint Size, Type)(SpatialVector!(Size, Type) vector, Type magnitude) {
     return cast(SpatialVector!(Size, Type))(vector * magnitude);
