@@ -17,18 +17,18 @@ class Hashtable(Type, uint Buckets) {
 	
 	public alias uint function(Type element) HashFunctionType;
 
-	final this(HashFunctionType calcHash) {
-		this.calcHash = calcHash;
+	final this(HashFunctionType hashFunction) {
+		this.protectedHashFunction = hashFunction;
 	}
 
 	final public void insert(Type element) {
-		uint hashForElement = calcHash(element);
+		uint hashForElement = protectedHashFunction(element);
 		uint bucketIndex = hashForElement % Buckets;
 		buckets[bucketIndex].content ~= new BucketElement(element, hashForElement);
 	}
 
 	final public bool contains(Type element) {
-		uint hashForElement = calcHash(element);
+		uint hashForElement = protectedHashFunction(element);
 		uint bucketIndex = hashForElement % Buckets;
 		
 		foreach( BucketElement iterationBucketElement; buckets[bucketIndex].content ) {
@@ -47,13 +47,18 @@ class Hashtable(Type, uint Buckets) {
 		
 		foreach( BucketElement iterationBucketElement; buckets[bucketIndex].content ) {
 			if( iterationBucketElement.hash == hash ) {
-				result ~= iterationBucketElement;
+				result ~= iterationBucketElement.element;
 			}
 		}
 		
 		return result;
 	}
+	
+	// uncommented because its not used, code is fine
+	//final public @property HashFunctionType hashFunction() {
+	//	return protectedHashFunction;
+	//}
 
 	protected Bucket[Buckets] buckets;
-	protected HashFunctionType calcHash;
+	protected HashFunctionType protectedHashFunction;
 }
