@@ -134,15 +134,16 @@ unittest {
 	assert( result.x == 1 && result.y == 0 && result.z == 1 );
 }
 
+import geometry.AxisOrientedBoundingBox;
+
 class GridElement(ContentType, VectorType) {
 	public static class ContentWithBoundingBox {
 		public ContentType content;
-		public VectorType boundingBoxMin, boundingBoxMax;
+		public AxisOrientedBoundingBox!VectorType boundingBox;
 		
-		public final this(ContentType content, VectorType boundingBoxMin, VectorType boundingBoxMax) {
+		public final this(ContentType content, AxisOrientedBoundingBox!VectorType boundingBox) {
 			this.content = content;
-			this.boundingBoxMin = boundingBoxMin;
-			this.boundingBoxMax = boundingBoxMax;
+			this.boundingBox = boundingBox;
 		}
 	}
 	
@@ -207,7 +208,7 @@ class NestedGrid(ContentType, VectorType) : GridElement!(ContentType, VectorType
 	
 	// doesn't look for deeper grids, doesn't reallocate anything
 	public final void addNonrecursive(ContentWithBoundingBox contentWithBoundingBox) {
-		CoordinateRange!IntegerCoordinateGlobalType coordinateRangeToSweepToAdd = convertRealRangeToGlobalCoordinateRange(contentWithBoundingBox.boundingBoxMin, contentWithBoundingBox.boundingBoxMax);
+		CoordinateRange!IntegerCoordinateGlobalType coordinateRangeToSweepToAdd = convertRealRangeToGlobalCoordinateRange(contentWithBoundingBox.boundingBox.min, contentWithBoundingBox.boundingBox.max);
 		foreach( ix; coordinateRangeToSweepToAdd.minInclusive.x..coordinateRangeToSweepToAdd.maxInclusive.x+1 ) {
 			foreach( iy; coordinateRangeToSweepToAdd.minInclusive.y..coordinateRangeToSweepToAdd.maxInclusive.y+1 ) {
 				foreach( iz; coordinateRangeToSweepToAdd.minInclusive.z..coordinateRangeToSweepToAdd.maxInclusive.z+1 ) {
@@ -458,7 +459,7 @@ class HashSpatialNestedGrid(ContentType, VectorType) {
 		
 		if( checkBoundingBox ) {
 			bool isContentWithBoundingBoxInsideBoundOrOverlaps(ContentWithBoundingBoxType contentWithBoundingBox) {
-				bool doesOverlapOrIsInside = boundingBoxDoesOverlapInclusive(contentWithBoundingBox.boundingBoxMin, contentWithBoundingBox.boundingBoxMax, min, max);
+				bool doesOverlapOrIsInside = boundingBoxDoesOverlapInclusive(contentWithBoundingBox.boundingBox, new AxisOrientedBoundingBox!VectorType(min, max));
 				return doesOverlapOrIsInside;
 			}
 			
@@ -492,7 +493,7 @@ unittest {
 	SpatialGridType spatialGrid = new SpatialGridType(minExtend, maxExtend, rootGridSize, 0);
 	
 	SpatialGridType.ContentWithBoundingBoxType[] contentWithBbToAdd;
-	contentWithBbToAdd ~= new SpatialGridType.ContentWithBoundingBoxType(5, new VectorType(5.0, 10.0, 5.0), new VectorType(9.5, 19.5, 9.5));
+	contentWithBbToAdd ~= new SpatialGridType.ContentWithBoundingBoxType(5, new AxisOrientedBoundingBox!VectorType(new VectorType(5.0, 10.0, 5.0), new VectorType(9.5, 19.5, 9.5)));
 	
 	spatialGrid.resetContentAndAddAll(contentWithBbToAdd);
 	
@@ -520,7 +521,7 @@ unittest {
 	SpatialGridType spatialGrid = new SpatialGridType(minExtend, maxExtend, rootGridSize, 0);
 	
 	SpatialGridType.ContentWithBoundingBoxType[] contentWithBbToAdd;
-	contentWithBbToAdd ~= new SpatialGridType.ContentWithBoundingBoxType(5, new VectorType(0.02, 0.02, 0.02), new VectorType(4.5, 9.5, 4.5));
+	contentWithBbToAdd ~= new SpatialGridType.ContentWithBoundingBoxType(5, new AxisOrientedBoundingBox!VectorType(new VectorType(0.02, 0.02, 0.02), new VectorType(4.5, 9.5, 4.5)));
 	
 	spatialGrid.resetContentAndAddAll(contentWithBbToAdd);
 	
@@ -555,38 +556,3 @@ private Type[] calcUnique(Type)(Type[] input) {
 
 
 
-// bounding box helpers
-// TODO< put into own sourcefile >
-
-import math.Range;
-
-bool boundingBoxIsInsidePositionInclusive(VectorType)(VectorType boundingBoxMin, VectorType boundingBoxMax, VectorType toCheckPosition) {
-	return
-		isInRangeInclusive(boundingBoxMin.x, boundingBoxMax.x, toCheckPosition.x) &&
-		isInRangeInclusive(boundingBoxMin.y, boundingBoxMax.y, toCheckPosition.y) &&
-		isInRangeInclusive(boundingBoxMin.z, boundingBoxMax.z, toCheckPosition.z);
-}
-
-bool boundingBoxIsInsideInclusive(VectorType)(VectorType boundingBoxMin, VectorType boundingBoxMax, VectorType toCheckBoundingBoxMin, VectorType toCheckBoundingBoxMax) {
-	return
-		boundingBoxIsInsidePositionInclusive(boundingBoxMin, boundingBoxMax, toCheckBoundingBoxMin) &&
-		boundingBoxIsInsidePositionInclusive(boundingBoxMin, boundingBoxMax, toCheckBoundingBoxMax);
-}
-
-// implies the boundingBoxIsInside test
-bool boundingBoxDoesOverlapInclusive(VectorType)(VectorType boundingBoxMin, VectorType boundingBoxMax, VectorType toCheckBoundingBoxMin, VectorType toCheckBoundingBoxMax) {
-	alias typeof(boundingBoxMin.x) NumericType;
-	
-	bool overlapsOrInsideForOneDimension(NumericType aBegin, NumericType aEnd, NumericType bBegin, NumericType bEnd) {
-		return
-			isInRangeInclusive(aBegin, aEnd, bBegin) ||
-			isInRangeInclusive(aBegin, aEnd, bEnd) ||
-			isInRangeInclusive(bBegin, bEnd, aBegin) ||
-			isInRangeInclusive(bBegin, bEnd, aEnd);
-	}
-	
-	return
-		overlapsOrInsideForOneDimension(boundingBoxMin.x, boundingBoxMax.x, toCheckBoundingBoxMin.x, toCheckBoundingBoxMax.x) &&
-		overlapsOrInsideForOneDimension(boundingBoxMin.y, boundingBoxMax.y, toCheckBoundingBoxMin.y, toCheckBoundingBoxMax.y) &&
-		overlapsOrInsideForOneDimension(boundingBoxMin.z, boundingBoxMax.z, toCheckBoundingBoxMin.z, toCheckBoundingBoxMax.z);
-}
