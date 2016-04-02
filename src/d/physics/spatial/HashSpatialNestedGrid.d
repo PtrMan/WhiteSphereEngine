@@ -135,7 +135,7 @@ unittest {
 }
 
 import geometry.AxisOrientedBoundingBox;
-import helper.Unique : calcUnique;
+import helpers.Unique : calcUnique;
 
 class GridElement(ContentType, VectorType) {
 	public static class ContentWithBoundingBox {
