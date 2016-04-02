@@ -1,5 +1,8 @@
 module common.Hashtable;
 
+import std.algorithm.iteration : map;
+import std.array : array;
+
 class Hashtable(Type, uint Buckets) {
 	protected static struct Bucket {
 		public BucketElement[] content;
@@ -52,6 +55,16 @@ class Hashtable(Type, uint Buckets) {
 		}
 		
 		return result;
+	}
+	
+	final public Type[] getAllElements() {
+		Type[] elements;
+		
+		foreach( iterationBucket; buckets ) {
+			elements ~= array(map!(iterationBucketElement => iterationBucketElement.element)(iterationBucket.content));
+		}
+		
+		return elements;
 	}
 	
 	// uncommented because its not used, code is fine
