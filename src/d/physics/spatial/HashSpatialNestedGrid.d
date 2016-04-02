@@ -206,6 +206,10 @@ class NestedGrid(ContentType, VectorType) : GridElement!(ContentType, VectorType
 		hashtable = new HashTableType(&hashFunctionForHashtable);
 	}
 	
+	public final void resetAllGridElements() {
+		hashtable.flush();
+	}
+	
 	// doesn't look for deeper grids, doesn't reallocate anything
 	public final void addNonrecursive(ContentWithBoundingBox contentWithBoundingBox) {
 		CoordinateRange!IntegerCoordinateGlobalType coordinateRangeToSweepToAdd = convertRealRangeToGlobalCoordinateRange(contentWithBoundingBox.boundingBox.min, contentWithBoundingBox.boundingBox.max);
@@ -462,6 +466,8 @@ class HashSpatialNestedGrid(ContentType, VectorType) {
 	// LATER TODO< we do have the oportunity to reallocate the nested grids to a given depth after some criteria >
 	public final void resetContentAndAddAll(ContentWithBoundingBoxType[] contents) {
 		// for now we do the simple algorithm
+		
+		rootGrid.resetAllGridElements();
 		
 		foreach( iterationContentWithBoundingBox; contents ) {
 			rootGrid.addNonrecursive(iterationContentWithBoundingBox);
