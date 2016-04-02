@@ -135,6 +135,7 @@ unittest {
 }
 
 import geometry.AxisOrientedBoundingBox;
+import helper.Unique : calcUnique;
 
 class GridElement(ContentType, VectorType) {
 	public static class ContentWithBoundingBox {
@@ -562,27 +563,3 @@ unittest {
 	contentByRange = spatialGrid.getContentByRange(new VectorType(5.1, 11.0, 5.1), new VectorType(9.9, 19.9, 9.9));
 	assert(contentByRange.length == 0);
 }
-
-// helper
-private Type[] calcUnique(Type)(Type[] input) {
-	Type[] result;
-	
-	foreach( iterationInput; input ) {
-		bool alreadyContained = false;
-		foreach( iterationResult; result ) {
-			if( iterationResult is iterationInput ) {
-				alreadyContained = true;
-				break;
-			}
-		}
-		
-		if( !alreadyContained ) {
-			result ~= iterationInput;
-		}
-	}
-	
-	return result;
-}
-
-
-
