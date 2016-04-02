@@ -413,6 +413,23 @@ class NestedGrid(ContentType, VectorType) : GridElement!(ContentType, VectorType
 		return hashFuntionByLocalCoordinate(element.coordinate);
 	}
 	
+	public alias void delegate(GridElementType) GridElementInvokeCallbackType;
+	
+	public final void invokeDelegateForAllGridElementsRecursive(GridElementInvokeCallbackType gridElementInvokeCallback) {
+		auto hashtableElements = hashtable.getAllElements();
+		foreach( iterationHashtableElement; hashtableElements ) {
+			if( iterationHashtableElement.isNested ) {
+				// recursively call into it
+				NestedGrid!(ContentType, VectorType) nestedGrid = cast(NestedGrid!(ContentType, VectorType))iterationHashtableElement;
+				nestedGrid.invokeDelegateForAllGridElementsRecursive(gridElementInvokeCallback);
+			}
+			else {
+				gridElementInvokeCallback(iterationHashtableElement);
+			}
+		}
+	}
+
+	
 	public alias uint function(IntegerCoordinateLocalType) HashFunctionType;
 	
 	protected HashTableType hashtable;
@@ -439,6 +456,8 @@ class HashSpatialNestedGrid(ContentType, VectorType) {
 	}
 	
 	public alias NestedGrid!(ContentType, VectorType).ContentWithBoundingBox ContentWithBoundingBoxType;
+	public alias NestedGrid!(ContentType, VectorType).GridElementInvokeCallbackType GridElementInvokeCallbackType;
+	public alias NestedGrid!(ContentType, VectorType).GridElementType GridElementType;
 	
 	// LATER TODO< we do have the oportunity to reallocate the nested grids to a given depth after some criteria >
 	public final void resetContentAndAddAll(ContentWithBoundingBoxType[] contents) {
@@ -471,7 +490,12 @@ class HashSpatialNestedGrid(ContentType, VectorType) {
 		
 		return array(map!(element => element.content)(filteredGridQueryResult));
 	}
-		
+	
+	public final invokeDelegateForAllGridElementsRecursive(GridElementInvokeCallbackType gridElementInvokeCallback) {
+		rootGrid.invokeDelegateForAllGridElementsRecursive(gridElementInvokeCallback);
+	}
+
+	
 	protected NestedGrid!(ContentType, VectorType) rootGrid;
 	
 	protected const uint HASHTABLEBUCKETS = 256;
@@ -479,7 +503,7 @@ class HashSpatialNestedGrid(ContentType, VectorType) {
 	protected uint subdivisionFactor; // is powr of two for a simpler grid traversal calculation
 }
 
-// TODO< unittests >
+// unittests
 
 // contains element
 // checks for correct overlap tests
