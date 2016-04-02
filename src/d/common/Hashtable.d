@@ -67,6 +67,12 @@ class Hashtable(Type, uint Buckets) {
 		return elements;
 	}
 	
+	final public void flush() {
+		foreach( iterationBucket; buckets ) {
+			iterationBucket.content.length = 0;
+		}
+	}
+	
 	// uncommented because its not used, code is fine
 	//final public @property HashFunctionType hashFunction() {
 	//	return protectedHashFunction;
