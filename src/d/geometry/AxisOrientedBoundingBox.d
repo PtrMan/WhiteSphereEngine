@@ -12,7 +12,7 @@ class AxisOrientedBoundingBox(VectorType) {
 // bounding box helpers
 // TODO< put into own sourcefile >
 
-import std.math : min, max;
+import std.algorithm : min, max;
 
 import math.Range;
 
