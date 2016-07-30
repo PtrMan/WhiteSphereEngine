@@ -334,7 +334,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 	/// TODO< fit the queue families from the steps above into the queue budget of the device >
-BEGIN TO REFACTOR
+	//BEGIN TO REFACTOR
 
 
 	// create device	
@@ -432,7 +432,7 @@ BEGIN TO REFACTOR
 	}
 	scope(exit) vkDestroyDevice(chainContext.vulkan.chosenDevice.logicalDevice, null);
 
-END TO REFACTOR
+	//END TO REFACTOR
 
 
 
