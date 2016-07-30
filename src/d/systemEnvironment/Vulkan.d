@@ -31,6 +31,8 @@ import TypedPointerWithLength : TypedPointerWithLength;
 
 import helpers.Conversion : convertCStringToD;
 
+import helpers.VariableValidator : VariableValidator;
+
 private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
 	import std.stdio;
 	
@@ -132,6 +134,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	VulkanDevice[] vulkanDevices = vulkan.InitialisationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
 	
+	import common.IPipe;
 	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("i have %s vulkan devices", vulkanDevices.length), "vulkan");
 	
 	// now we filter for the devices with at least n queue of the given type
@@ -179,7 +182,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 	// first we figure out the queue families for the graphics and compute queue for the 
-	// TODO ASK< is the graphics queue realy necessary here or just refactor the queue to get the presentation queue and check later against
+	// TODO ASK< is the graphics queue really necessary here or just refactor the queue to get the presentation queue and check later against
 	//           the primary and secondary queue for graphics and compute? >
 	//uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
 	//uint32_t presentQueueFamilyIndex  = UINT32_MAX;
@@ -202,6 +205,14 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
 		QueryQueueResult[] queryQueueResult;
 		
+		
+		VariableValidator!VkSurfaceKHR surface;
+		surface.invalidate();
+		
+		VariableValidator!VkPhysicalDevice physicalDevice;
+		physicalDevice = chainContext.vulkan.chosenDevice.physicalDevice;
+		
+		// NOTE< this asserts because the surface is not set!, this is fine because we don't want to run this code >
 		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface);
 		
 		
@@ -401,17 +412,24 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		return uniqueQueueFamilies;
 	}
 	
-	// TODO< function to translate DeviceQueueCreateInfoHelper[] to VkDeviceQueueCreateInfo[] >
+	VkDeviceQueueCreateInfo[] translateDeviceQueueCreateInfoHelperToVk(DeviceQueueCreateInfoHelper[] queues) {
+		VkDeviceQueueCreateInfo[] result;
+		result.length = queues.length;
+		
+		foreach( i; 0..queues.length ) {
+			initDeviceQueueCreateInfo(&(result[i]));
+			result[i].queueFamilyIndex = queues[i].queueFamilyIndex;
+			result[i].queueCount = queues[i].count;
+			result[i].pQueuePriorities = cast(immutable(float)*)queues[i].priorities.ptr;
+		}
+		
+		return result;
+	}
 	
 	
-	// TODO< function which combines the two functions >
-
-	VkDeviceQueueCreateInfo[] queueCreateInfoArray = createQueueInfoForQueues();
-	initDeviceQueueCreateInfo(&(queueCreateInfoArray[0]));
-	queueCreateInfoArray[0].queueFamilyIndex = 0; // HACK< TODO< lookup index > >
-	queueCreateInfoArray[0].queueCount = 2;
-	queueCreateInfoArray[0].pQueuePriorities = cast(immutable(float)*)queuePriorities.ptr;
-
+	DeviceQueueCreateInfoHelper[] queueCreateInfoHelperArray = createQueueInfoForQueues(uniqueQueues);
+	VkDeviceQueueCreateInfo[] queueCreateInfoArray = translateDeviceQueueCreateInfoHelperToVk(queueCreateInfoHelperArray);
+	
 	VkDeviceCreateInfo deviceCreateInfo;
 	initDeviceCreateInfo(&deviceCreateInfo);
 	deviceCreateInfo.queueCreateInfoCount = queueCreateInfoArray.length;
