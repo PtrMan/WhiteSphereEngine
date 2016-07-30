@@ -17,6 +17,7 @@ public void platformVulkan1Libary(ChainContext chainContext, ChainElement[] chai
 import std.string : toStringz;
 import core.memory : GC;
 import std.stdint;
+import std.format : format;
 
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
@@ -131,11 +132,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	VulkanDevice[] vulkanDevices = vulkan.InitialisationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
 	
-	{
-		import std.stdio : writeln;
-		writeln("I have ", vulkanDevices.length, " vulkan devices");
-	
-	}
+	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("i have %s vulkan devices", vulkanDevices.length), "vulkan");
 	
 	// now we filter for the devices with at least n queue of the given type
 
@@ -172,19 +169,244 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 
+
+
+
+
+
+
+
+
+
+	// first we figure out the queue families for the graphics and compute queue for the 
+	// TODO ASK< is the graphics queue realy necessary here or just refactor the queue to get the presentation queue and check later against
+	//           the primary and secondary queue for graphics and compute? >
+	//uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+	//uint32_t presentQueueFamilyIndex  = UINT32_MAX;
+	
+	class QueueInfo {
+		public uint32_t queueFamilyIndex = UINT32_MAX;
+		public ExtendedQueueFamilyProperty queueFamilyProperty;
+		public VariableValidator!VkQueue queue;
+		
+		public float priority; // used mainly for retrival of queues
+	}
+	
+	QueueInfo primaryQueue;
+	QueueInfo secondaryQueue;
+	QueueInfo presentQueue;
+	
+    primaryQueue = new QueueInfo();
+    presentQueue = new QueueInfo();
+	{
+		ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
+		QueryQueueResult[] queryQueueResult;
+		
+		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface);
+		
+		
+		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndComputeAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
+		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
+		
+		requestedQueueFamilyProperties.length = 0;
+		// try to find a queue family which can do graphics, present and compute capability
+		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicsAndComputeAndPresentation;
+		// followed by a queue which can do only graphics and presentation
+		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicsAndPresentation;
+		
+		queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+		
+		if( queryQueueResult.length == 0 ) {
+			// TODO< it could be the case that we need a extra present queue >
+			
+	    	throw new EngineException(true, true, "Couldn't find a suitable queue for graphics and presentation!");
+	    }
+		
+		// the best queue is the first result
+		primaryQueue.queueFamilyIndex = presentQueue.queueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+		primaryQueue.queueFamilyProperty = presentQueue.queueFamilyProperty = queryQueueResult[0].requiredProperties;
+		
+		
+		// now we try to find the secondary queue, it has only to offer graphics and compute
+		
+		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndCompute = new ExtendedQueueFamilyProperty(true, false, false, false);
+		requestedQueueFamilyProperties.length = 0;
+		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicsAndCompute;
+		
+		queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+		
+		if( queryQueueResult.length == 0 ) {
+			throw new EngineException(true, true, "Couldn't find a suitable queue for graphics and compute!");
+	    }
+		
+		secondaryQueue = new QueueInfo();
+		secondaryQueue.queueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+		secondaryQueue.queueFamilyProperty = queryQueueResult[0].requiredProperties;
+		
+		
+		/*
+		
+		// the best queue would be one with both graphics and present capabilities
+		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
+		
+		ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
+		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicsAndPresentation;
+		
+		// if the is not available, we choose seperate queues
+		requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(false, false, false, true);
+		requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(true, false, false, false);
+		
+		QueryQueueResult[] queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+		
+		
+	    
+	    if( queryQueueResult.length == 0 ) {
+	    	throw new EngineException(true, true, "Couldn't find a suitable queue for graphics and presentation");
+	    }
+	    
+	    if( queryQueueResult[0].requiredProperties.isEqual(queueFamilyPropertyForGraphicsAndPresentation) ) {
+	    	graphicsQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+	    	presentQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+	    }
+	    else {
+	    	foreach( QueryQueueResult iterationQueryQueueResult; queryQueueResult ) {
+	    		if( iterationQueryQueueResult.requiredProperties.isEqual(new ExtendedQueueFamilyProperty(false, false, false, true)) ) {
+	    			presentQueueFamilyIndex = iterationQueryQueueResult.queueFamilyIndex;
+	    		}
+	    		else if( iterationQueryQueueResult.requiredProperties.isEqual(new ExtendedQueueFamilyProperty(true, false, false, false)) ) {
+	    			graphicsQueueFamilyIndex = iterationQueryQueueResult.queueFamilyIndex;
+	    		}
+	    	}
+	    }
+		
+	    // Generate error if could not find both a graphics and a present queue
+	    if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
+	        throw new EngineException(true, true, "Could not find a graphics and a present queue");
+	    }
+	    */
+	    
+	    // log
+	    chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("primary queue family index is %s", primaryQueue.queueFamilyIndex), "vulkan");
+	    chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("present queue family index is %s", presentQueue.queueFamilyIndex), "vulkan");
+	    chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("secondary queue family index is %s", secondaryQueue.queueFamilyIndex), "vulkan");
+	}
+    
+    
+	/*
+	
+	// choose queue family for primary and maybe secondary queues
+	
+	// possible because later we try to fit the presentation, primary and maybe secondary queues into the available resources
+	uint32_t possibleComputeQueueFamilyIndex;
+	uint32_t possibleGraphicsQueueFamilyIndex;
+	{
+		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties;
+		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicAndCompute = new ExtendedQueueFamilyProperty(true, true, false, false);
+		
+		requestedQueueFamilyProperties.length = 0;
+		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicAndCompute;
+		queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+		if( queryQueueResult.length == 1 ) {
+			possibleComputeQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+	    	possibleGraphicsQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+		}
+		else {
+			requestedQueueFamilyProperties.length = 0;
+			requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(true, false, false, false);
+			requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(false, true, false, false);
+			queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
+			if( queryQueueResult.length != 2 ) {
+				throw new EngineException(true, true, "Could not find a graphics and a present queue");
+			}
+			
+			possibleGraphicsQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
+			possibleComputeQueueFamilyIndex = queryQueueResult[1].queueFamilyIndex;
+		}
+	
+		// log
+	    chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("possible graphics queue family index is %s", possibleGraphicsQueueFamilyIndex), "vulkan");
+	    chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("possible present queue family index is %s", possibleComputeQueueFamilyIndex), "vulkan");
+	}
+	*/
+
+
+
+
+
+	/// TODO< fit the queue families from the steps above into the queue budget of the device >
+BEGIN TO REFACTOR
+
+
 	// create device	
 	VkPhysicalDeviceFeatures physicalDeviceFeatures;
 	initPhysicalDeviceFeatures(&physicalDeviceFeatures);
+	
+	primaryQueue.priority = 1.0f;
+	presentQueue.priority = 1.0f;
+	secondaryQueue.priority = 0.3f;
+	
+	QueueInfo[] uniqueQueues;
+	uniqueQueues ~= primaryQueue;
+	if( primaryQueue !is presentQueue ) {
+		uniqueQueues ~= presentQueue;
+	}
+	uniqueQueues ~= secondaryQueue;
+	
 
-	// TODO< check if we do this like this in the OpenGL implementation and rewrite this code here if we allocate memory not over the GC
-	float[] queuePriorities = new float[2];
-	queuePriorities[0] = 1.0f;
-	queuePriorities[1] = 0.3f;
+	float[] queuePriorities = new float[uniqueQueues.length];
+	for( uint i = 0; i < uniqueQueues.length; i++ ) {
+		queuePriorities[i] = uniqueQueues[i].priority;
+	}
+	
+	
+	class DeviceQueueCreateInfoHelper {
+		public uint32_t queueFamilyIndex;
+		public float[] priorities;
+		
+		final public @property uint count() {
+			return priorities.length;
+		}
+	}
+	
+	DeviceQueueCreateInfoHelper[] createQueueInfoForQueues(QueueInfo[] queues) {
+		DeviceQueueCreateInfoHelper[] uniqueQueueFamilies;
+		
+		DeviceQueueCreateInfoHelper getWithSameFamily(uint32_t queueFamilyIndex, out bool found) {
+			found = false;
+			foreach( DeviceQueueCreateInfoHelper iterationHelper; uniqueQueueFamilies) {
+				if( iterationHelper.queueFamilyIndex == queueFamilyIndex) {
+					found = true;
+					return iterationHelper;
+				}
+			}
+			
+			return null;
+		}
+		
+		foreach( QueueInfo iterationQueue; queues ) {
+			bool found;
+			DeviceQueueCreateInfoHelper helperWithSameFamily = getWithSameFamily(iterationQueue.queueFamilyIndex, found);
+			if( !found ) {
+				DeviceQueueCreateInfoHelper createdHelper = new DeviceQueueCreateInfoHelper();
+				createdHelper.queueFamilyIndex = iterationQueue.queueFamilyIndex;
+				createdHelper.priorities = [iterationQueue.priority];
+				uniqueQueueFamilies ~= createdHelper;
+			}
+			else {
+				assert(helperWithSameFamily.queueFamilyIndex == iterationQueue.queueFamilyIndex);
+				helperWithSameFamily.priorities ~= iterationQueue.priority;
+			}
+		}
+		
+		return uniqueQueueFamilies;
+	}
+	
+	// TODO< function to translate DeviceQueueCreateInfoHelper[] to VkDeviceQueueCreateInfo[] >
+	
+	
+	// TODO< function which combines the two functions >
 
-	// TODO< check if we do this like this in the OpenGL implementation and rewrite this code here if we allocate memory not over the GC
-	// for now we just request two queues
-	// one high priority queue and one low priority queue
-	VkDeviceQueueCreateInfo[] queueCreateInfoArray = new VkDeviceQueueCreateInfo[1];
+	VkDeviceQueueCreateInfo[] queueCreateInfoArray = createQueueInfoForQueues();
 	initDeviceQueueCreateInfo(&(queueCreateInfoArray[0]));
 	queueCreateInfoArray[0].queueFamilyIndex = 0; // HACK< TODO< lookup index > >
 	queueCreateInfoArray[0].queueCount = 2;
@@ -209,6 +431,35 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		throw new EngineException(true, true, "Couldn't create vulkan device!");
 	}
 	scope(exit) vkDestroyDevice(chainContext.vulkan.chosenDevice.logicalDevice, null);
+
+END TO REFACTOR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	// now we can free the array with the layers and the baked gc memory

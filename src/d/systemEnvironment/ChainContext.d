@@ -6,6 +6,7 @@ import api.vulkan.Vulkan;
 import memory.NonGcHandle : NonGcHandle;
 import vulkan.VulkanSwapChain;
 import vulkan.VulkanDevice;
+import common.LoggerPipe;
 
 // context which is passed between all chain functions for exchainging configuration information
 class ChainContext {
@@ -27,6 +28,8 @@ class ChainContext {
 		WindowsContext windowsContext;
 	}
 	
+	public LoggerPipe loggerPipe;
+	
 	struct Vulkan {
 		VulkanDevice chosenDevice;
 		
@@ -37,7 +40,7 @@ class ChainContext {
 		NonGcHandle!VkFormat depthFormatMediumPrecision;
 		NonGcHandle!VkFormat depthFormatHighPrecision;
 		
-		VkQueue highPriorityQueue, lowPriorityQueue;
+		//VkQueue highPriorityQueue, lowPriorityQueue;
 		
 		
 		
