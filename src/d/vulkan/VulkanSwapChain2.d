@@ -876,10 +876,12 @@ class VulkanSwapChain2 {
 	            break;
 	        
 	        {
+	        	immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	        	VkSubmitInfo submitInfo;
 	        	initSubmitInfo(&submitInfo);
 	        	submitInfo.waitSemaphoreCount = 1;
 	        	submitInfo.pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+	        	submitInfo.pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 	        	submitInfo.signalSemaphoreCount = 1;
 	        	submitInfo.pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
 	        	
