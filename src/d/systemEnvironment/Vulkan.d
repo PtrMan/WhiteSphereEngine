@@ -880,7 +880,7 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 	
 		vulkanSuccess = vkQueueSubmit(queueManager.getQueueByName("primary"), 1, &submitInfo, 0);
 		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't submi to queue!");
+			throw new EngineException(true, true, "Couldn't submit to queue!");
 		}
 
 		
