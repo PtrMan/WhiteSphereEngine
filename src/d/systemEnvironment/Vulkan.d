@@ -24,6 +24,7 @@ import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
 import vulkan.VulkanPlatform;
+import vulkan.VulkanQueueHelpers : DeviceQueueInfoHelper, QueueInfo;
 static import vulkan.InitialisationHelpers;
 import Exceptions : EngineException;
 import TypedPointerWithLength : TypedPointerWithLength;
@@ -187,13 +188,6 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	//uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
 	//uint32_t presentQueueFamilyIndex  = UINT32_MAX;
 	
-	class QueueInfo {
-		public uint32_t queueFamilyIndex = UINT32_MAX;
-		public ExtendedQueueFamilyProperty queueFamilyProperty;
-		public VariableValidator!VkQueue queue;
-		
-		public float priority; // used mainly for retrival of queues
-	}
 	
 	QueueInfo primaryQueue;
 	QueueInfo secondaryQueue;
@@ -365,67 +359,15 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	
 	
-	class DeviceQueueInfoHelper {
-		public uint32_t queueFamilyIndex;
-		public float[] priorities;
-		
-		public VkQueue[] queues; // the queues, must have the same length as priorities at the end of the initialisation and retrival
-		
-		final public @property uint count() {
-			return priorities.length;
-		}
-	}
-	
-	DeviceQueueInfoHelper[] createQueueInfoForQueues(QueueInfo[] queues) {
-		DeviceQueueInfoHelper[] uniqueQueueFamilies;
-		
-		DeviceQueueInfoHelper getWithSameFamily(uint32_t queueFamilyIndex, out bool found) {
-			found = false;
-			foreach( DeviceQueueInfoHelper iterationHelper; uniqueQueueFamilies) {
-				if( iterationHelper.queueFamilyIndex == queueFamilyIndex) {
-					found = true;
-					return iterationHelper;
-				}
-			}
-			
-			return null;
-		}
-		
-		foreach( QueueInfo iterationQueue; queues ) {
-			bool found;
-			DeviceQueueInfoHelper helperWithSameFamily = getWithSameFamily(iterationQueue.queueFamilyIndex, found);
-			if( !found ) {
-				DeviceQueueInfoHelper createdHelper = new DeviceQueueInfoHelper();
-				createdHelper.queueFamilyIndex = iterationQueue.queueFamilyIndex;
-				createdHelper.priorities = [iterationQueue.priority];
-				uniqueQueueFamilies ~= createdHelper;
-			}
-			else {
-				assert(helperWithSameFamily.queueFamilyIndex == iterationQueue.queueFamilyIndex);
-				helperWithSameFamily.priorities ~= iterationQueue.priority;
-			}
-		}
-		
-		return uniqueQueueFamilies;
-	}
-	
-	VkDeviceQueueCreateInfo[] translateDeviceQueueCreateInfoHelperToVk(DeviceQueueInfoHelper[] queues) {
-		VkDeviceQueueCreateInfo[] result;
-		result.length = queues.length;
-		
-		foreach( i; 0..queues.length ) {
-			initDeviceQueueCreateInfo(&(result[i]));
-			result[i].queueFamilyIndex = queues[i].queueFamilyIndex;
-			result[i].queueCount = queues[i].count;
-			result[i].pQueuePriorities = cast(immutable(float)*)queues[i].priorities.ptr;
-		}
-		
-		return result;
-	}
+
 	
 	
-	DeviceQueueInfoHelper[] queueInfoHelpers = createQueueInfoForQueues(uniqueQueues);
-	VkDeviceQueueCreateInfo[] queueCreateInfoArray = translateDeviceQueueCreateInfoHelperToVk(queueInfoHelpers);
+	
+	
+	
+	
+	DeviceQueueInfoHelper[] queueInfoHelpers = DeviceQueueInfoHelper.createQueueInfoForQueues(uniqueQueues);
+	VkDeviceQueueCreateInfo[] queueCreateInfoArray = DeviceQueueInfoHelper.translateDeviceQueueCreateInfoHelperToVk(queueInfoHelpers);
 	
 	VkDeviceCreateInfo deviceCreateInfo;
 	initDeviceCreateInfo(&deviceCreateInfo);
