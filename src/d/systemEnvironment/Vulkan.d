@@ -24,6 +24,7 @@ import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
 import vulkan.VulkanPlatform;
+import vulkan.QueueManager;
 import vulkan.VulkanQueueHelpers : DeviceQueueInfoHelper, QueueInfo;
 static import vulkan.InitialisationHelpers;
 import Exceptions : EngineException;
@@ -48,6 +49,8 @@ private extern(System) VkBool32 vulkanDebugCallback(VkFlags msgFlags, VkDebugRep
  */
 public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
+	
+	QueueManager queueManager = chainContext.vulkan.queueManager;
 	
 	bool withDebugReportExtension = true;
 	
@@ -340,7 +343,10 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 	/// TODO< fit the queue families from the steps above into the queue budget of the device >
 	//BEGIN TO REFACTOR
-
+	
+	
+	
+	
 
 	// create device	
 	VkPhysicalDeviceFeatures physicalDeviceFeatures;
@@ -350,11 +356,19 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	presentQueue.priority = 1.0f;
 	secondaryQueue.priority = 0.3f;
 	
+	uint[string] queueIndexByName;
+	
 	QueueInfo[] uniqueQueues;
+	
+	
+	queueIndexByName["primary"] = uniqueQueues.length;
 	uniqueQueues ~= primaryQueue;
+	
 	if( primaryQueue !is presentQueue ) {
 		uniqueQueues ~= presentQueue;
 	}
+	
+	queueIndexByName["secondary"] = uniqueQueues.length;
 	uniqueQueues ~= secondaryQueue;
 	
 	
@@ -365,9 +379,11 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	
 	
+	queueManager.queueInfos = DeviceQueueInfoHelper.createQueueInfoForQueues(uniqueQueues);
+	queueManager.queueInfosByString["primary"] = queueManager.queueInfos[queueIndexByName["primary"]];
+	queueManager.queueInfosByString["secondary"] = queueManager.queueInfos[queueIndexByName["secondary"]];
 	
-	DeviceQueueInfoHelper[] queueInfoHelpers = DeviceQueueInfoHelper.createQueueInfoForQueues(uniqueQueues);
-	VkDeviceQueueCreateInfo[] queueCreateInfoArray = DeviceQueueInfoHelper.translateDeviceQueueCreateInfoHelperToVk(queueInfoHelpers);
+	VkDeviceQueueCreateInfo[] queueCreateInfoArray = DeviceQueueInfoHelper.translateDeviceQueueCreateInfoHelperToVk(queueManager.queueInfos);
 	
 	VkDeviceCreateInfo deviceCreateInfo;
 	initDeviceCreateInfo(&deviceCreateInfo);
@@ -393,7 +409,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	// retrive queues
 	{
-		foreach( iterationDeviceQueueInfoHelper; queueInfoHelpers ) {
+		foreach( iterationDeviceQueueInfoHelper; queueManager.queueInfos ) {
 			iterationDeviceQueueInfoHelper.queues.length = iterationDeviceQueueInfoHelper.count;
 			
 			foreach( queueIndex; 0..iterationDeviceQueueInfoHelper.count ) {
@@ -683,6 +699,8 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 	// under MIT license
 	
 	VkResult vulkanResult;
+	
+	QueueManager queueManager = chainContext.vulkan.queueManager;
 
 	struct DepthStencil {
 		VkImage image;
@@ -860,13 +878,13 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = cast(immutable(VkCommandBuffer)*)&chainContext.vulkan.setupCmdBuffer;
 	
-		vulkanSuccess = vkQueueSubmit(chainContext.vulkan.highPriorityQueue, 1, &submitInfo, 0);
+		vulkanSuccess = vkQueueSubmit(queueManager.getQueueByName("primary"), 1, &submitInfo, 0);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't submi to queue!");
 		}
 
 		
-		vulkanSuccess = vkQueueWaitIdle(chainContext.vulkan.highPriorityQueue);
+		vulkanSuccess = vkQueueWaitIdle(queueManager.getQueueByName("primary"));
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't wait on queue idle!");
 		}

@@ -6,6 +6,7 @@ import api.vulkan.Vulkan;
 import memory.NonGcHandle : NonGcHandle;
 import vulkan.VulkanSwapChain;
 import vulkan.VulkanDevice;
+import vulkan.QueueManager;
 import common.LoggerPipe;
 
 // context which is passed between all chain functions for exchainging configuration information
@@ -31,6 +32,8 @@ class ChainContext {
 	public LoggerPipe loggerPipe;
 	
 	struct Vulkan {
+		QueueManager queueManager = new QueueManager();
+		
 		VulkanDevice chosenDevice;
 		
 		NonGcHandle!VkInstance instance;
