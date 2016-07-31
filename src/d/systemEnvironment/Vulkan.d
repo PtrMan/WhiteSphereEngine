@@ -378,10 +378,10 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	
 	
-	
-	queueManager.queueInfos = DeviceQueueInfoHelper.createQueueInfoForQueues(uniqueQueues);
-	queueManager.queueInfosByString["primary"] = queueManager.queueInfos[queueIndexByName["primary"]];
-	queueManager.queueInfosByString["secondary"] = queueManager.queueInfos[queueIndexByName["secondary"]];
+	DeviceQueueInfoHelper.DeviceQueueInfoAndIndexType[] queueDeviceQueueInfoAndQueueIndices;
+	queueManager.queueInfos = DeviceQueueInfoHelper.createQueueInfoForQueues(uniqueQueues, queueDeviceQueueInfoAndQueueIndices);
+	queueManager.addQueueByName("primary", queueDeviceQueueInfoAndQueueIndices[queueIndexByName["primary"]][0], queueDeviceQueueInfoAndQueueIndices[queueIndexByName["primary"]][1]);
+	queueManager.addQueueByName("secondary", queueDeviceQueueInfoAndQueueIndices[queueIndexByName["secondary"]][0], queueDeviceQueueInfoAndQueueIndices[queueIndexByName["secondary"]][1]);
 	
 	VkDeviceQueueCreateInfo[] queueCreateInfoArray = DeviceQueueInfoHelper.translateDeviceQueueCreateInfoHelperToVk(queueManager.queueInfos);
 	

@@ -2,6 +2,7 @@ module vulkan.QueueManager;
 
 import std.typecons : Tuple;
 
+import api.vulkan.Vulkan;
 import vulkan.VulkanQueueHelpers;
 
 // bundles the queues and a mechanism to adress them by name
