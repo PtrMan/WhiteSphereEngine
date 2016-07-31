@@ -302,6 +302,8 @@ class ExtendedQueueFamilyProperty {
 
 
 ExtendedQueueFamilyProperty[] getSupportPresentForAllQueueFamiliesAndQueueInfo(VariableValidator!VkPhysicalDevice physicalDevice, VariableValidator!VkSurfaceKHR surface) {
+	assert(surface.isValid());
+	
 	ExtendedQueueFamilyProperty[] result;
 	
 	uint32_t queueFamilyCount;

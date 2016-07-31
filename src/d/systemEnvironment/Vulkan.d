@@ -363,28 +363,25 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	}
 	uniqueQueues ~= secondaryQueue;
 	
-
-	float[] queuePriorities = new float[uniqueQueues.length];
-	for( uint i = 0; i < uniqueQueues.length; i++ ) {
-		queuePriorities[i] = uniqueQueues[i].priority;
-	}
 	
 	
-	class DeviceQueueCreateInfoHelper {
+	class DeviceQueueInfoHelper {
 		public uint32_t queueFamilyIndex;
 		public float[] priorities;
+		
+		public VkQueue[] queues; // the queues, must have the same length as priorities at the end of the initialisation and retrival
 		
 		final public @property uint count() {
 			return priorities.length;
 		}
 	}
 	
-	DeviceQueueCreateInfoHelper[] createQueueInfoForQueues(QueueInfo[] queues) {
-		DeviceQueueCreateInfoHelper[] uniqueQueueFamilies;
+	DeviceQueueInfoHelper[] createQueueInfoForQueues(QueueInfo[] queues) {
+		DeviceQueueInfoHelper[] uniqueQueueFamilies;
 		
-		DeviceQueueCreateInfoHelper getWithSameFamily(uint32_t queueFamilyIndex, out bool found) {
+		DeviceQueueInfoHelper getWithSameFamily(uint32_t queueFamilyIndex, out bool found) {
 			found = false;
-			foreach( DeviceQueueCreateInfoHelper iterationHelper; uniqueQueueFamilies) {
+			foreach( DeviceQueueInfoHelper iterationHelper; uniqueQueueFamilies) {
 				if( iterationHelper.queueFamilyIndex == queueFamilyIndex) {
 					found = true;
 					return iterationHelper;
@@ -396,9 +393,9 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		
 		foreach( QueueInfo iterationQueue; queues ) {
 			bool found;
-			DeviceQueueCreateInfoHelper helperWithSameFamily = getWithSameFamily(iterationQueue.queueFamilyIndex, found);
+			DeviceQueueInfoHelper helperWithSameFamily = getWithSameFamily(iterationQueue.queueFamilyIndex, found);
 			if( !found ) {
-				DeviceQueueCreateInfoHelper createdHelper = new DeviceQueueCreateInfoHelper();
+				DeviceQueueInfoHelper createdHelper = new DeviceQueueInfoHelper();
 				createdHelper.queueFamilyIndex = iterationQueue.queueFamilyIndex;
 				createdHelper.priorities = [iterationQueue.priority];
 				uniqueQueueFamilies ~= createdHelper;
@@ -412,7 +409,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		return uniqueQueueFamilies;
 	}
 	
-	VkDeviceQueueCreateInfo[] translateDeviceQueueCreateInfoHelperToVk(DeviceQueueCreateInfoHelper[] queues) {
+	VkDeviceQueueCreateInfo[] translateDeviceQueueCreateInfoHelperToVk(DeviceQueueInfoHelper[] queues) {
 		VkDeviceQueueCreateInfo[] result;
 		result.length = queues.length;
 		
@@ -427,8 +424,8 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	}
 	
 	
-	DeviceQueueCreateInfoHelper[] queueCreateInfoHelperArray = createQueueInfoForQueues(uniqueQueues);
-	VkDeviceQueueCreateInfo[] queueCreateInfoArray = translateDeviceQueueCreateInfoHelperToVk(queueCreateInfoHelperArray);
+	DeviceQueueInfoHelper[] queueInfoHelpers = createQueueInfoForQueues(uniqueQueues);
+	VkDeviceQueueCreateInfo[] queueCreateInfoArray = translateDeviceQueueCreateInfoHelperToVk(queueInfoHelpers);
 	
 	VkDeviceCreateInfo deviceCreateInfo;
 	initDeviceCreateInfo(&deviceCreateInfo);
@@ -449,6 +446,23 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		throw new EngineException(true, true, "Couldn't create vulkan device!");
 	}
 	scope(exit) vkDestroyDevice(chainContext.vulkan.chosenDevice.logicalDevice, null);
+
+
+	
+	// retrive queues
+	{
+		foreach( iterationDeviceQueueInfoHelper; queueInfoHelpers ) {
+			iterationDeviceQueueInfoHelper.queues.length = iterationDeviceQueueInfoHelper.count;
+			
+			foreach( queueIndex; 0..iterationDeviceQueueInfoHelper.count ) {
+				vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, iterationDeviceQueueInfoHelper.queueFamilyIndex, queueIndex, &iterationDeviceQueueInfoHelper.queues[queueIndex]);
+			}
+		}
+	}
+	
+
+
+
 
 	//END TO REFACTOR
 
@@ -496,14 +510,6 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 
 
-	// retrive queues
-	{
-		uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
-
-		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 0, &chainContext.vulkan.highPriorityQueue);
-		vkGetDeviceQueue(chainContext.vulkan.chosenDevice.logicalDevice, queueFamilyIndex, 1, &chainContext.vulkan.lowPriorityQueue);
-	}
-	
 
 
 
