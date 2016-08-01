@@ -719,6 +719,8 @@ class VulkanSwapChain2 {
 			
 	        ///...
 	        
+	        
+	        /++++++
 			VkCommandBufferBeginInfo beginInfo;
 			initCommandBufferBeginInfo(&beginInfo);
 	        vkBeginCommandBuffer(cmdBuffers[i], &beginInfo);
@@ -798,6 +800,66 @@ class VulkanSwapChain2 {
 	
 	        vkEndCommandBuffer(cmdBuffers[i]);
 	        // TODO< error checking >
+	        
+	        +/
+	        
+	        
+	        
+	        
+	        
+	        
+	        
+	        
+	        // from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-2
+	        // license: copyleft
+	        // section: "Recording Command Buffers"
+	        
+	        VkCommandBufferBeginInfo cmd_buffer_begin_info = {
+				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
+				null, // pNext
+				VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, // flags
+				null // pInheritanceInfo
+			};
+
+	        
+	        VkImageSubresourceRange image_subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	        
+	        VkClearColorValue clear_color;
+	        clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
+	        
+	        VkImageMemoryBarrier barrier_from_present_to_clear;
+	        barrier_from_present_to_clear.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	        barrier_from_present_to_clear.pNext = null;
+	        barrier_from_present_to_clear.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	        barrier_from_present_to_clear.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	        barrier_from_present_to_clear.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	        barrier_from_present_to_clear.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	        barrier_from_present_to_clear.srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+	        barrier_from_present_to_clear.dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+	        barrier_from_present_to_clear.image = pSwapchainImages[i];
+	        barrier_from_present_to_clear.subresourceRange = image_subresource_range;
+	        
+	        VkImageMemoryBarrier barrier_from_clear_to_present;
+	        barrier_from_clear_to_present.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	        barrier_from_clear_to_present.pNext = null;
+	        barrier_from_clear_to_present.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	        barrier_from_clear_to_present.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	        barrier_from_clear_to_present.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	        barrier_from_clear_to_present.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	        barrier_from_clear_to_present.srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+	        barrier_from_clear_to_present.dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+	        barrier_from_clear_to_present.image = pSwapchainImages[i];
+	        barrier_from_clear_to_present.subresourceRange = image_subresource_range;
+ 
+			vkBeginCommandBuffer(cmdBuffers[i], &cmd_buffer_begin_info );
+			vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
+			vkCmdClearColorImage(cmdBuffers[i], pSwapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_subresource_range);
+			vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
+			
+			vulkanResult = vkEndCommandBuffer(cmdBuffers[i]);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't end command buffer [vkEndCommandBuffer]!");
+			}
 	    }
 		
 		// we need a pair of semaphores for each image we display

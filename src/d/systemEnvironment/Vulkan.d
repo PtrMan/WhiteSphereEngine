@@ -75,6 +75,10 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	string[] deviceExtensionsToLoadGced;
 	deviceExtensionsToLoadGced ~= VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 	
+	// TODO< see https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-2
+	//       check for available extension  see chapter "Checking Whether an Instance Extension Is Supported"
+	//       check for device extensions    see chapter "Checking Whether a Device Extension is Supported"
+	// >
 	
 	// DESTROY THIS
 	// we need it later, but we also need to refactor the code below and put it into a box>
