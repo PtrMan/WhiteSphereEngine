@@ -575,27 +575,28 @@ class VulkanSwapChain2 {
 		}
 		
 		
-	    const VkSwapchainCreateInfoKHR createInfo =
-	    {
-	        VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,    // sType
-	        null,                                           // pNext
-	        0,                                              // flags
-	        surface.value,                                  // surface
-	        desiredNumberOfSwapchainImages,                 // minImageCount
-	        swapchainFormat,                                // imageFormat
-	        swapchainColorSpace,                            // imageColorSpace
-	        swapchainExtent,                                // imageExtent
-	        1,                                              // imageArrayLayers
-	        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,            // imageUsage
-	        VK_SHARING_MODE_EXCLUSIVE,                      // imageSharingMode
-	        0,                                              // queueFamilyIndexCount
-	        null,                                           // pQueueFamilyIndices
-	        surfaceProperties.currentTransform,             // preTransform
-	        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,             // compositeAlpha
-	        swapchainPresentMode,                           // presentMode
-	        VK_TRUE,                                        // clipped
-	        VK_NULL_HANDLE                                  // oldSwapchain
-	    };
+	    VkSwapchainCreateInfoKHR createInfo;
+	    with (createInfo) {
+	        sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	        pNext = null;
+	        flags = 0;
+	        minImageCount = desiredNumberOfSwapchainImages;
+	        imageFormat = swapchainFormat;
+	        imageColorSpace = swapchainColorSpace;
+	        imageExtent = swapchainExtent;
+	        imageArrayLayers = 1;
+	        imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	        imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	        queueFamilyIndexCount = 0;
+	        pQueueFamilyIndices = null;
+	        preTransform = surfaceProperties.currentTransform;
+	        compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	        presentMode = swapchainPresentMode;
+	        clipped = VK_TRUE;
+	        oldSwapchain = VK_NULL_HANDLE;
+	    }
+	    createInfo.surface = surface.value; // outside because ambiguous
+	        
 	
 	    VkSwapchainKHR swapchain;
 	    vulkanResult = fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
@@ -701,8 +702,7 @@ class VulkanSwapChain2 {
 	    }
 	    
 		
-	    for (size_t i = 0; i < swapchainImageCount; ++i)
-	    {
+	    for (size_t i = 0; i < swapchainImageCount; ++i) {
 	        const VkImageViewCreateInfo viewInfo =
 	        {
 	            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // sType
@@ -716,99 +716,7 @@ class VulkanSwapChain2 {
 	        };
 	        vkCreateImageView(device.value, &viewInfo, null, &views[i]);
 			// TODO< error checking >
-			
-	        ///...
-	        
-	        
-	        /++++++
-			VkCommandBufferBeginInfo beginInfo;
-			initCommandBufferBeginInfo(&beginInfo);
-	        vkBeginCommandBuffer(cmdBuffers[i], &beginInfo);
-	        // TODO< error checking >
-	
-	        // Need to transition image from presentable state before being able to render
-	        const VkImageMemoryBarrier acquireImageBarrier =
-	        {
-	            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,     // sType
-	            null,                                       // pNext
-	            VK_ACCESS_MEMORY_READ_BIT,                  // srcAccessMask
-	            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,       // dstAccessMask
-	            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // oldLayout
-	            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,   // newLayout
-	            presentQueueFamilyIndex,                    // srcQueueFamilyIndex
-	            graphicsQueueFamilyIndex,                   // dstQueueFamilyIndex
-	            pSwapchainImages[i],                        // image
-	            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }   // subresourceRange
-	        };
-	
-	        vkCmdPipelineBarrier(
-	            cmdBuffers[i],
-	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	            VK_FALSE,
-	            0,
-	            null,
-	            0,
-	            null,
-	            1,
-	            &acquireImageBarrier);
-	
-	        // ... Render to views[i] ...
-	        {
-	        	VkImageLayout imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	        	VkClearColorValue clearColor;
-	        	VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-	        	
-	        
-	        	vkCmdClearColorImage(
-					cmdBuffers[i],
-					pSwapchainImages[i],
-					imageLayout,
-					&clearColor,
-					1, // range count
-					&range);
-	        }
-	        
-	        
-	
-	        // Need to transition image into presentable state before being able to present
-	        const VkImageMemoryBarrier presentImageBarrier =
-	        {
-	            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,     // sType
-	            null,                                       // pNext
-	            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,       // srcAccessMask
-	            VK_ACCESS_MEMORY_READ_BIT,                  // dstAccessMask
-	            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,   // oldLayout
-	            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // newLayout
-	            graphicsQueueFamilyIndex,                   // srcQueueFamilyIndex
-	            presentQueueFamilyIndex,                    // dstQueueFamilyIndex
-	            pSwapchainImages[i],                        // image
-	            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }   // subresourceRange
-	        };
-	
-	        vkCmdPipelineBarrier(
-	            cmdBuffers[i],
-	            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-	            VK_FALSE,
-	            0, null,
-	            0, null,
-	            1,
-	            &presentImageBarrier);
-	
-	        ///...
-	
-	        vkEndCommandBuffer(cmdBuffers[i]);
-	        // TODO< error checking >
-	        
-	        +/
-	        
-	        
-	        
-	        
-	        
-	        
-	        
+
 	        
 	        // from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-2
 	        // license: copyleft
@@ -828,28 +736,32 @@ class VulkanSwapChain2 {
 	        clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
 	        
 	        VkImageMemoryBarrier barrier_from_present_to_clear;
-	        barrier_from_present_to_clear.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	        barrier_from_present_to_clear.pNext = null;
-	        barrier_from_present_to_clear.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-	        barrier_from_present_to_clear.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	        barrier_from_present_to_clear.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	        barrier_from_present_to_clear.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	        barrier_from_present_to_clear.srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        barrier_from_present_to_clear.dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        barrier_from_present_to_clear.image = pSwapchainImages[i];
-	        barrier_from_present_to_clear.subresourceRange = image_subresource_range;
+	        with (barrier_from_present_to_clear) {
+	        	sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		        pNext = null;
+		        srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			    dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		        oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		        newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		        srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+		        dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+		        image = pSwapchainImages[i];
+		        subresourceRange = image_subresource_range;
+	        }
 	        
 	        VkImageMemoryBarrier barrier_from_clear_to_present;
-	        barrier_from_clear_to_present.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	        barrier_from_clear_to_present.pNext = null;
-	        barrier_from_clear_to_present.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	        barrier_from_clear_to_present.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-	        barrier_from_clear_to_present.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	        barrier_from_clear_to_present.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	        barrier_from_clear_to_present.srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        barrier_from_clear_to_present.dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        barrier_from_clear_to_present.image = pSwapchainImages[i];
-	        barrier_from_clear_to_present.subresourceRange = image_subresource_range;
+	        with (barrier_from_clear_to_present) {
+				sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		        pNext = null;
+		        srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		        dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		        oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		        newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		        srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+		        dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
+		        image = pSwapchainImages[i];
+		        subresourceRange = image_subresource_range;	
+	        }
  
 			vkBeginCommandBuffer(cmdBuffers[i], &cmd_buffer_begin_info );
 			vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
@@ -941,11 +853,13 @@ class VulkanSwapChain2 {
 	        	immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	        	VkSubmitInfo submitInfo;
 	        	initSubmitInfo(&submitInfo);
-	        	submitInfo.waitSemaphoreCount = 1;
-	        	submitInfo.pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
-	        	submitInfo.pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
-	        	submitInfo.signalSemaphoreCount = 1;
-	        	submitInfo.pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
+	        	with (submitInfo) {
+	        		waitSemaphoreCount = 1;
+		        	pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+		        	pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
+		        	signalSemaphoreCount = 1;
+		        	pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
+	        	}
 	        	
 	        	vulkanResult = vkQueueSubmit(presentQueue, 1, &submitInfo, additionalFence);
 				if( !vulkanSuccess(vulkanResult) ) {
@@ -966,18 +880,18 @@ class VulkanSwapChain2 {
 	
 	        // Submit rendering work to the graphics queue
 	        const VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	        const VkSubmitInfo submitInfo =
-	        {
-	            VK_STRUCTURE_TYPE_SUBMIT_INFO,          // sType
-	            null,                                   // pNext
-	            1,                                      // waitSemaphoreCount
-	            cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore,                // pWaitSemaphores
-	            cast(const(immutable(VkPipelineStageFlags)*))&waitDstStageMask,                      // pWaitDstStageMasks
-	            1,                                      // commandBufferCount
-	            cast(immutable(VkCommandBuffer)*)&cmdBuffers[imageIndex],                // pCommandBuffers
-	            1,                                      // signalSemaphoreCount
-	            cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore             // pSignalSemaphores
-	        };
+	        VkSubmitInfo submitInfo;
+	        initSubmitInfo(&submitInfo);
+	        with (submitInfo) {
+	            waitSemaphoreCount = 1;
+	            pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
+	            pWaitDstStageMask = cast(const(immutable(VkPipelineStageFlags)*))&waitDstStageMask;
+	            commandBufferCount = 1;
+	            pCommandBuffers = cast(immutable(VkCommandBuffer)*)&cmdBuffers[imageIndex];
+	            signalSemaphoreCount = 1;
+	            pSignalSemaphores = cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore;
+	        }
+	        
 	        vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, additionalFence);
 	        if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Queue submit failed! (3)");
@@ -995,8 +909,7 @@ class VulkanSwapChain2 {
 	        
 	        
 	        // Submit present operation to present queue
-	        const VkPresentInfoKHR presentInfo =
-	        {
+	        const VkPresentInfoKHR presentInfo = {
 	            VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,     // sType
 	            null,                                   // pNext
 	            1,                                      // waitSemaphoreCount
