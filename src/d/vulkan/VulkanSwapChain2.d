@@ -70,8 +70,6 @@ class VulkanSwapChain2 {
 	private PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
 	private PFN_vkQueuePresentKHR fpQueuePresentKHR;
 	
-	//private PFN_vkGetSurfacePropertiesKHR fpGetSurfacePropertiesKHR;
-
 	
 	// Connect to the instance und device and get all required function pointers
 	public final void connect(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device) {
