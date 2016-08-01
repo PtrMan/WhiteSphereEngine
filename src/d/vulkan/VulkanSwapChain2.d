@@ -483,9 +483,11 @@ class VulkanSwapChain2 {
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
     	}
+	    
+	    VkSurfaceFormatKHR[] surfaceFormats;
+	    surfaceFormats.length = formatCount;
 	
-	    VkSurfaceFormatKHR* pSurfFormats = cast(VkSurfaceFormatKHR*)malloc(formatCount * VkSurfaceFormatKHR.sizeof);
-	    vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, pSurfFormats);
+	    vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, surfaceFormats.ptr);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
     	}
@@ -495,9 +497,11 @@ class VulkanSwapChain2 {
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
     	}
+	    
+	    VkPresentModeKHR[] presentModes;
+	    presentModes.length = presentModeCount;
 	
-	    VkPresentModeKHR* pPresentModes = cast(VkPresentModeKHR*)malloc(presentModeCount * VkPresentModeKHR.sizeof);
-	    vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, pPresentModes);
+	    vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, presentModes.ptr);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
     	}
@@ -547,20 +551,20 @@ class VulkanSwapChain2 {
 	    // supported format will be returned (assuming that the
 	    // vkGetPhysicalDeviceSurfaceSupportKHR function, in the
 	    // VK_KHR_surface extension returned support for the surface).
-	    if ((formatCount == 1) && (pSurfFormats[0].format == VK_FORMAT_UNDEFINED))
+	    if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED))
 	        swapchainFormat = VK_FORMAT_R8G8B8_UNORM;
 	    else
 	    {
 	        assert(formatCount >= 1);
-	        swapchainFormat = pSurfFormats[0].format;
+	        swapchainFormat = surfaceFormats[0].format;
 	    }
-	    VkColorSpaceKHR swapchainColorSpace = pSurfFormats[0].colorSpace;
+	    VkColorSpaceKHR swapchainColorSpace = surfaceFormats[0].colorSpace;
 	    
 	    // If mailbox mode is available, use it, as it is the lowest-latency non-
 	    // tearing mode.  If not, fall back to FIFO which is always available.
 	    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	    for (size_t i = 0; i < presentModeCount; ++i) {
-	        if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+	    foreach( iteratorPresentMode; presentModes ) {
+	        if( iteratorPresentMode == VK_PRESENT_MODE_MAILBOX_KHR ) {
 	            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 	            break;
 	        }
@@ -815,22 +819,7 @@ class VulkanSwapChain2 {
 		
 	    VkResult result;
 	    do {
-	    		
-		
-	    	
-	    	
-	    	{
-	    		import std.stdio;
-	    		writeln("fence inited ", fencesInited[frameIdx]);
-	    	}
-	    	
-	        
 	        uint32_t imageIndex = UINT32_MAX;
-	
-	
-	  
-	    	
-			
 	
 	        // Get the next available swapchain image
 	        result = fpAcquireNextImageKHR(
@@ -844,8 +833,9 @@ class VulkanSwapChain2 {
 	        
 	
 	        // Swapchain cannot be used for presentation if failed to acquired new image.
-	        if (result < 0)
-	            break;
+	        if (result < 0) {
+	        	break;
+	        }
 	        
 	        {
 	        	immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -924,11 +914,6 @@ class VulkanSwapChain2 {
 	        semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
 	        
 	    } while (result >= 0);
-
-	    
-	    
-	    
-
 	}
 	
 	private final VkResult createSurface(
