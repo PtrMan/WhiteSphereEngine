@@ -561,13 +561,13 @@ class VulkanSwapChain2 {
 	    // If mailbox mode is available, use it, as it is the lowest-latency non-
 	    // tearing mode.  If not, fall back to FIFO which is always available.
 	    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	    for (size_t i = 0; i < presentModeCount; ++i)
-	        if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
-	        {
+	    for (size_t i = 0; i < presentModeCount; ++i) {
+	        if (pPresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
 	            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 	            break;
 	        }
-		
+	    }
+	    
 		// TODO< cut me here >
 		bool forceFifo = true;
 		if( forceFifo ) {
@@ -714,8 +714,10 @@ class VulkanSwapChain2 {
 	            {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A}, // components
 	            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}// subresourceRange
 	        };
-	        vkCreateImageView(device.value, &viewInfo, null, &views[i]);
-			// TODO< error checking >
+	        vulkanResult = vkCreateImageView(device.value, &viewInfo, null, &views[i]);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't create imageview [vkCreateImageView]!");
+			}
 
 	        
 	        // from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-2
@@ -784,32 +786,30 @@ class VulkanSwapChain2 {
 		SemaphorePair[] semaphorePairs;
 		semaphorePairs.length = desiredNumberOfSwapchainImages;
 		
-	    const VkSemaphoreCreateInfo semaphoreCreateInfo =
-	    {
+	    const VkSemaphoreCreateInfo semaphoreCreateInfo = {
 	        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
 	        null,                                       // pNext
 	        0                                           // flags
 	    };
 		
 		for( uint i = 0; i < semaphorePairs.length; i++ ) {
-			vkCreateSemaphore(device.value,
+			VkResult vulkanResults[3];
+			
+			vulkanResults[0] = vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &semaphorePairs[i].imageAcquiredSemaphore);
-	    	// TODO< error checking >
 	    	
-	    	vkCreateSemaphore(device.value,
+	    	vulkanResults[1] = vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &semaphorePairs[i].chainSemaphore);
-	    	// TODO< error checking >
 	    	
-	    	
-	    	
-	
-		    vkCreateSemaphore(device.value,
+	    	vulkanResults[2] = vkCreateSemaphore(device.value,
 	                      &semaphoreCreateInfo, null,
 	                      &semaphorePairs[i].renderingCompleteSemaphore);
-		    // TODO< error checking >
-	
+		    
+		    if( !vulkanSuccess(vulkanResults[0]) || !vulkanSuccess(vulkanResults[1]) || !vulkanSuccess(vulkanResults[2]) ) {
+				throw new EngineException(true, true, "Couldn't create semaphore [vkCreateSemaphore]!");		    	
+		    }
 		}
 		
 		uint semaphorePairIndex = 0;	
@@ -949,7 +949,6 @@ class VulkanSwapChain2 {
 		surfaceCreateInfo.hinstance = platformHandle;
 		surfaceCreateInfo.hwnd = platformWindow;
 		vulkanResult = vkCreateWin32SurfaceKHR(instance.value, cast(const(VkWin32SurfaceCreateInfoKHR*))&surfaceCreateInfo, null, &surface);
-		this.surface = surface;
 		}
 //#else
 //#ifdef __ANDROID__
@@ -965,6 +964,8 @@ class VulkanSwapChain2 {
 		surfaceCreateInfo.window = window;
 		vulkanResult = vkCreateXcbSurfaceKHR(instance, &surfaceCreateInfo, null, &surface);
 		}
+		
+		this.surface = surface;
 		
 		return vulkanResult;
 	}
