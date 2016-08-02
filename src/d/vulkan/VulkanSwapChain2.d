@@ -529,36 +529,45 @@ class VulkanSwapChain2 {
 	        // If the surface size is defined, the swapchain size must match
 	        swapchainExtent = surfaceProperties.currentExtent;
 	    }
-	
-	    // Application desires to own 2 images at a time (still allowing
-	    // 'minImageCount' images to be owned by the presentation engine).
-	    uint32_t desiredNumberOfSwapchainImages = surfaceProperties.minImageCount + 2;
-	    if ((surfaceProperties.maxImageCount > 0) &&
-	        (desiredNumberOfSwapchainImages > surfaceProperties.maxImageCount))
-	    {
-	        // Application must settle for fewer images than desired:
-	        desiredNumberOfSwapchainImages = surfaceProperties.maxImageCount;
-	    }
-	    
+		
+		
+		// inspired by https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-2
+		//             see chapter "Selecting the Number of Swap Chain Images"
+		uint getSwapChainNumImages(uint numberOfImagesToOwnRequest) {
+			uint desiredNumberOfSwapchainImages = cast(uint)surfaceProperties.minImageCount + numberOfImagesToOwnRequest;
+		    if (surfaceProperties.maxImageCount > 0) {
+		    	// Application must settle for at maximum of the allowed images
+		    	import std.algorithm.comparison : min;
+		    	desiredNumberOfSwapchainImages = min(desiredNumberOfSwapchainImages, surfaceProperties.maxImageCount);
+		    }
+		    return desiredNumberOfSwapchainImages;
+		}
+		
+		uint numberOfImagesToOwnRequest = 2; // Application desires to own 2 images at a time
+	    uint32_t desiredNumberOfSwapchainImages = cast(uint32_t)getSwapChainNumImages(numberOfImagesToOwnRequest);
+		
 	    {
 	    	import std.stdio;
 	    	writeln("desiredNumberOfSwapchainImages ", desiredNumberOfSwapchainImages);
 	    }
 	
 	    VkFormat swapchainFormat;
+	    VkColorSpaceKHR swapchainColorSpace;
 	    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
 	    // the surface has no preferred format.  Otherwise, at least one
 	    // supported format will be returned (assuming that the
 	    // vkGetPhysicalDeviceSurfaceSupportKHR function, in the
 	    // VK_KHR_surface extension returned support for the surface).
-	    if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED))
+	    if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
 	        swapchainFormat = VK_FORMAT_R8G8B8_UNORM;
-	    else
-	    {
+	        swapchainColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	    }
+	    else {
 	        assert(formatCount >= 1);
 	        swapchainFormat = surfaceFormats[0].format;
+	        swapchainColorSpace = surfaceFormats[0].colorSpace;
 	    }
-	    VkColorSpaceKHR swapchainColorSpace = surfaceFormats[0].colorSpace;
+	    
 	    
 	    // If mailbox mode is available, use it, as it is the lowest-latency non-
 	    // tearing mode.  If not, fall back to FIFO which is always available.
