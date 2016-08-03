@@ -3,6 +3,7 @@ import systemEnvironment.EnvironmentChain;
 import systemEnvironment.Vulkan;
 import systemEnvironment.Window;
 import systemEnvironment.ChainContext;
+import systemEnvironment.Logging;
 
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
@@ -34,6 +35,7 @@ void main(string[] args) {
 	}
 	
 	ChainElement[] chainElements;
+	chainElements ~= new ChainElement(&platformLogging);
 	chainElements ~= new ChainElement(&platformWindow);
 	chainElements ~= new ChainElement(&platformVulkan1Libary);
 	chainElements ~= new ChainElement(&platformVulkan2DeviceBase);
