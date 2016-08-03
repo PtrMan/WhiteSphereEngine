@@ -824,6 +824,11 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         VkClearColorValue clear_color;
         clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
         
+        // TODO< multi queue syncronisation if queues are different as described in
+        //       https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-2
+        //       chapter "Image Presentation" (or around there)
+        // >
+        
         // NOTE< not 100% sure if this is right for multiple queues, test on hardware where the queues are different ones > 
         uint32_t presentQueueFamilyIndex = chainContext.vulkan.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
         uint32_t primaryQueueFamilyIndex = chainContext.vulkan.queueManager.getDeviceQueueInfoByName("primary").queueFamilyIndex;
