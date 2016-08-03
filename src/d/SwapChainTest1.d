@@ -36,6 +36,7 @@ void main(string[] args) {
 	ChainElement[] chainElements;
 	chainElements ~= new ChainElement(&platformWindow);
 	chainElements ~= new ChainElement(&platformVulkan1Libary);
+	chainElements ~= new ChainElement(&platformVulkan2DeviceBase);
 	chainElements ~= new ChainElement(&platformVulkan3SwapChain2);
 	
 	processChain(chainElements, chainContext);

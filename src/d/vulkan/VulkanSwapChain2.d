@@ -58,10 +58,11 @@ import helpers.VariableValidator;
  * https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/xhtml/vkspec.html#_vk_khr_swapchain
  */
 class VulkanSwapChain2 {
+	private VariableValidator!VkSurfaceKHR surface;
 	private VariableValidator!VkInstance instance;
 	private VariableValidator!VkDevice device;
 	private VariableValidator!VkPhysicalDevice physicalDevice;
-	private VariableValidator!VkSurfaceKHR surface;
+	private VariableValidator!VkCommandPool commandPool;
 	
 	// Function pointers
 	private PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
@@ -72,10 +73,12 @@ class VulkanSwapChain2 {
 	
 	
 	// Connect to the instance und device and get all required function pointers
-	public final void connect(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device) {
+	public final void connect(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool commandPool) {
 		this.instance = instance;
 		this.physicalDevice = physicalDevice;
 		this.device = device;
+		this.commandPool = commandPool;
+		
 		mixin(GET_DEVICE_PROC_ADDR!("device", "CreateSwapchainKHR"));
 		mixin(GET_DEVICE_PROC_ADDR!("device", "DestroySwapchainKHR"));
 		mixin(GET_DEVICE_PROC_ADDR!("device", "GetSwapchainImagesKHR"));
@@ -87,190 +90,15 @@ class VulkanSwapChain2 {
 		// for windows
 		HINSTANCE platformHandle, HWND platformWindow
 	) {
-		instance.invalidate();
-		device.invalidate();
-		physicalDevice.invalidate();
 		surface.invalidate();
 		
 		import TypedPointerWithLength : TypedPointerWithLength;
 		import std.string : toStringz;
-		import vulkan.VulkanDevice;
 		VkResult vulkanResult;
 		
-		
-		// hack
-		import systemEnvironment.ChainContext;
-		ChainContext chainContext = new ChainContext();
-			
-
 		import core.memory : GC;
-		
-		
+
 		import vulkan.VulkanTools;
-
-
-
-
-
-
-
-
-
-
-
-	// PULLED IN FROM Vulkan.d BEGIN
-
-	
-	bool withDebugReportExtension = true;
-	
-	// we enable the standard debug and validation layers
-	string[] layersToLoadGced = ["VK_LAYER_LUNARG_standard_validation"];
-	
-	string[] extensionsToLoadGced;
-	
-	if( withDebugReportExtension ) {
-		extensionsToLoadGced ~= VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-	}
-	
-	const bool withSurface = true; // do we want to render to a surface?
-	if( withSurface ) {
-		extensionsToLoadGced ~= VK_KHR_SURFACE_EXTENSION_NAME; // required
-		version(Win32) {
-			extensionsToLoadGced ~= VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-		}
-		// TODO< linux >
-	}
-	
-	string[] deviceExtensionsToLoadGced;
-	deviceExtensionsToLoadGced ~= VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-	
-	
-	// DESTROY THIS
-	// we need it later, but we also need to refactor the code below and put it into a box>
-	TypedPointerWithLength!(immutable(char)*) layersNonGced = TypedPointerWithLength!(immutable(char)*).allocate(layersToLoadGced.length);
-	for( uint i = 0; i < layersNonGced.length; i++ ) {
-		layersNonGced.ptr[i] = toStringz(layersToLoadGced[i]);
-	}
-	
-	TypedPointerWithLength!(immutable(char)*) extensionsNonGced = TypedPointerWithLength!(immutable(char)*).allocate(extensionsToLoadGced.length);
-	for( uint i = 0; i < extensionsNonGced.length; i++ ) {
-		extensionsNonGced.ptr[i] = toStringz(extensionsToLoadGced[i]);
-	}
-	
-	TypedPointerWithLength!(immutable(char)*) deviceExtensionsNonGced = TypedPointerWithLength!(immutable(char)*).allocate(deviceExtensionsToLoadGced.length);
-	for( uint i = 0; i < deviceExtensionsNonGced.length; i++ ) {
-		deviceExtensionsNonGced.ptr[i] = toStringz(deviceExtensionsToLoadGced[i]);
-	}
-	// END DESTROY THIS
-	
-	
-	
-	
-	chainContext.vulkan.instance = NonGcHandle!VkInstance.createNotInitialized();
-	//instance = chainContext.vulkan.instance.value;
-	scope(exit) chainContext.vulkan.instance.dispose();
-	
-	{
-		VkInstance instance;
-		vulkan.InitialisationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
-		
-		{
-			import std.stdio;
-			writeln("initializeInstance value is ",instance);
-		}
-		
-		
-		chainContext.vulkan.instance.value = instance;
-	}
-	instance = chainContext.vulkan.instance.value;
-	scope(exit) vulkan.InitialisationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
-	
-	
-	// init remaining function pointers for debugging
-	if( withDebugReportExtension ) {
-		bindVulkanFunctionByInstance(cast(void**)&vkCreateDebugReportCallbackEXT, chainContext.vulkan.instance.value, "vkCreateDebugReportCallbackEXT");
-		bindVulkanFunctionByInstance(cast(void**)&vkDestroyDebugReportCallbackEXT, chainContext.vulkan.instance.value, "vkDestroyDebugReportCallbackEXT");
-		bindVulkanFunctionByInstance(cast(void**)&vkDebugReportMessageEXT, chainContext.vulkan.instance.value, "vkDebugReportMessageEXT");
-	}
-	
-	// init debugging
-	if( withDebugReportExtension ) {
-		VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfoEXT;
-		initDebugReportCallbackCreateInfoEXT(&debugReportCallbackCreateInfoEXT);
-		debugReportCallbackCreateInfoEXT.pfnCallback = &vulkanDebugCallback2;
-		debugReportCallbackCreateInfoEXT.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT; // enable me | VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-	
-		VkDebugReportCallbackEXT debugReportCallback;
-		vulkanResult = vkCreateDebugReportCallbackEXT( chainContext.vulkan.instance.value, cast(const(VkDebugReportCallbackCreateInfoEXT)*)&debugReportCallbackCreateInfoEXT, null, &debugReportCallback );
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "vkCreateDebugReportCallbackEXT failed!");
-		}
-	}
-	
-	scope(exit) {
-		if( withDebugReportExtension ) {
-			// TODO< debug cleanup >
-		}
-	}
-	
-	
-	VulkanDevice[] vulkanDevices = vulkan.InitialisationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
-	
-	{
-		import std.stdio : writeln;
-		writeln("I have ", vulkanDevices.length, " vulkan devices");
-	
-	}
-	
-	// now we filter for the devices with at least n queue of the given type
-
-
-	/* TODO
-	final uint minimumNumberOfComputeQueues = 2;
-
-	foreach( VulkanDevice currentDevice; vulkanDevices ) {
-		// TODO< check for required properties of the queues >
-		deviceIterator.queueFamilyProperties
-	}
-	*/
-	
-	// HACK
-	// for now we just add all devices to possibleDevices
-	VulkanDevice[] possibleDevices;
-	foreach( VulkanDevice currentDevice; vulkanDevices ) {
-		possibleDevices ~= currentDevice;
-	}
-
-	if( possibleDevices.length == 0 ) {
-		throw new EngineException(true, true, "Could not find a vulkan device with the required properties!");
-	}
-
-	// now we select the best device
-	// HACK
-	// < we select the first device >
-	chainContext.vulkan.chosenDevice = possibleDevices[0];
-	
-	
-	// set some funny variables
-	physicalDevice = chainContext.vulkan.chosenDevice.physicalDevice;
-	
-	
-	
-
-	// query memory
-	chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties = cast(VkPhysicalDeviceMemoryProperties*)GC.malloc(VkPhysicalDeviceMemoryProperties.sizeof, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
-	vkGetPhysicalDeviceMemoryProperties(chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties);
-
-
-	// PULLED IN FROM Vulkan.d END
-
-
-
-
-
-
-
-
 
 		vulkanResult = createSurface(platformHandle, platformWindow);
 		if( !vulkanSuccess(vulkanResult) ) {
@@ -282,184 +110,6 @@ class VulkanSwapChain2 {
 
 		
 		import std.stdio;
-		/////////////
-		// big hack, we do initialize the whole crap device here, just for getting to a black screen, need to work out the correct queue initializing code
-		///////////////
-		
-		
-		// TODO< do logging of chosen queues >
-		
-		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface);
-		
-		
-		// the best queue would be one with both graphics and present capabilities
-		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
-		
-		ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
-		requestedQueueFamilyProperties ~= queueFamilyPropertyForGraphicsAndPresentation;
-		
-		// if the is not available, we choose seperate queues
-		requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(false, false, false, true);
-		requestedQueueFamilyProperties ~= new ExtendedQueueFamilyProperty(true, false, false, false);
-		
-		QueryQueueResult[] queryQueueResult = queryPossibleQueueFamilies(availableQueueFamilyProperties, requestedQueueFamilyProperties);
-		
-		uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
-	    uint32_t presentQueueFamilyIndex  = UINT32_MAX;
-	    
-	    if( queryQueueResult.length == 0 ) {
-	    	throw new EngineException(true, true, "Couldn't find a suitable queue for graphics and presentation");
-	    }
-	    
-	    if( queryQueueResult[0].requiredProperties.isEqual(queueFamilyPropertyForGraphicsAndPresentation) ) {
-	    	graphicsQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
-	    	presentQueueFamilyIndex = queryQueueResult[0].queueFamilyIndex;
-	    }
-	    else {
-	    	foreach( QueryQueueResult iterationQueryQueueResult; queryQueueResult ) {
-	    		if( iterationQueryQueueResult.requiredProperties.isEqual(new ExtendedQueueFamilyProperty(false, false, false, true)) ) {
-	    			presentQueueFamilyIndex = iterationQueryQueueResult.queueFamilyIndex;
-	    		}
-	    		else if( iterationQueryQueueResult.requiredProperties.isEqual(new ExtendedQueueFamilyProperty(true, false, false, false)) ) {
-	    			graphicsQueueFamilyIndex = iterationQueryQueueResult.queueFamilyIndex;
-	    		}
-	    	}
-	    }
-		
-		
-		
-		
-	
-	    // Generate error if could not find both a graphics and a present queue
-	    if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
-	        throw new EngineException(true, true, "Could not find a graphics and a present queue");
-	    }
-	    
-	    
-	    // TODO< log this >
-	    {
-	    	import std.stdio;
-	    	writeln("graphics queue family index is ", graphicsQueueFamilyIndex);
-	    	writeln("present queue family index is ", presentQueueFamilyIndex);
-	    }
-	    
-	    
-	    
-	
-	    // Put together the list of requested queues
-	    const float queuePriority = 1.0f;
-	    VkDeviceQueueCreateInfo[] requestedQueues =
-	    [
-	        {
-	            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
-	            NULL,                                       // pNext
-	            0,                                          // flags
-	            graphicsQueueFamilyIndex,                   // queueFamilyIndex
-	            1,                                          // queueCount
-	            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
-	        },
-	        {
-	            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
-	            NULL,                                       // pNext
-	            0,                                          // flags
-	            presentQueueFamilyIndex,                    // queueFamilyIndex
-	            1,                                          // queueCount
-	            cast(immutable(float)*)&queuePriority                              // pQueuePriorities
-	        }
-	    ];
-	    uint32_t requestedQueueCount = 2;
-	
-	    if (graphicsQueueFamilyIndex == presentQueueFamilyIndex)
-	    {
-	        // We need only a single queue if the graphics queue is also the present queue
-	        requestedQueueCount = 1;
-	    }
-
-    // Create a device and request access to the specified queues
-    
-    VkPhysicalDeviceFeatures physicalDeviceFeatures;
-	initPhysicalDeviceFeatures(&physicalDeviceFeatures);
-    
-    VkDeviceCreateInfo deviceCreateInfo;
-	initDeviceCreateInfo(&deviceCreateInfo);
-	deviceCreateInfo.queueCreateInfoCount = requestedQueueCount;
-	deviceCreateInfo.pQueueCreateInfos = cast(immutable(VkDeviceQueueCreateInfo)*)requestedQueues.ptr;
-
-	deviceCreateInfo.enabledLayerCount = cast(uint32_t)layersNonGced.length;
-	deviceCreateInfo.ppEnabledLayerNames = layersNonGced.ptr;
-	
-	deviceCreateInfo.enabledExtensionCount = cast(uint32_t)deviceExtensionsNonGced.length;
-	deviceCreateInfo.ppEnabledExtensionNames = deviceExtensionsNonGced.ptr;
-
-	deviceCreateInfo.pEnabledFeatures = cast(immutable(VkPhysicalDeviceFeatures)*)&physicalDeviceFeatures;
-
-	vulkanResult = vkCreateDevice(chainContext.vulkan.chosenDevice.physicalDevice, &deviceCreateInfo, null, &chainContext.vulkan.chosenDevice.logicalDevice);
-	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "Couldn't create vulkan device!");
-	}
-	scope(exit) vkDestroyDevice(chainContext.vulkan.chosenDevice.logicalDevice, null);
-    
-    device = chainContext.vulkan.chosenDevice.logicalDevice;
-    
-    
-    
-    
-    
-
-
-
-
-
-    // Acquire graphics and present queue handle from device
-    VkQueue graphicsQueue, presentQueue;
-    vkGetDeviceQueue(device.value, graphicsQueueFamilyIndex, 0, &graphicsQueue);
-    vkGetDeviceQueue(device.value, presentQueueFamilyIndex, 0, &presentQueue);
-		
-		
-		
-		
-
-
-
-
-	{
-		import std.stdio;
-		writeln("family indides ", graphicsQueueFamilyIndex, " ", presentQueueFamilyIndex);
-	}
-
-
-
-
-
-	// create command pool
-	// TODO LOW< rename >
-	chainContext.vulkan.cmdPool = NonGcHandle!VkCommandPool.createNotInitialized();
-	
-	uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
-
-	VkCommandPoolCreateInfo commandPoolCreateInfo;
-	initCommandPoolCreateInfo(&commandPoolCreateInfo);
-	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
-
-	vulkanResult = vkCreateCommandPool(
-		chainContext.vulkan.chosenDevice.logicalDevice,
-		&commandPoolCreateInfo,
-		null,
-		chainContext.vulkan.cmdPool.ptr
-	);
-	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "Couldn't create command pool!");
-	}
-	scope(exit) vkDestroyCommandPool(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
-
-
-
-
-
-
-		
-		
 		
 		
 		
@@ -607,7 +257,7 @@ class VulkanSwapChain2 {
 	        oldSwapchain = VK_NULL_HANDLE;
 	    }
 	    createInfo.surface = surface.value; // outside because ambiguous
-	        
+	    
 	
 	    VkSwapchainKHR swapchain;
 	    vulkanResult = fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
@@ -674,21 +324,22 @@ class VulkanSwapChain2 {
     		}
     	}
 
-    	createFences(chainContext.vulkan.chosenDevice.logicalDevice, fences);
+    	createFences(device.value, fences);
 		
 	    // create command buffers
 	    for (size_t i = 0; i < swapchainImageCount; ++i) {
 			VkCommandBufferAllocateInfo commandBufferAllocationInfo;
 			initCommandBufferAllocateInfo(&commandBufferAllocationInfo);
-			commandBufferAllocationInfo.commandPool = chainContext.vulkan.cmdPool.value;
+			commandBufferAllocationInfo.commandPool = commandPool.value;
 			commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			commandBufferAllocationInfo.commandBufferCount = 1; // we just want to allocate one command buffer in the target array
 		
 			// SYNC : this needs to be host synced with a mutex
 			vulkanResult = vkAllocateCommandBuffers(
-				chainContext.vulkan.chosenDevice.logicalDevice,
+				device.value,
 				&commandBufferAllocationInfo,
-				&cmdBuffers[i]);
+				&cmdBuffers[i]
+			);
 			if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
 			}

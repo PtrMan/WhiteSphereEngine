@@ -556,6 +556,7 @@ static import vulkan.Messages;
  * the step can be skiped if no monitor output is required (such as offline procedural rendering)
  *
  */
+/+
 public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	// much is
 	// from https://github.com/SaschaWillems/Vulkan/blob/master/base/vulkanexamplebase.cpp
@@ -665,7 +666,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
 }
-
++/
 
 
 
@@ -677,15 +678,18 @@ public void platformVulkan3SwapChain2(ChainContext chainContext, ChainElement[] 
 	
 	VulkanSwapChain2 swapChain = new VulkanSwapChain2();
 
-	// for testing
-	swapChain.connect(null, null, null);
-	//swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
+	swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
 	version(Win32) {
 		swapChain.initSurface(chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
 	}
 	
+	scope(exit) {
+		swapChain.shutdown();
+	}
 	
+	chainIndex++;
+	chainElements[chainIndex](chainContext, chainElements, chainIndex);
 }
 // experimental END
 
