@@ -11,7 +11,7 @@ class VulkanSurface {
 	private VariableValidator!VkSurfaceKHR privateSurface;
 	
 	public final @property VariableValidator!VkSurfaceKHR surface() {
-		return surface;
+		return privateSurface;
 	}
 	
 	public final this() {

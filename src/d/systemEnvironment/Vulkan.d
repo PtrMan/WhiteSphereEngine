@@ -180,21 +180,16 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	// create surface
 	chainContext.vulkan.surface = new VulkanSurface();
-	
-	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", "DEBUG create surface", "vulkan");
-	
 	version(Win32) {
 		vulkanResult = chainContext.vulkan.surface.createSurface(chainContext.vulkan.instance, chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't create Surface!");
-		}
+	}
+	
+	if( !vulkanSuccess(vulkanResult) ) {
+		throw new EngineException(true, true, "Couldn't create Surface!");
 	}
 	
 	scope(exit) chainContext.vulkan.surface.destroySurface(chainContext.vulkan.instance);
 
-
-	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", "DEBUG surface created", "vulkan");
-	
 
 
 
@@ -217,13 +212,9 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		ExtendedQueueFamilyProperty[] requestedQueueFamilyProperties;
 		QueryQueueResult[] queryQueueResult;
 		
-		
-		VariableValidator!VkSurfaceKHR surface;
-		surface.invalidate();
-		
 		VariableValidator!VkPhysicalDevice physicalDevice;
 		physicalDevice = chainContext.vulkan.chosenDevice.physicalDevice;
-
+		
 		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, chainContext.vulkan.surface.surface);
 		
 		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndComputeAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
