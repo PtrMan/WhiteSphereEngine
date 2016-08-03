@@ -177,10 +177,12 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	// query memory
 	chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties = cast(VkPhysicalDeviceMemoryProperties*)GC.malloc(VkPhysicalDeviceMemoryProperties.sizeof, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
 	vkGetPhysicalDeviceMemoryProperties(chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties);
-
-
+	
 	// create surface
 	chainContext.vulkan.surface = new VulkanSurface();
+	
+	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", "DEBUG create surface", "vulkan");
+	
 	version(Win32) {
 		vulkanResult = chainContext.vulkan.surface.createSurface(chainContext.vulkan.instance, chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
 		if( !vulkanSuccess(vulkanResult) ) {
@@ -191,7 +193,8 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	scope(exit) chainContext.vulkan.surface.destroySurface(chainContext.vulkan.instance);
 
 
-
+	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", "DEBUG surface created", "vulkan");
+	
 
 
 

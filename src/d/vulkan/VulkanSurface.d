@@ -15,7 +15,7 @@ class VulkanSurface {
 	}
 	
 	public final this() {
-		surface.invalidate();
+		privateSurface.invalidate();
 	}
 	
 	public final VkResult createSurface(
@@ -27,7 +27,7 @@ class VulkanSurface {
 		VkResult vulkanResult;
 		VkSurfaceKHR surface;
 		
-		assert(!this.surface.isValid);
+		assert(!privateSurface.isValid);
 		
 		// Create surface depending on OS
 		version(Win32) {
@@ -37,6 +37,7 @@ class VulkanSurface {
 		surfaceCreateInfo.hwnd = platformWindow;
 		vulkanResult = vkCreateWin32SurfaceKHR(instance.value, cast(const(VkWin32SurfaceCreateInfoKHR*))&surfaceCreateInfo, null, &surface);
 		}
+		
 //#else
 //#ifdef __ANDROID__
 //		VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -52,7 +53,7 @@ class VulkanSurface {
 		vulkanResult = vkCreateXcbSurfaceKHR(instance, &surfaceCreateInfo, null, &surface);
 		}
 		
-		this.privateSurface = surface;
+		privateSurface = surface;
 		
 		return vulkanResult;
 	}
