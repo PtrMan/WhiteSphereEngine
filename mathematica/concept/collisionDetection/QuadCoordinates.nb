@@ -1,0 +1,396 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.4' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     13497,        388]
+NotebookOptionsPosition[     12563,        353]
+NotebookOutlinePosition[     12909,        368]
+CellTagsIndexPosition[     12866,        365]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["\<\
+To calculate the coordinates of a quad we define the 4 points as
+a, b, c, d
+a->b looks into the same direction as c->d, parameter of these is t
+parameter of the interpolation is s
+
+for the position p
+so this gives
+((b-a)*t+a*(1-t))*s + ((d-c)*t+c*(1-t))*(1-s)  = p, solving this for s and t \
+gives us
+
+\
+\>", "Text",
+ CellChangeTimes->{{3.6718078947294097`*^9, 3.671808080743252*^9}, {
+   3.6718081148202567`*^9, 3.6718081216370993`*^9}, {3.6718081750994463`*^9, 
+   3.6718082025948486`*^9}, {3.6718094554024982`*^9, 3.671809468178522*^9}, {
+   3.6718098892614145`*^9, 3.671809921826375*^9}, 3.671810090533995*^9}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"solutions", "=", 
+  RowBox[{"Solve", "[", 
+   RowBox[{
+    RowBox[{"{", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"topX", "==", 
+       RowBox[{"baseTopX", "+", 
+        RowBox[{"s", "*", "topDiffX"}]}]}], ",", "\[IndentingNewLine]", 
+      RowBox[{"topY", "==", 
+       RowBox[{"baseTopY", "+", 
+        RowBox[{"s", "*", "topDiffY"}]}]}], ",", "\[IndentingNewLine]", 
+      RowBox[{"bottomX", "==", 
+       RowBox[{"baseBottomX", "+", 
+        RowBox[{"s", "*", "bottomDiffX"}]}]}], ",", "\[IndentingNewLine]", 
+      RowBox[{"bottomY", "==", 
+       RowBox[{"baseBottomY", "+", 
+        RowBox[{"s", "*", "bottomDiffY"}]}]}], ",", "\[IndentingNewLine]", 
+      "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"topX", "*", "t"}], "+", 
+        RowBox[{"bottomX", "*", 
+         RowBox[{"(", 
+          RowBox[{"1", "-", "t"}], ")"}]}]}], "\[Equal]", "px"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"topY", "*", "t"}], "+", 
+        RowBox[{"bottomY", "*", 
+         RowBox[{"(", 
+          RowBox[{"1", "-", "t"}], ")"}]}]}], "\[Equal]", "py"}]}], 
+     "\[IndentingNewLine]", "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"t", ",", "s"}], "}"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"equation", "=", 
+   RowBox[{"Values", "[", 
+    RowBox[{"solutions", "[", 
+     RowBox[{"[", 
+      RowBox[{"1", ",", " ", "2"}], "]"}], "]"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Print", "[", 
+   RowBox[{"CForm", "[", "equation", "]"}], "]"}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"equation", "=", 
+   RowBox[{"Values", "[", 
+    RowBox[{"solutions", "[", 
+     RowBox[{"[", 
+      RowBox[{"2", ",", " ", "2"}], "]"}], "]"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Print", "[", 
+   RowBox[{"CForm", "[", "equation", "]"}], "]"}], ";"}]}], "Input",
+ CellChangeTimes->{{3.6718081573869452`*^9, 3.6718081684147325`*^9}, {
+   3.671808206133315*^9, 3.671808224369187*^9}, {3.671808272990511*^9, 
+   3.6718083139113255`*^9}, {3.6718084701712027`*^9, 3.671808492681075*^9}, 
+   3.671808635616581*^9, {3.671809483844565*^9, 3.671809515126627*^9}, {
+   3.671809584597597*^9, 3.671809590322298*^9}, {3.67180963858433*^9, 
+   3.671809692723519*^9}, {3.6718099299100847`*^9, 3.671809954269912*^9}, {
+   3.671810014309247*^9, 3.6718100446426373`*^9}, {3.6718100812354245`*^9, 
+   3.6718101658858056`*^9}, {3.671810220260147*^9, 3.6718102479786777`*^9}, {
+   3.6718132820244856`*^9, 3.671813298007742*^9}, {3.6718827054455023`*^9, 
+   3.6718827067153993`*^9}, {3.671882772241603*^9, 3.671882830368103*^9}, {
+   3.6718829104035387`*^9, 3.6718829293036604`*^9}, {3.671883239878918*^9, 
+   3.671883432684866*^9}, {3.671883714409116*^9, 3.67188371642854*^9}, {
+   3.671883793907035*^9, 3.671883797778765*^9}, {3.671885250774582*^9, 
+   3.671885261354809*^9}}],
+
+Cell[BoxData[
+ RowBox[{"{", "}"}]], "Output",
+ CellChangeTimes->{
+  3.671809955019436*^9, {3.6718100150577593`*^9, 3.6718100387254896`*^9}, 
+   3.6718101666343193`*^9, 3.671810248885316*^9, {3.6718132850456142`*^9, 
+   3.6718132988793554`*^9}, 3.671882835295602*^9, {3.671882911952602*^9, 
+   3.671882929825*^9}, {3.6718834000158253`*^9, 3.6718834348403935`*^9}, 
+   3.671883717810542*^9, 3.671883799083686*^9, 3.67188526216636*^9}],
+
+Cell[BoxData[
+ RowBox[{
+  StyleBox[
+   RowBox[{"Part", "::", "partw"}], "MessageName"], 
+  RowBox[{
+  ":", " "}], "\<\"Part \[NoBreak]\\!\\(\\*RowBox[{\\\"1\\\"}]\\)\[NoBreak] \
+of \[NoBreak]\\!\\(\\*RowBox[{\\\"{\\\", \\\"}\\\"}]\\)\[NoBreak] does not \
+exist. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
+ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/message/General/partw\\\", ButtonNote -> \
+\\\"Part::partw\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{3.67188526229445*^9}],
+
+Cell[BoxData[
+ RowBox[{
+  StyleBox[
+   RowBox[{"Values", "::", "invrl"}], "MessageName"], 
+  RowBox[{
+  ":", " "}], "\<\"The argument \[NoBreak]\\!\\(\\*RowBox[{RowBox[{\\\"{\\\", \
+\\\"}\\\"}], \\\"\[LeftDoubleBracket]\\\", RowBox[{\\\"1\\\", \\\",\\\", \
+\\\"2\\\"}], \\\"\[RightDoubleBracket]\\\"}]\\)\[NoBreak] is not a valid \
+Association or a list of rules. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
+ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/Values\\\", ButtonNote -> \
+\\\"Values::invrl\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{3.671885262414552*^9}],
+
+Cell[BoxData[
+ InterpretationBox["\<\"Values(List()[1][2])\"\>",
+  CForm[
+   Values[
+    Part[{}, 1, 2]]],
+  AutoDelete->True,
+  Editable->True]], "Print",
+ CellChangeTimes->{{3.671809645919501*^9, 3.671809693174822*^9}, {
+   3.671809949123646*^9, 3.6718099551204967`*^9}, {3.671810015059761*^9, 
+   3.6718100389235897`*^9}, 3.6718101666953764`*^9, 3.6718102489473596`*^9, {
+   3.6718132851086664`*^9, 3.6718132989413996`*^9}, 3.671882836144148*^9, {
+   3.671882911962637*^9, 3.6718829298330145`*^9}, {3.6718834004251175`*^9, 
+   3.6718834350645556`*^9}, 3.6718837179986506`*^9, 3.6718837992217827`*^9, 
+   3.671885262416567*^9}],
+
+Cell[BoxData[
+ RowBox[{
+  StyleBox[
+   RowBox[{"Part", "::", "partw"}], "MessageName"], 
+  RowBox[{
+  ":", " "}], "\<\"Part \[NoBreak]\\!\\(\\*RowBox[{\\\"2\\\"}]\\)\[NoBreak] \
+of \[NoBreak]\\!\\(\\*RowBox[{\\\"{\\\", \\\"}\\\"}]\\)\[NoBreak] does not \
+exist. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
+ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/message/General/partw\\\", ButtonNote -> \
+\\\"Part::partw\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{3.6718852624845824`*^9}],
+
+Cell[BoxData[
+ RowBox[{
+  StyleBox[
+   RowBox[{"Values", "::", "invrl"}], "MessageName"], 
+  RowBox[{
+  ":", " "}], "\<\"The argument \[NoBreak]\\!\\(\\*RowBox[{RowBox[{\\\"{\\\", \
+\\\"}\\\"}], \\\"\[LeftDoubleBracket]\\\", RowBox[{\\\"2\\\", \\\",\\\", \
+\\\"2\\\"}], \\\"\[RightDoubleBracket]\\\"}]\\)\[NoBreak] is not a valid \
+Association or a list of rules. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
+ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/Values\\\", ButtonNote -> \
+\\\"Values::invrl\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{3.6718852626036725`*^9}],
+
+Cell[BoxData[
+ InterpretationBox["\<\"Values(List()[2][2])\"\>",
+  CForm[
+   Values[
+    Part[{}, 2, 2]]],
+  AutoDelete->True,
+  Editable->True]], "Print",
+ CellChangeTimes->{{3.671809645919501*^9, 3.671809693174822*^9}, {
+   3.671809949123646*^9, 3.6718099551204967`*^9}, {3.671810015059761*^9, 
+   3.6718100389235897`*^9}, 3.6718101666953764`*^9, 3.6718102489473596`*^9, {
+   3.6718132851086664`*^9, 3.6718132989413996`*^9}, 3.671882836144148*^9, {
+   3.671882911962637*^9, 3.6718829298330145`*^9}, {3.6718834004251175`*^9, 
+   3.6718834350645556`*^9}, 3.6718837179986506`*^9, 3.6718837992217827`*^9, 
+   3.6718852626046767`*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Expand", "[", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"bx", "-", "ax"}], ")"}], "*", "t"}], "+", "ax"}], ")"}], 
+     "*", "s"}], "+", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"dx", "-", "cx"}], ")"}], "*", "t"}], "+", "cx"}], ")"}], 
+     "*", 
+     RowBox[{"(", 
+      RowBox[{"1", "-", "s"}], ")"}]}], "-", "px"}], "\[Equal]", "0"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.67180851482041*^9, 3.671808532009576*^9}, {
+  3.6718088097219954`*^9, 3.671808814421282*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"cx", "-", "px", "+", 
+   RowBox[{"ax", " ", "s"}], "-", 
+   RowBox[{"cx", " ", "s"}], "-", 
+   RowBox[{"cx", " ", "t"}], "+", 
+   RowBox[{"dx", " ", "t"}], "-", 
+   RowBox[{"ax", " ", "s", " ", "t"}], "+", 
+   RowBox[{"bx", " ", "s", " ", "t"}], "+", 
+   RowBox[{"cx", " ", "s", " ", "t"}], "-", 
+   RowBox[{"dx", " ", "s", " ", "t"}]}], "\[Equal]", "0"}]], "Output",
+ CellChangeTimes->{{3.67180852620343*^9, 3.6718085325499177`*^9}, 
+   3.6718088152018447`*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"expandedY", "=", 
+  RowBox[{"Expand", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"by", "-", "ay"}], ")"}], "*", "t"}], "+", "ay"}], ")"}], 
+      "*", "s"}], "+", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"dy", "-", "cy"}], ")"}], "*", "t"}], "+", "cy"}], ")"}], 
+      "*", 
+      RowBox[{"(", 
+       RowBox[{"1", "-", "s"}], ")"}]}], "-", "py"}], "\[Equal]", "0"}], 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.6718088382020617`*^9, 3.671808886748553*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"cy", "-", "py", "+", 
+   RowBox[{"ay", " ", "s"}], "-", 
+   RowBox[{"cy", " ", "s"}], "-", 
+   RowBox[{"cy", " ", "t"}], "+", 
+   RowBox[{"dy", " ", "t"}], "-", 
+   RowBox[{"ay", " ", "s", " ", "t"}], "+", 
+   RowBox[{"by", " ", "s", " ", "t"}], "+", 
+   RowBox[{"cy", " ", "s", " ", "t"}], "-", 
+   RowBox[{"dy", " ", "s", " ", "t"}]}], "\[Equal]", "0"}]], "Output",
+ CellChangeTimes->{3.671808876407274*^9, 3.6718089221625233`*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Reduce", "[", 
+  RowBox[{"expandedY", ",", "t"}], "]"}]], "Input",
+ CellChangeTimes->{{3.671809142829827*^9, 3.6718091568757577`*^9}, {
+  3.6718092920727315`*^9, 3.6718092925690823`*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "cy"}], "+", "dy", "-", 
+      RowBox[{"ay", " ", "s"}], "+", 
+      RowBox[{"by", " ", "s"}], "+", 
+      RowBox[{"cy", " ", "s"}], "-", 
+      RowBox[{"dy", " ", "s"}]}], "\[NotEqual]", "0"}], "&&", 
+    RowBox[{"t", "\[Equal]", 
+     FractionBox[
+      RowBox[{
+       RowBox[{"-", "cy"}], "+", "py", "-", 
+       RowBox[{"ay", " ", "s"}], "+", 
+       RowBox[{"cy", " ", "s"}]}], 
+      RowBox[{
+       RowBox[{"-", "cy"}], "+", "dy", "-", 
+       RowBox[{"ay", " ", "s"}], "+", 
+       RowBox[{"by", " ", "s"}], "+", 
+       RowBox[{"cy", " ", "s"}], "-", 
+       RowBox[{"dy", " ", "s"}]}]]}]}], ")"}], "||", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"s", "\[Equal]", "0"}], "&&", 
+    RowBox[{"dy", "\[Equal]", "py"}], "&&", 
+    RowBox[{"cy", "\[Equal]", "py"}]}], ")"}], "||", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"dy", "\[Equal]", "py"}], "&&", 
+    RowBox[{"by", "\[Equal]", "py"}], "&&", 
+    RowBox[{"s", "\[NotEqual]", "0"}], "&&", 
+    RowBox[{"ay", "\[Equal]", 
+     FractionBox[
+      RowBox[{
+       RowBox[{"-", "cy"}], "+", "py", "+", 
+       RowBox[{"cy", " ", "s"}]}], "s"]}]}], ")"}], "||", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"s", "\[NotEqual]", "0"}], "&&", 
+    RowBox[{"by", "\[Equal]", 
+     FractionBox[
+      RowBox[{
+       RowBox[{"-", "dy"}], "+", "py", "+", 
+       RowBox[{"dy", " ", "s"}]}], "s"]}], "&&", 
+    RowBox[{
+     RowBox[{"dy", "-", "py"}], "\[NotEqual]", "0"}], "&&", 
+    RowBox[{"ay", "\[Equal]", 
+     FractionBox[
+      RowBox[{
+       RowBox[{"by", " ", "cy"}], "-", 
+       RowBox[{"by", " ", "py"}], "-", 
+       RowBox[{"cy", " ", "py"}], "+", 
+       RowBox[{"dy", " ", "py"}]}], 
+      RowBox[{"dy", "-", "py"}]]}]}], ")"}]}]], "Output",
+ CellChangeTimes->{3.6718091574110975`*^9, 3.671809293254565*^9}]
+}, Open  ]]
+},
+WindowSize->{1680, 967},
+WindowMargins->{{1358, Automatic}, {Automatic, -8}},
+FrontEndVersion->"10.4 for Microsoft Windows (64-bit) (April 11, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 625, 16, 201, "Text"],
+Cell[CellGroupData[{
+Cell[1208, 40, 2916, 69, 272, "Input"],
+Cell[4127, 111, 432, 7, 31, "Output"],
+Cell[4562, 120, 518, 11, 21, "Message"],
+Cell[5083, 133, 608, 12, 21, "Message"],
+Cell[5694, 147, 629, 13, 23, "Print"],
+Cell[6326, 162, 521, 11, 21, "Message"],
+Cell[6850, 175, 610, 12, 21, "Message"],
+Cell[7463, 189, 631, 13, 23, "Print"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8131, 207, 644, 22, 31, "Input"],
+Cell[8778, 231, 497, 12, 31, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[9312, 248, 646, 22, 31, "Input"],
+Cell[9961, 272, 468, 11, 31, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[10466, 288, 211, 4, 31, "Input"],
+Cell[10680, 294, 1867, 56, 85, "Output"]
+}, Open  ]]
+}
+]
+*)
+

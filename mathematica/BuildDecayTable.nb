@@ -1,0 +1,466 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.4' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     18125,        458]
+NotebookOptionsPosition[     16839,        408]
+NotebookOutlinePosition[     17183,        423]
+CellTagsIndexPosition[     17140,        420]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["\<\
+This script grabs the decay informations of isotopes of elements from wolfram \
+and dumps it into a easy to read text file\
+\>", "Text",
+ CellChangeTimes->{{3.6710389216617303`*^9, 3.671038959301284*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "if", " ", "false", " ", "is", " ", "a", " ", "hack", " ", "because", " ", 
+    "it", " ", "works"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"convertListOfNumbersWithExceptionToString", "[", "list_", "]"}],
+      "=", 
+     RowBox[{
+      RowBox[{"If", "[", 
+       RowBox[{"false", ",", ",", 
+        RowBox[{"ToString", "[", 
+         RowBox[{"#", ",", "CForm"}], "]"}]}], "]"}], "/@", "list"}]}], ";"}],
+    "\[IndentingNewLine]", 
+   RowBox[{"convertListOfNumbersWithExceptionToString", "[", 
+    RowBox[{"{", 
+     RowBox[{"5", ",", 
+      RowBox[{"Missing", "[", "Variables", "]"}]}], "}"}], "]"}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"replaceEntity", "[", "entity_", "]"}], ":=", 
+     RowBox[{"Module", "[", 
+      RowBox[{
+       RowBox[{"{", "result", "}"}], ",", 
+       RowBox[{
+        RowBox[{"result", "=", 
+         RowBox[{"entity", "/.", 
+          RowBox[{
+           RowBox[{"Entity", "[", 
+            RowBox[{"Isotope", ",", "a_"}], "]"}], "\[Rule]", "a"}]}]}], ";", 
+        " ", "result"}]}], "]"}]}], ";"}], "\[IndentingNewLine]"}]}]], "Input",
+ CellChangeTimes->{{3.6710395249950867`*^9, 3.671039553145933*^9}, {
+   3.6710405118529105`*^9, 3.6710405745320935`*^9}, {3.671040610269495*^9, 
+   3.67104077810888*^9}, {3.6710410019787197`*^9, 3.671041003279617*^9}, {
+   3.67104106968946*^9, 3.6710410721932244`*^9}, 3.671041226620714*^9, {
+   3.6710450313323164`*^9, 3.6710450319007173`*^9}, {3.671045188550789*^9, 
+   3.6710452010986395`*^9}, {3.6711981255815477`*^9, 3.6711981358868294`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"5", ",", 
+   RowBox[{"Missing", "[", "Variables", "]"}]}], "}"}]], "Output",
+ CellChangeTimes->{{3.6710395377350526`*^9, 3.671039553582225*^9}, {
+   3.671040513020732*^9, 3.671040674120534*^9}, {3.6710407277343254`*^9, 
+   3.6710407433203154`*^9}, 3.671040778759303*^9, 3.6710410039911184`*^9, 
+   3.6710410727526045`*^9, 3.6710412283699617`*^9, 3.6710414766195517`*^9, 
+   3.6710450323860607`*^9, 3.6710452019362416`*^9, 3.6711981393799314`*^9, {
+   3.671244792140747*^9, 3.6712448127302656`*^9}}]
+}, Open  ]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{
+   "filename", "=", "\"\<C:\\\\users\\\\r0b3\\\\temp\\\\decay8.txt\>\""}], 
+   ";"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"fileHandle", "=", 
+    RowBox[{"OpenWrite", "[", "filename", "]"}]}], ";"}], 
+  "\[IndentingNewLine]", "\[IndentingNewLine]", 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"For", "[", 
+    RowBox[{
+     RowBox[{"iElement", "=", "1"}], ",", 
+     RowBox[{"iElement", "\[LessEqual]", "118"}], ",", 
+     RowBox[{"iElement", "++"}], ",", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"currentElement", "=", 
+       RowBox[{"ElementData", "[", "iElement", "]"}]}], ";", 
+      "\[IndentingNewLine]", 
+      RowBox[{"isotopesNumbers", "=", 
+       RowBox[{"ElementData", "[", 
+        RowBox[{"currentElement", ",", "\"\<IsotopeHalfLives\>\""}], "]"}]}], 
+      ";", "\[IndentingNewLine]", 
+      RowBox[{"Print", "[", "isotopesNumbers", "]"}], ";", 
+      "\[IndentingNewLine]", 
+      RowBox[{"isotopesNames", "=", 
+       RowBox[{"Keys", "[", "isotopesNumbers", "]"}]}], ";", 
+      "\[IndentingNewLine]", "\[IndentingNewLine]", 
+      RowBox[{"For", "[", 
+       RowBox[{
+        RowBox[{"i", "=", "1"}], ",", 
+        RowBox[{"i", "<=", 
+         RowBox[{"Length", "[", "isotopesNames", "]"}]}], ",", 
+        RowBox[{"i", "++"}], ",", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"iterationIsotopeName", " ", "=", " ", 
+          RowBox[{"isotopesNames", "[", 
+           RowBox[{"[", "i", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+         "\[IndentingNewLine]", 
+         RowBox[{"WriteString", "[", 
+          RowBox[{"fileHandle", ",", 
+           RowBox[{
+            RowBox[{"ToString", "[", 
+             RowBox[{"iterationIsotopeName", "/.", 
+              RowBox[{
+               RowBox[{"Entity", "[", 
+                RowBox[{"b_", ",", "a_"}], "]"}], "\[Rule]", "a"}]}], "]"}], 
+            "<>", "\"\<\\n\>\""}]}], "]"}], ";", "\[IndentingNewLine]", 
+         RowBox[{"WriteString", "[", 
+          RowBox[{"fileHandle", ",", 
+           RowBox[{"\"\<\\t\>\"", "<>", "\"\<atomicMass=\>\"", "<>", 
+            RowBox[{"ToString", "[", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"QuantityMagnitude", "[", 
+                RowBox[{
+                 RowBox[{"IsotopeData", "[", 
+                  RowBox[{"iterationIsotopeName", ",", "\"\<AtomicMass\>\""}],
+                   "]"}], ",", 
+                 RowBox[{"MixedRadix", "[", "\"\<AtomicMassUnit\>\"", "]"}]}],
+                 "]"}], "/.", 
+               RowBox[{
+                RowBox[{"MixedMagnitude", "[", 
+                 RowBox[{"List", "[", "x_", "]"}], "]"}], "\[Rule]", "x"}]}], 
+              ",", "CForm"}], "]"}], "<>", "\"\<\\n\>\""}]}], "]"}], ";", 
+         "\[IndentingNewLine]", "\[IndentingNewLine]", 
+         RowBox[{"halflifeAsString", "=", 
+          RowBox[{"ToString", "[", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"QuantityMagnitude", "[", 
+              RowBox[{"UnitConvert", "[", 
+               RowBox[{
+                RowBox[{"IsotopeData", "[", 
+                 RowBox[{"iterationIsotopeName", ",", "\"\<HalfLife\>\""}], 
+                 "]"}], ",", 
+                RowBox[{"MixedRadix", "[", "\"\<Seconds\>\"", "]"}]}], "]"}], 
+              "]"}], "/.", 
+             RowBox[{
+              RowBox[{"MixedMagnitude", "[", 
+               RowBox[{"List", "[", "x_", "]"}], "]"}], "\[Rule]", "x"}]}], 
+            ",", "CForm"}], "]"}]}], ";", "\[IndentingNewLine]", 
+         RowBox[{"(*", 
+          RowBox[{
+          "as", " ", "string", " ", "comparision", " ", "because", " ", "its",
+            " ", "a", " ", "lot", " ", "simpler"}], " ", "*)"}], 
+         "\[IndentingNewLine]", 
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{
+           "halflifeAsString", "\[Equal]", 
+            "\"\<QuantityMagnitude(UnitConvert(DirectedInfinity(1),MixedRadix(\
+\\\"Seconds\\\")))\>\""}], ",", " ", 
+           RowBox[{"halflifeAsString", "=", "\"\<inf\>\""}]}], "]"}], ";", 
+         "\[IndentingNewLine]", "\[IndentingNewLine]", 
+         RowBox[{"WriteString", "[", 
+          RowBox[{"fileHandle", ",", 
+           RowBox[{
+           "\"\<\\t\>\"", "<>", "\"\<halflife=\>\"", "<>", "halflifeAsString",
+             "<>", "\"\<\\n\>\""}]}], "]"}], ";", "\[IndentingNewLine]", 
+         RowBox[{"WriteString", "[", 
+          RowBox[{"fileHandle", ",", 
+           RowBox[{"\"\<\\t\>\"", "<>", "\"\<modes=\>\"", "<>", 
+            RowBox[{"ToString", "[", 
+             RowBox[{"IsotopeData", "[", 
+              RowBox[{"iterationIsotopeName", ",", "\"\<DecayModes\>\""}], 
+              "]"}], "]"}], "<>", "\"\<\\n\>\""}]}], "]"}], ";", 
+         "\[IndentingNewLine]", 
+         RowBox[{"WriteString", "[", 
+          RowBox[{"fileHandle", ",", 
+           RowBox[{"\"\<\\t\>\"", "<>", "\"\<ratios=\>\"", "<>", 
+            RowBox[{"ToString", "[", 
+             RowBox[{
+              RowBox[{"IsotopeData", "[", 
+               RowBox[{
+               "iterationIsotopeName", ",", "\"\<BranchingRatios\>\""}], 
+               "]"}], ",", "CForm"}], "]"}], "<>", "\"\<\\n\>\""}]}], "]"}], 
+         ";", "\[IndentingNewLine]", 
+         RowBox[{"WriteString", "[", 
+          RowBox[{"fileHandle", ",", 
+           RowBox[{"\"\<\\t\>\"", "<>", "\"\<daughter=\>\"", "<>", 
+            RowBox[{"ToString", "[", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", 
+                RowBox[{"#", "/.", 
+                 RowBox[{
+                  RowBox[{"Entity", "[", 
+                   RowBox[{"b_", ",", "a_"}], "]"}], "\[Rule]", "a"}]}], 
+                ")"}], "&"}], "/@", 
+              RowBox[{"IsotopeData", "[", 
+               RowBox[{
+               "iterationIsotopeName", ",", "\"\<DaughterNuclides\>\""}], 
+               "]"}]}], "]"}], "<>", "\"\<\\n\>\""}]}], "]"}], ";"}]}], 
+       "\[IndentingNewLine]", "]"}], ";"}]}], "\[IndentingNewLine]", "]"}], 
+   ";"}], "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Close", "[", "fileHandle", "]"}], ";"}]}], "Input",
+ CellChangeTimes->{{3.6710362689484043`*^9, 3.671036287428093*^9}, {
+   3.6710364054753313`*^9, 3.671036417576849*^9}, {3.6710364575633783`*^9, 
+   3.6710364613070335`*^9}, {3.6710365880914383`*^9, 3.671036593354144*^9}, {
+   3.671037464941388*^9, 3.6710375127200623`*^9}, {3.671037571253095*^9, 
+   3.6710376936534023`*^9}, {3.671037732927312*^9, 3.6710377656213455`*^9}, 
+   3.67103784421276*^9, {3.6710382844849586`*^9, 3.671038299929864*^9}, {
+   3.6710384028334217`*^9, 3.671038454082232*^9}, {3.671038521577843*^9, 
+   3.671038523275036*^9}, {3.671038762519868*^9, 3.671038854838624*^9}, {
+   3.671038967117795*^9, 3.671039005582155*^9}, {3.6710394492908764`*^9, 
+   3.6710395133550606`*^9}, {3.6710407880921907`*^9, 3.671040791731743*^9}, {
+   3.6710409562357388`*^9, 3.671040961971783*^9}, {3.6710412958475275`*^9, 
+   3.671041297930006*^9}, {3.671041329451765*^9, 3.6710413376495714`*^9}, 
+   3.6710414474990144`*^9, {3.671041499601756*^9, 3.6710415780338907`*^9}, {
+   3.6710416828868113`*^9, 3.671041874685977*^9}, {3.6710423708752317`*^9, 
+   3.671042389587411*^9}, {3.6710424221390457`*^9, 3.6710424777622533`*^9}, {
+   3.6710426897708783`*^9, 3.6710427415373907`*^9}, {3.6710428123309984`*^9, 
+   3.6710428297352667`*^9}, {3.6710429160190973`*^9, 
+   3.6710429254597673`*^9}, {3.6710448311358385`*^9, 3.671044836568672*^9}, 
+   3.671045009106659*^9, {3.6710452241659164`*^9, 3.6710452262213707`*^9}, {
+   3.6710452921645517`*^9, 3.671045322411867*^9}, {3.6710454147009583`*^9, 
+   3.671045417210727*^9}, 3.671045450429859*^9, {3.6710456373139935`*^9, 
+   3.6710456574821987`*^9}, 3.671192674009781*^9, {3.671195483750188*^9, 
+   3.671195543381256*^9}, {3.671196055272002*^9, 3.6711960801967154`*^9}, 
+   3.671196125089737*^9, {3.6711967155872307`*^9, 3.6711967467271967`*^9}, {
+   3.6711974447001963`*^9, 3.671197495430971*^9}, {3.6711975378636017`*^9, 
+   3.671197540941697*^9}, {3.671197748152652*^9, 3.6711977591524105`*^9}, {
+   3.671197829266449*^9, 3.67119784090464*^9}, {3.671198077941249*^9, 
+   3.671198088383313*^9}, {3.6711986543875246`*^9, 3.6711986570193777`*^9}, {
+   3.6711995031027765`*^9, 3.671199587278795*^9}, {3.6712448466849155`*^9, 
+   3.6712448795921135`*^9}, {3.671245199842252*^9, 3.6712452384477015`*^9}, {
+   3.671245393274748*^9, 3.6712453935649395`*^9}, {3.671245655191202*^9, 
+   3.6712456620696797`*^9}, {3.671246001759348*^9, 3.6712460020735683`*^9}, {
+   3.6712461405608706`*^9, 3.671246158951825*^9}, {3.671246416451663*^9, 
+   3.6712464303714776`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"isotposNumbers", "[", 
+  RowBox[{"[", "1", "]"}], "]"}]], "Input",
+ CellChangeTimes->{{3.671036491657439*^9, 3.6710364987234154`*^9}}],
+
+Cell[BoxData[
+ TemplateBox[{
+  "79.2744799594114662608`2.","\"Myr\"","megayears","\"Megayears\""},
+  "Quantity"]], "Output",
+ CellChangeTimes->{3.671036499356848*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"UnitConvert", "[", 
+  RowBox[{
+   RowBox[{"Quantity", "[", 
+    RowBox[{"79.2744799594114662608`2.", ",", "\"\<Megayears\>\""}], "]"}], 
+   ",", 
+   RowBox[{"MixedRadix", "[", "\"\<Seconds\>\"", "]"}]}], "]"}]], "Input",
+ CellChangeTimes->{3.671036524458548*^9},
+ NumberMarks->False],
+
+Cell[BoxData[
+ TemplateBox[{
+  "2.4999999999999999999998846408888475`2.*^15",
+   RowBox[{"\[ThinSpace]", "\"s\""}],"seconds",
+   RowBox[{"{", "\"Seconds\"", "}"}]},
+  "QuantityMixedUnit1"]], "Output",
+ CellChangeTimes->{{3.6710365109890623`*^9, 3.671036525244116*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"IsotopeData", "[", 
+  RowBox[{"\"\<Pu238\>\"", ",", "\"\<HalfLife\>\""}], "]"}]], "Input",
+ CellChangeTimes->{{3.6710427932956114`*^9, 3.671042797004176*^9}}],
+
+Cell[BoxData[
+ TemplateBox[{"2.77`3.*^9","\"s\"","seconds","\"Seconds\""},
+  "Quantity"]], "Output",
+ CellChangeTimes->{3.671042797873803*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"IsotopeData", "[", 
+  RowBox[{"\"\<Pu238\>\"", ",", "\"\<DecayModes\>\""}], "]"}]], "Input",
+ CellChangeTimes->{{3.671036844303403*^9, 3.6710368566491213`*^9}, {
+   3.6710368880972958`*^9, 3.6710369114007287`*^9}, {3.6710369631862497`*^9, 
+   3.671036967867531*^9}, {3.6710370413760443`*^9, 3.6710370417443104`*^9}, {
+   3.6710371129064693`*^9, 3.6710371223941574`*^9}, 3.6710372840385456`*^9}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"AlphaEmission\"\>", ",", "\<\"SpontaneousFission\"\>", 
+   ",", "\<\"Silicon32ClusterEmission\"\>", 
+   ",", "\<\"Magnesium28Magnesium30ClusterEmission\"\>"}], "}"}]], "Output",
+ CellChangeTimes->{{3.671036872838575*^9, 3.671036918277563*^9}, 
+   3.671036969491689*^9, 3.671037047028017*^9, 3.6710371254753313`*^9, 
+   3.671037284639969*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"IsotopeData", "[", 
+  RowBox[{"\"\<Pu238\>\"", ",", "\"\<BranchingRatios\>\""}], "]"}]], "Input",
+ CellChangeTimes->{{3.6710369783939533`*^9, 3.671036980013095*^9}, {
+   3.6710370438637986`*^9, 3.671037044479269*^9}, 3.671037279608407*^9}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"1.`3.", ",", "1.9`2.*^-9", ",", "1.4`2.*^-16", ",", "6.`2.*^-17"}],
+   "}"}]], "Output",
+ CellChangeTimes->{3.67103698057249*^9, 3.6710370504414372`*^9, 
+  3.6710372804730167`*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"IsotopeData", "[", 
+  RowBox[{"\"\<Pu238\>\"", ",", "\"\<DaughterNuclides\>\""}], "]"}]], "Input",
+ CellChangeTimes->{{3.671037018271739*^9, 3.6710370197758093`*^9}, {
+  3.671037059648935*^9, 3.6710370603524313`*^9}, {3.6710372878622417`*^9, 
+  3.6710372966304274`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   TemplateBox[{"\"uranium-234\"",RowBox[{"Entity", "[", 
+       RowBox[{"\"Isotope\"", ",", "\"Uranium234\""}], "]"}],
+     "\"Entity[\\\"Isotope\\\", \\\"Uranium234\\\"]\"","\"isotope\""},
+    "Entity"], ",", 
+   RowBox[{"Missing", "[", "\<\"Variable\"\>", "]"}], ",", 
+   TemplateBox[{"\"mercury-206\"",RowBox[{"Entity", "[", 
+       RowBox[{"\"Isotope\"", ",", "\"Mercury206\""}], "]"}],
+     "\"Entity[\\\"Isotope\\\", \\\"Mercury206\\\"]\"","\"isotope\""},
+    "Entity"], ",", 
+   TemplateBox[{"\"lead-180\"",RowBox[{"Entity", "[", 
+       RowBox[{"\"Isotope\"", ",", "\"Lead180\""}], "]"}],
+     "\"Entity[\\\"Isotope\\\", \\\"Lead180\\\"]\"","\"isotope\""},
+    "Entity"]}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.6710370206074204`*^9, 3.6710370606986685`*^9, {3.671037299592511*^9, 
+   3.671037303646369*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"replaceEntity", "[", 
+  RowBox[{"Entity", "[", 
+   RowBox[{"Isotope", ",", " ", "Thorium211"}], "]"}], "]"}]], "Input",
+ CellChangeTimes->{{3.6710447235419874`*^9, 3.6710448123976517`*^9}, {
+  3.6712447999072385`*^9, 3.6712448055091743`*^9}}],
+
+Cell[BoxData["Thorium211"], "Output",
+ CellChangeTimes->{{3.6710447476799917`*^9, 3.6710447658928356`*^9}, {
+   3.6710448039256673`*^9, 3.6710448128309317`*^9}, 3.6710449681507516`*^9, 
+   3.6712447614080777`*^9, {3.6712447974194703`*^9, 3.6712448185893965`*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"QuantityMagnitude", "[", 
+   RowBox[{"UnitConvert", "[", 
+    RowBox[{"\[Infinity]", ",", 
+     RowBox[{"MixedRadix", "[", "\"\<Seconds\>\"", "]"}]}], "]"}], "]"}], "/.", 
+  RowBox[{
+   RowBox[{"QuantityMagnitude", "[", "x_", "]"}], "\[Rule]", "x"}]}]], "Input",
+ CellChangeTimes->{{3.671197803383198*^9, 3.6711978172870016`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"UnitConvert", "[", 
+  RowBox[{"\[Infinity]", ",", 
+   RowBox[{"MixedRadix", "[", "\<\"Seconds\"\>", "]"}]}], "]"}]], "Output",
+ CellChangeTimes->{{3.6711978105722513`*^9, 3.671197817916445*^9}}]
+}, Open  ]]
+},
+WindowSize->{1366, 685},
+WindowMargins->{{-8, Automatic}, {Automatic, -8}},
+FrontEndVersion->"10.4 for Microsoft Windows (64-bit) (April 11, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 214, 4, 30, "Text"],
+Cell[CellGroupData[{
+Cell[797, 28, 1678, 40, 132, "Input"],
+Cell[2478, 70, 538, 9, 31, "Output"]
+}, Open  ]],
+Cell[3031, 82, 8708, 176, 692, "Input"],
+Cell[CellGroupData[{
+Cell[11764, 262, 158, 3, 31, "Input"],
+Cell[11925, 267, 166, 4, 39, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[12128, 276, 307, 8, 31, "Input"],
+Cell[12438, 286, 268, 6, 41, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[12743, 297, 182, 3, 31, "Input"],
+Cell[12928, 302, 142, 3, 42, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[13107, 310, 418, 6, 31, "Input"],
+Cell[13528, 318, 385, 7, 31, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[13950, 330, 263, 4, 31, "Input"],
+Cell[14216, 336, 220, 5, 33, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[14473, 346, 294, 5, 31, "Input"],
+Cell[14770, 353, 861, 18, 43, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15668, 376, 266, 5, 31, "Input"],
+Cell[15937, 383, 263, 3, 31, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[16237, 391, 365, 8, 31, "Input"],
+Cell[16605, 401, 218, 4, 31, "Output"]
+}, Open  ]]
+}
+]
+*)
+

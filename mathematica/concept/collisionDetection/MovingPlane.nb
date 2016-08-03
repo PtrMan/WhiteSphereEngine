@@ -1,0 +1,352 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.4' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     13365,        344]
+NotebookOptionsPosition[     12674,        315]
+NotebookOutlinePosition[     13018,        330]
+CellTagsIndexPosition[     12975,        327]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[TextData[{
+ StyleBox["Moving plane VS point",
+  FontWeight->"Bold"],
+ "\n\nplane equation\n\nax+by+cz+d=0\n\nwe do have two planes\n(a0, b0, c0, \
+d0) and (a1, b1, c1, d1)\n\nwe want to interpolate between the two planes \
+based on t\nfor this the best way is to interpolate the points which define \
+the plane on the side and recalculate the plane for the interpolated points.\n"
+}], "Text",
+ CellChangeTimes->{{3.6717987831271834`*^9, 3.6717988412492027`*^9}, {
+  3.6717988991720133`*^9, 3.671799083902917*^9}, {3.6717991265540066`*^9, 
+  3.6717991315532637`*^9}, {3.671799315233099*^9, 3.6717993219858427`*^9}, {
+  3.671802467195727*^9, 3.671802473169942*^9}, {3.6723400323152075`*^9, 
+  3.6723400738324428`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", "invalid", " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"solutions", ",", "equation"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"solutions", "=", 
+      RowBox[{"Solve", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{"a0", "+", 
+             RowBox[{"t", "*", 
+              RowBox[{"(", 
+               RowBox[{"a1", "-", "a0"}], ")"}]}]}], ")"}], "x"}], "+", 
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{"b0", "+", 
+             RowBox[{"t", "*", 
+              RowBox[{"(", 
+               RowBox[{"b1", "-", "b0"}], ")"}]}]}], ")"}], "y"}], "+", 
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{"c0", "+", 
+             RowBox[{"t", "*", 
+              RowBox[{"(", 
+               RowBox[{"c1", "-", "c0"}], ")"}]}]}], ")"}], "z"}], "+", 
+          RowBox[{"(", 
+           RowBox[{"d0", "+", 
+            RowBox[{"t", "*", 
+             RowBox[{"(", 
+              RowBox[{"d1", "-", "d0"}], ")"}]}]}], ")"}]}], "==", "0"}], ",",
+         "t"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"Print", "[", "solutions", "]"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"equation", "=", 
+      RowBox[{"Values", "[", 
+       RowBox[{"solutions", "[", 
+        RowBox[{"[", 
+         RowBox[{"1", ",", " ", "1"}], "]"}], "]"}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"Print", "[", 
+      RowBox[{"CForm", "[", "equation", "]"}], "]"}]}]}], 
+   "\[IndentingNewLine]", "]"}]}]], "Input",
+ CellChangeTimes->{{3.671799098781411*^9, 3.671799134236171*^9}, {
+  3.671799600603991*^9, 3.6717996503340383`*^9}, {3.6717997063313603`*^9, 
+  3.6717997103672047`*^9}, {3.6717997786113253`*^9, 3.6717997853380566`*^9}, {
+  3.6717998392212296`*^9, 3.6717999697394886`*^9}, {3.672340095133498*^9, 
+  3.6723401032692356`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{"t", "\[Rule]", 
+    FractionBox[
+     RowBox[{"d0", "+", 
+      RowBox[{"a0", " ", "x"}], "+", 
+      RowBox[{"b0", " ", "y"}], "+", 
+      RowBox[{"c0", " ", "z"}]}], 
+     RowBox[{"d0", "-", "d1", "+", 
+      RowBox[{"a0", " ", "x"}], "-", 
+      RowBox[{"a1", " ", "x"}], "+", 
+      RowBox[{"b0", " ", "y"}], "-", 
+      RowBox[{"b1", " ", "y"}], "+", 
+      RowBox[{"c0", " ", "z"}], "-", 
+      RowBox[{"c1", " ", "z"}]}]]}], "}"}], "}"}]], "Print",
+ CellChangeTimes->{3.6717999704289875`*^9}],
+
+Cell[BoxData[
+ InterpretationBox["\<\"(d0 + a0*x + b0*y + c0*z)/(d0 - d1 + a0*x - a1*x + \
+b0*y - b1*y + c0*z - c1*z)\"\>",
+  CForm[($CellContext`d0 + $CellContext`a0 $CellContext`x + $CellContext`b0 \
+$CellContext`y + $CellContext`c0 $CellContext`z)/($CellContext`d0 - \
+$CellContext`d1 + $CellContext`a0 $CellContext`x - $CellContext`a1 \
+$CellContext`x + $CellContext`b0 $CellContext`y - $CellContext`b1 \
+$CellContext`y + $CellContext`c0 $CellContext`z - $CellContext`c1 \
+$CellContext`z)],
+  AutoDelete->True,
+  Editable->True]], "Print",
+ CellChangeTimes->{3.6717999704309893`*^9}]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Moving plane VS line segment", "Subsection",
+ CellChangeTimes->{{3.6718004192962604`*^9, 3.671800431036505*^9}}],
+
+Cell["Visualisation", "Text",
+ CellChangeTimes->{{3.6718004515139303`*^9, 3.6718004545931015`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"linearInterpolate", "[", 
+     RowBox[{"a_", ",", "b_", ",", "t_"}], "]"}], ":=", 
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"b", "-", "a"}], ")"}], "*", "t"}]}], ")"}]}], ";"}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"Module", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+    "collisionLineStart", ",", "collisionLineEnd", ",", "\[IndentingNewLine]",
+      "startVertex0", ",", "startVertex1", ",", "startVertex2", ",", 
+     "\[IndentingNewLine]", "endVertex0", ",", "endVertex1", ",", 
+     "endVertex2", ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     "interpolatedVertex0", ",", "interpolatedVertex1", ",", 
+     "interpolatedVertex2"}], "\[IndentingNewLine]", "}"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"collisionLineStart", "=", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0"}], "}"}]}], ";", "\[IndentingNewLine]", 
+    RowBox[{"collisionLineEnd", "=", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "2", ",", "0"}], "}"}]}], ";", "\[IndentingNewLine]", 
+    "\[IndentingNewLine]", 
+    RowBox[{"startVertex0", "=", 
+     RowBox[{"{", 
+      RowBox[{"0.5", ",", "1", ",", "1"}], "}"}]}], ";", 
+    "\[IndentingNewLine]", 
+    RowBox[{"startVertex1", "=", 
+     RowBox[{"{", 
+      RowBox[{"0.5", ",", "1.9", ",", "1"}], "}"}]}], ";", 
+    "\[IndentingNewLine]", 
+    RowBox[{"startVertex2", "=", 
+     RowBox[{"{", 
+      RowBox[{"1.5", ",", "1.5", ",", "1"}], "}"}]}], ";", 
+    "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    RowBox[{"endVertex0", "=", 
+     RowBox[{"{", 
+      RowBox[{"0.5", ",", "1", ",", 
+       RowBox[{"-", "1"}]}], "}"}]}], ";", "\[IndentingNewLine]", 
+    RowBox[{"endVertex1", "=", 
+     RowBox[{"{", 
+      RowBox[{"0.5", ",", "1.9", ",", 
+       RowBox[{"-", "1.5"}]}], "}"}]}], ";", "\[IndentingNewLine]", 
+    RowBox[{"endVertex2", "=", 
+     RowBox[{"{", 
+      RowBox[{"1.5", ",", "1.5", ",", 
+       RowBox[{"-", "1.2"}]}], "}"}]}], ";", "\[IndentingNewLine]", 
+    "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    RowBox[{"Manipulate", "[", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"interpolatedVertex0", "=", 
+        RowBox[{"linearInterpolate", "[", 
+         RowBox[{"startVertex0", ",", "endVertex0", ",", "t"}], "]"}]}], ";", 
+       "\[IndentingNewLine]", 
+       RowBox[{"interpolatedVertex1", "=", 
+        RowBox[{"linearInterpolate", "[", 
+         RowBox[{"startVertex1", ",", "endVertex1", ",", "t"}], "]"}]}], ";", 
+       RowBox[{"interpolatedVertex2", "=", 
+        RowBox[{"linearInterpolate", "[", 
+         RowBox[{"startVertex2", ",", "endVertex2", ",", "t"}], "]"}]}], ";", 
+       "\[IndentingNewLine]", "\[IndentingNewLine]", 
+       RowBox[{"Graphics3D", "[", "\[IndentingNewLine]", 
+        RowBox[{"{", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"Line", "[", 
+           RowBox[{"{", 
+            RowBox[{"collisionLineStart", ",", "collisionLineEnd"}], "}"}], 
+           "]"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"Polygon", "[", 
+           RowBox[{"{", 
+            RowBox[{
+            "startVertex0", ",", "startVertex1", ",", "startVertex2"}], "}"}],
+            "]"}], ",", "\[IndentingNewLine]", 
+          RowBox[{"Polygon", "[", 
+           RowBox[{"{", 
+            RowBox[{
+            "interpolatedVertex0", ",", "interpolatedVertex1", ",", 
+             "interpolatedVertex2"}], "}"}], "]"}]}], "\[IndentingNewLine]", 
+         "\[IndentingNewLine]", "}"}], "\[IndentingNewLine]", "]"}]}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"t", ",", "0", ",", "1"}], "}"}]}], "\[IndentingNewLine]", 
+     "]"}]}]}], "\[IndentingNewLine]", "]"}]}], "Input",
+ CellChangeTimes->{{3.671800595605363*^9, 3.6718006213004875`*^9}, {
+   3.6718007517294683`*^9, 3.6718007560408907`*^9}, {3.671800817342087*^9, 
+   3.671800871796482*^9}, {3.671800907049342*^9, 3.671800957175971*^9}, {
+   3.6718009936897163`*^9, 3.671801018953536*^9}, 3.671801051981806*^9, {
+   3.6718012513700933`*^9, 3.6718012515432315`*^9}, {3.6718012873654904`*^9, 
+   3.6718014547162695`*^9}, {3.671801504325945*^9, 3.6718015072580137`*^9}, {
+   3.6718015703444986`*^9, 3.671801608492383*^9}, {3.671801668902182*^9, 
+   3.6718018182514834`*^9}}],
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`t$$ = 0.428, Typeset`show$$ = True, 
+    Typeset`bookmarkList$$ = {}, Typeset`bookmarkMode$$ = "Menu", 
+    Typeset`animator$$, Typeset`animvar$$ = 1, Typeset`name$$ = 
+    "\"untitled\"", Typeset`specs$$ = {{
+      Hold[$CellContext`t$$], 0, 1}}, Typeset`size$$ = {438., {154., 159.}}, 
+    Typeset`update$$ = 0, Typeset`initDone$$, Typeset`skipInitDone$$ = 
+    True, $CellContext`t$3424$$ = 0}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, "Variables" :> {$CellContext`t$$ = 0}, 
+      "ControllerVariables" :> {
+        Hold[$CellContext`t$$, $CellContext`t$3424$$, 0]}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, 
+      "Body" :> ($CellContext`interpolatedVertex0$3423 = \
+$CellContext`linearInterpolate[$CellContext`startVertex0$3423, \
+$CellContext`endVertex0$3423, $CellContext`t$$]; \
+$CellContext`interpolatedVertex1$3423 = \
+$CellContext`linearInterpolate[$CellContext`startVertex1$3423, \
+$CellContext`endVertex1$3423, $CellContext`t$$]; \
+$CellContext`interpolatedVertex2$3423 = \
+$CellContext`linearInterpolate[$CellContext`startVertex2$3423, \
+$CellContext`endVertex2$3423, $CellContext`t$$]; Graphics3D[{
+          
+          Line[{$CellContext`collisionLineStart$3423, \
+$CellContext`collisionLineEnd$3423}], 
+          
+          Polygon[{$CellContext`startVertex0$3423, \
+$CellContext`startVertex1$3423, $CellContext`startVertex2$3423}], 
+          
+          Polygon[{$CellContext`interpolatedVertex0$3423, \
+$CellContext`interpolatedVertex1$3423, \
+$CellContext`interpolatedVertex2$3423}]}]), 
+      "Specifications" :> {{$CellContext`t$$, 0, 1}}, "Options" :> {}, 
+      "DefaultOptions" :> {}],
+     ImageSizeCache->{489., {200., 207.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    SynchronousInitialization->True,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Output",
+ CellChangeTimes->{
+  3.6718006224092684`*^9, {3.6718006819322414`*^9, 3.6718006974862*^9}, {
+   3.671800852869134*^9, 3.6718008723558655`*^9}, 3.6718009195191345`*^9, {
+   3.6718010228442745`*^9, 3.671801052595252*^9}, 3.671801456212323*^9, 
+   3.6718015080845823`*^9, 3.6718015732625413`*^9, 3.6718016089327064`*^9, 
+   3.6718018189069414`*^9}]
+}, Open  ]],
+
+Cell["\<\
+There are serveral cases when testing a moving convex polygon against a line:
+(case a) the startpoints are outside of the sweeped volume
+(case b) one or two startpoints are inside the sweeping volume
+
+case a can be tested by intersecting the ray of the line against the sweeped \
+outer (convex) hull planes and checking if the bayestric interpolated time \
+for the collisionpoint is in [0, 1], the collisionpoint mus be i the range \
+[0, 1] of the line too.
+case b can be tested by putting the points into [equation 1] and checking if \
+the time is in [0, 1] and if the point is inside the convex sweeped shape at \
+that time. 
+
+\
+\>", "Text",
+ CellChangeTimes->{{3.6718023383021593`*^9, 3.671802576181217*^9}, {
+  3.6718026415383015`*^9, 3.6718027780281773`*^9}}]
+}, Open  ]]
+},
+WindowSize->{1366, 685},
+WindowMargins->{{-8, Automatic}, {Automatic, -8}},
+FrontEndVersion->"10.4 for Microsoft Windows (64-bit) (April 11, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 721, 12, 239, "Text"],
+Cell[CellGroupData[{
+Cell[1304, 36, 2007, 53, 172, "Input"],
+Cell[CellGroupData[{
+Cell[3336, 93, 556, 16, 42, "Print"],
+Cell[3895, 111, 587, 11, 23, "Print"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4531, 128, 118, 1, 43, "Subsection"],
+Cell[4652, 131, 99, 1, 30, "Text"],
+Cell[CellGroupData[{
+Cell[4776, 136, 4372, 99, 752, "Input"],
+Cell[9151, 237, 2718, 56, 424, "Output"]
+}, Open  ]],
+Cell[11884, 296, 774, 16, 182, "Text"]
+}, Open  ]]
+}
+]
+*)
+
