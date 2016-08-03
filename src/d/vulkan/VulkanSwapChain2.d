@@ -63,12 +63,26 @@ class VulkanSwapChain2 {
 	private VariableValidator!VkPhysicalDevice physicalDevice;
 	private VariableValidator!VkCommandPool commandPool;
 	
+	private static struct Context {
+		VkSwapchainKHR swapchain;
+		
+		VkImage[] swapchainImages; // no need to destroy(?)
+	}
+	
+	private Context context; // stores all created handles
+	
 	// Function pointers
 	private PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
 	private PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
 	private PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
 	private PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
 	private PFN_vkQueuePresentKHR fpQueuePresentKHR;
+	
+	
+	// accessors for access from outside
+	public final @property VkImage[] swapchainImages() {
+		return context.swapchainImages;
+	}
 	
 	
 	// Connect to the instance und device and get all required function pointers
@@ -104,6 +118,8 @@ class VulkanSwapChain2 {
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't create SwapChain Surface!");
 		}
+		
+		scope(failure) destroySurface();
 
 		assert(device.isValid && surface.isValid);
 		
@@ -182,11 +198,12 @@ class VulkanSwapChain2 {
 		uint numberOfImagesToOwnRequest = 2; // Application desires to own 2 images at a time
 	    uint32_t desiredNumberOfSwapchainImages = cast(uint32_t)getSwapChainNumImages(numberOfImagesToOwnRequest);
 		
+		// TODO< log >
 	    {
 	    	import std.stdio;
 	    	writeln("desiredNumberOfSwapchainImages ", desiredNumberOfSwapchainImages);
 	    }
-	
+		
 	    VkFormat swapchainFormat;
 	    VkColorSpaceKHR swapchainColorSpace;
 	    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
@@ -245,26 +262,26 @@ class VulkanSwapChain2 {
 	    createInfo.surface = surface.value; // outside because ambiguous
 	    
 	
-	    VkSwapchainKHR swapchain;
-	    vulkanResult = fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &swapchain);
+	    vulkanResult = fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &context.swapchain);
 	    if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't create swapchain!");
     	}
 	    
-	    
+	    scope(failure) fpDestroySwapchainKHR(device.value, context.swapchain, null);
 	    
 	    
 	    /////////////////////////////////////////////////
 	    // Obtaining the persistent images of a swapchain
 	    /////////////////////////////////////////////////
 	    uint32_t swapchainImageCount;
-    	vulkanResult = fpGetSwapchainImagesKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)swapchain, &swapchainImageCount, null);
+    	vulkanResult = fpGetSwapchainImagesKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)context.swapchain, &swapchainImageCount, null);
     	if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't get swapchain images!");
     	}
 
-    	VkImage* pSwapchainImages = cast(VkImage*)malloc(swapchainImageCount * VkImage.sizeof);
-    	vulkanResult = fpGetSwapchainImagesKHR(device.value, swapchain, &swapchainImageCount, pSwapchainImages);
+    	
+    	context.swapchainImages.length = swapchainImageCount;
+    	vulkanResult = fpGetSwapchainImagesKHR(device.value, context.swapchain, &swapchainImageCount, context.swapchainImages.ptr);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't get swapchain images!");
 		}
@@ -357,7 +374,7 @@ class VulkanSwapChain2 {
 	            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // sType
 	            null,                                       // pNext
 	            0,                                          // flags
-	            pSwapchainImages[i],                        // image
+	            context.swapchainImages[i],                 // image
 	            VK_IMAGE_VIEW_TYPE_2D,                      // viewType
 	            swapchainFormat,                            // format
 	            {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A}, // components
@@ -396,7 +413,7 @@ class VulkanSwapChain2 {
 		        newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		        srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
 		        dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-		        image = pSwapchainImages[i];
+		        image = context.swapchainImages[i];
 		        subresourceRange = image_subresource_range;
 	        }
 	        
@@ -598,5 +615,19 @@ class VulkanSwapChain2 {
 		this.surface = surface;
 		
 		return vulkanResult;
+	}
+	
+	private final void destroySurface() {
+		assert(surface.isValid);
+		
+		vkDestroySurfaceKHR(instance.value, surface, null);
+		
+		surface.invalidate();
+	}
+	
+	public final void shutdown() {
+		fpDestroySwapchainKHR(device.value, context.swapchain, null);
+		
+		destroySurface();
 	}
 }
