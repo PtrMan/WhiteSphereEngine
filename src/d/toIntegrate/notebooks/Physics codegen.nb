@@ -1,0 +1,168 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      4992,        158]
+NotebookOptionsPosition[      4484,        137]
+NotebookOutlinePosition[      4829,        152]
+CellTagsIndexPosition[      4786,        149]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{"rule0", "=", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"Dot", "[", 
+     RowBox[{
+      RowBox[{"Get", "[", 
+       RowBox[{"box", ",", "x"}], "]"}], ",", "x"}], "]"}], ",", 
+    RowBox[{"Dot", "[", 
+     RowBox[{
+      RowBox[{"Get", "[", 
+       RowBox[{"box", ",", "y"}], "]"}], ",", "y"}], "]"}]}], 
+   "}"}]}]], "Input",
+ CellChangeTimes->{{3.665532748126805*^9, 3.6655328825582714`*^9}}],
+
+Cell["\<\
+Transform \[OpenCurlyDoubleQuote]code\[CloseCurlyDoubleQuote] of the form
+
+\tprojectedToBox=ForAllComponents[
+\t\tcomponent,Dot[Get[\[OpenCurlyDoubleQuote]box.\
+motionAxisDirectionsNormalized\[CloseCurlyDoubleQuote], component], component]
+\t];
+\tcollides=InAbsBounds[projectedToBox, \
+\[OpenCurlyDoubleQuote]box.motionAxisSizes\[CloseCurlyDoubleQuote]];
+\tReturn[collides];
+to
+\tVector projectedToBox;
+\t{
+\t\tdouble componentX = dot(box.motionAxisDirectionsNormalized.x, x);
+\t\tdouble componentY = dot(box.motionAxisDirectionsNormalized.y, y);
+\t\tdouble componentZ = dot(box.motionAxisDirectionsNormalized.z, z);
+\t\tprojectedToBox = new Vector(componentX, componentY, componentZ);
+\t}
+\t
+\tbool collides;
+\t{
+\t\tcollides=true;
+\t\tcollides &= abs(projectedToBox.x) < box.motionAxisSizes.x;
+\t\tcollides &= abs(projectedToBox.y) < box.motionAxisSizes.y;
+\t\tcollides &= abs(projectedToBox.z) < box.motionAxisSizes.z;
+\t}
+\t
+\treturn collides;
+
+
+
+\
+\>", "Text",
+ CellChangeTimes->{{3.665533120957953*^9, 3.665533260894605*^9}, {
+  3.6655333063917303`*^9, 3.6655333904570165`*^9}, {3.665533424239867*^9, 
+  3.6655334579917097`*^9}, {3.665533608343585*^9, 3.6655338141398416`*^9}, {
+  3.6655338790575757`*^9, 3.6655338965499096`*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  StyleBox[
+   RowBox[{"Get", "::", "stringorstream"}], "MessageName"], 
+  RowBox[{
+  ":", " "}], "\<\"-- Message text not found -- \
+(\[NoBreak]\\!\\(\\*RowBox[{\\\"box\\\"}]\\)\[NoBreak]) \\!\\(\\*ButtonBox[\\\
+\"\[RightSkeleton]\\\", ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/Get\\\", ButtonNote -> \
+\\\"Get::stringorstream\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{{3.665532875988641*^9, 3.6655328834408903`*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  StyleBox[
+   RowBox[{"Get", "::", "stringorstream"}], "MessageName"], 
+  RowBox[{
+  ":", " "}], "\<\"-- Message text not found -- \
+(\[NoBreak]\\!\\(\\*RowBox[{\\\"box\\\"}]\\)\[NoBreak]) \\!\\(\\*ButtonBox[\\\
+\"\[RightSkeleton]\\\", ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/Get\\\", ButtonNote -> \
+\\\"Get::stringorstream\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{{3.665532875988641*^9, 3.665532883531972*^9}}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"Get", "[", 
+     RowBox[{"box", ",", "x"}], "]"}], ".", "x"}], ",", 
+   RowBox[{
+    RowBox[{"Get", "[", 
+     RowBox[{"box", ",", "y"}], "]"}], ".", "y"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.6655328835339737`*^9}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Replace", "[", 
+  RowBox[{
+   RowBox[{"rule0", "[", 
+    RowBox[{"[", "1", "]"}], "]"}], ",", 
+   RowBox[{
+    RowBox[{"Dot", "[", 
+     RowBox[{"left_", ",", "right_"}], "]"}], "\[Rule]", 
+    RowBox[{"StrConcat", "[", 
+     RowBox[{
+     "\"\<dot(\>\"", ",", "left", ",", "\"\<,\>\"", ",", "right", ",", 
+      "\"\<)\>\""}], "]"}]}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.6655325741318703`*^9, 3.665532619136746*^9}, {
+  3.6655326554243565`*^9, 3.6655326900648193`*^9}, {3.665532906474167*^9, 
+  3.6655330298045907`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"StrConcat", "[", 
+  RowBox[{"\<\"dot(\"\>", ",", 
+   RowBox[{"Get", "[", 
+    RowBox[{"box", ",", "x"}], "]"}], ",", "\<\",\"\>", ",", "x", 
+   ",", "\<\")\"\>"}], "]"}]], "Output",
+ CellChangeTimes->{{3.6655325981069036`*^9, 3.665532619642096*^9}, {
+   3.6655326582223325`*^9, 3.665532690687252*^9}, {3.66553291358535*^9, 
+   3.6655329968068204`*^9}, 3.6655330309984245`*^9}]
+}, Open  ]]
+},
+WindowSize->{1366, 685},
+WindowMargins->{{-8, Automatic}, {Automatic, -8}},
+FrontEndVersion->"10.3 for Microsoft Windows (64-bit) (October 9, 2015)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 416, 13, 31, "Input"],
+Cell[977, 35, 1246, 36, 562, "Text"],
+Cell[2226, 73, 487, 10, 21, "Message"],
+Cell[2716, 85, 485, 10, 21, "Message"],
+Cell[3204, 97, 285, 9, 31, "Output"],
+Cell[CellGroupData[{
+Cell[3514, 110, 551, 14, 31, "Input"],
+Cell[4068, 126, 400, 8, 31, "Output"]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
+
