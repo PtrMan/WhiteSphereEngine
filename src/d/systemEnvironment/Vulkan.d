@@ -364,12 +364,21 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	QueueInfo[] uniqueQueues;
 	
-	
+	size_t primaryQueueIndex = uniqueQueues.length;
 	queueIndexByName["primary"] = uniqueQueues.length;
+	queueIndexByName["graphics"] = uniqueQueues.length; // graphics queue is the primary queue
 	uniqueQueues ~= primaryQueue;
 	
 	if( primaryQueue !is presentQueue ) {
 		uniqueQueues ~= presentQueue;
+	}
+	
+	// if there is a present queue which is not the primary queue then we have to set it to the length
+	if( primaryQueue !is presentQueue ) {
+		queueIndexByName["present"] = uniqueQueues.length - 1;
+	}
+	else {
+		queueIndexByName["present"] = primaryQueueIndex;
 	}
 	
 	queueIndexByName["secondary"] = uniqueQueues.length;
@@ -386,6 +395,9 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	queueManager.queueInfos = DeviceQueueInfoHelper.createQueueInfoForQueues(uniqueQueues, queueDeviceQueueInfoAndQueueIndices);
 	queueManager.addQueueByName("primary", queueDeviceQueueInfoAndQueueIndices[queueIndexByName["primary"]][0], queueDeviceQueueInfoAndQueueIndices[queueIndexByName["primary"]][1]);
 	queueManager.addQueueByName("secondary", queueDeviceQueueInfoAndQueueIndices[queueIndexByName["secondary"]][0], queueDeviceQueueInfoAndQueueIndices[queueIndexByName["secondary"]][1]);
+	queueManager.addQueueByName("present", queueDeviceQueueInfoAndQueueIndices[queueIndexByName["present"]][0], queueDeviceQueueInfoAndQueueIndices[queueIndexByName["present"]][1]);
+	queueManager.addQueueByName("graphics", queueDeviceQueueInfoAndQueueIndices[queueIndexByName["graphics"]][0], queueDeviceQueueInfoAndQueueIndices[queueIndexByName["graphics"]][1]);
+	
 	
 	VkDeviceQueueCreateInfo[] queueCreateInfoArray = DeviceQueueInfoHelper.translateDeviceQueueCreateInfoHelperToVk(queueManager.queueInfos);
 	
@@ -673,7 +685,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 
 import vulkan.VulkanSwapChain2;
 
-public void platformVulkan3SwapChain2(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
+public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
 	
 	chainContext.vulkan.swapChain = new VulkanSwapChain2();
@@ -731,21 +743,21 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 		}
 	}
 
-	createFences(device.value, fences);
+	createFences(chainContext.vulkan.chosenDevice.logicalDevice, fences);
 	
     // create command buffers
-    for (size_t i = 0; i < chainContext.swapchain.swapchainImages.length; ++i) {
+    for (size_t i = 0; i < chainContext.vulkan.swapChain.swapchainImages.length; ++i) {
 		VkCommandBufferAllocateInfo commandBufferAllocationInfo;
 		initCommandBufferAllocateInfo(&commandBufferAllocationInfo);
 		with( commandBufferAllocationInfo ) {
 			level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			commandBufferCount = 1; // we just want to allocate one command buffer in the target array
 		}
-		commandBufferAllocationInfo.commandPool = commandPool.value;
+		commandBufferAllocationInfo.commandPool = chainContext.vulkan.cmdPool.value;
 		
 		// SYNC : this needs to be host synced with a mutex
 		vulkanResult = vkAllocateCommandBuffers(
-			device.value,
+			chainContext.vulkan.chosenDevice.logicalDevice,
 			&commandBufferAllocationInfo,
 			&cmdBuffers[i]
 		);
@@ -762,7 +774,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 		fenceCreateInfo.flags = 0;
 		
 		vulkanResult = vkCreateFence(
-			device.value,
+			chainContext.vulkan.chosenDevice.logicalDevice,
 			&fenceCreateInfo,
 			null,
 			&additionalFence);
@@ -773,18 +785,18 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
     }
     
 	
-    for (size_t i = 0; i < chainContext.swapchain.swapchainImages.length; ++i) {
+    for (size_t i = 0; i < chainContext.vulkan.swapChain.swapchainImages.length; ++i) {
         const VkImageViewCreateInfo viewInfo = {
-            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // sType
-            null,                                       // pNext
-            0,                                          // flags
+            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,          // sType
+            null,                                              // pNext
+            0,                                                 // flags
             chainContext.vulkan.swapChain.swapchainImages[i],  // image
-            VK_IMAGE_VIEW_TYPE_2D,                      // viewType
-            swapchainFormat,                            // format
+            VK_IMAGE_VIEW_TYPE_2D,                             // viewType
+            chainContext.vulkan.swapChain.swapchainFormat,     // format
             {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A}, // components
-            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}// subresourceRange
+            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}            // subresourceRange
         };
-        vulkanResult = vkCreateImageView(device.value, &viewInfo, null, &views[i]);
+        vulkanResult = vkCreateImageView(chainContext.vulkan.chosenDevice.logicalDevice, &viewInfo, null, &views[i]);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't create imageview [vkCreateImageView]!");
 		}
@@ -807,6 +819,11 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         VkClearColorValue clear_color;
         clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
         
+        // NOTE< not 100% sure if this is right for multiple queues, test on hardware where the queues are different ones > 
+        uint32_t presentQueueFamilyIndex = chainContext.vulkan.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
+        uint32_t primaryQueueFamilyIndex = chainContext.vulkan.queueManager.getDeviceQueueInfoByName("primary").queueFamilyIndex;
+        
+        
         VkImageMemoryBarrier barrier_from_present_to_clear;
         with (barrier_from_present_to_clear) {
         	sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -815,9 +832,9 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 		    dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	        oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	        newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	        srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        image = context.swapchainImages[i];
+	        srcQueueFamilyIndex = primaryQueueFamilyIndex;
+	        dstQueueFamilyIndex = presentQueueFamilyIndex;
+	        image = chainContext.vulkan.swapChain.swapchainImages[i];
 	        subresourceRange = image_subresource_range;
         }
         
@@ -829,20 +846,20 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 	        dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 	        oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	        newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	        srcQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-	        dstQueueFamilyIndex = presentQueueFamilyIndex; // after the code its the present queue, could be another queue, TODO< check >
-		        image = pSwapchainImages[i];
-		        subresourceRange = image_subresource_range;	
-	        }
+	        srcQueueFamilyIndex = presentQueueFamilyIndex;
+	        dstQueueFamilyIndex = primaryQueueFamilyIndex;
+		    image = chainContext.vulkan.swapChain.swapchainImages[i];
+		    subresourceRange = image_subresource_range;	
+	    }
  
-			vkBeginCommandBuffer(cmdBuffers[i], &cmd_buffer_begin_info );
-			vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
-			vkCmdClearColorImage(cmdBuffers[i], pSwapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_subresource_range);
-			vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
-			
-			vulkanResult = vkEndCommandBuffer(cmdBuffers[i]);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't end command buffer [vkEndCommandBuffer]!");
+		vkBeginCommandBuffer(cmdBuffers[i], &cmd_buffer_begin_info );
+		vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
+		vkCmdClearColorImage(cmdBuffers[i], chainContext.vulkan.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_subresource_range);
+		vkCmdPipelineBarrier(cmdBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
+		
+		vulkanResult = vkEndCommandBuffer(cmdBuffers[i]);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't end command buffer [vkEndCommandBuffer]!");
 		}
     }
 	
@@ -854,7 +871,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 	}
 	
 	SemaphorePair[] semaphorePairs;
-	semaphorePairs.length = desiredNumberOfSwapchainImages;
+	semaphorePairs.length = chainContext.vulkan.swapChain.desiredNumberOfSwapchainImages;
 	
     const VkSemaphoreCreateInfo semaphoreCreateInfo = {
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
@@ -865,15 +882,15 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 	for( uint i = 0; i < semaphorePairs.length; i++ ) {
 		VkResult vulkanResults[3];
 		
-		vulkanResults[0] = vkCreateSemaphore(device.value,
+		vulkanResults[0] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
                       &semaphoreCreateInfo, null,
                       &semaphorePairs[i].imageAcquiredSemaphore);
     	
-    	vulkanResults[1] = vkCreateSemaphore(device.value,
+    	vulkanResults[1] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
                       &semaphoreCreateInfo, null,
                       &semaphorePairs[i].chainSemaphore);
     	
-    	vulkanResults[2] = vkCreateSemaphore(device.value,
+    	vulkanResults[2] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
                       &semaphoreCreateInfo, null,
                       &semaphorePairs[i].renderingCompleteSemaphore);
 	    
@@ -889,17 +906,9 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
     do {
         uint32_t imageIndex = UINT32_MAX;
 
-        // Get the next available swapchain image
-        result = fpAcquireNextImageKHR(
-            device.value,
-            swapchain,
-            UINT64_MAX,
-            semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore,
-            VK_NULL_HANDLE,
-            
-            &imageIndex);
+        // get the next available swapchain image
+        result = chainContext.vulkan.swapChain.acquireNextImage(semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, &imageIndex);
         
-
         // Swapchain cannot be used for presentation if failed to acquired new image.
         if (result < 0) {
         	break;
@@ -917,16 +926,16 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 	        	pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
         	}
         	
-        	vulkanResult = vkQueueSubmit(presentQueue, 1, &submitInfo, additionalFence);
+        	vulkanResult = vkQueueSubmit(chainContext.vulkan.queueManager.getQueueByName("present"), 1, &submitInfo, additionalFence);
 			if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Queue submit failed! (2)");
 			}
         }
-		vulkanResult = vkWaitForFences(device.value, 1, &additionalFence, VK_TRUE, UINT64_MAX);
+		vulkanResult = vkWaitForFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence, VK_TRUE, UINT64_MAX);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Wait for fences failed!");
 		}
-		vulkanResult = vkResetFences(device.value, 1, &additionalFence);
+		vulkanResult = vkResetFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence);
         if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Fence reset failed!");
 		}
@@ -948,16 +957,16 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
             pSignalSemaphores = cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore;
         }
         
-        vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, additionalFence);
+        vulkanResult = vkQueueSubmit(chainContext.vulkan.queueManager.getQueueByName("graphics"), 1, &submitInfo, additionalFence);
         if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Queue submit failed! (3)");
 		}
     	
-    	vulkanResult = vkWaitForFences(device.value, 1, &additionalFence, VK_TRUE, UINT64_MAX);
+    	vulkanResult = vkWaitForFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence, VK_TRUE, UINT64_MAX);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Wait for fences failed!");
 		}
-		vulkanResult = vkResetFences(device.value, 1, &additionalFence);
+		vulkanResult = vkResetFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence);
         if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Fence reset failed!");
 		}
@@ -965,19 +974,14 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         
         
         // Submit present operation to present queue
-        const VkPresentInfoKHR presentInfo = {
-            VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,     // sType
-            null,                                   // pNext
-            1,                                      // waitSemaphoreCount
-            cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,            // pWaitSemaphores
-            1,                                      // swapchainCount
-            cast(immutable(VkSwapchainKHR)*)&swapchain,                             // pSwapchains
-            cast(immutable(uint32_t)*)&imageIndex,                            // pImageIndices
-            null                                    // pResults
-        };
-        
-        result = fpQueuePresentKHR(presentQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
-        
+        result = chainContext.vulkan.swapChain.queuePresent(
+        	chainContext.vulkan.queueManager.getQueueByName("present"),
+        	semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
+        	imageIndex
+        );
+        if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Presentation failed!");
+		}
         
         semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
         
@@ -992,6 +996,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
  *
  *
  */
+/+
 public void platformVulkan4(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	// most
 	// from https://github.com/SaschaWillems/Vulkan/blob/master/base/vulkanexamplebase.cpp
@@ -1253,3 +1258,4 @@ public void platformVulkan4(ChainContext chainContext, ChainElement[] chainEleme
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
 }
++/

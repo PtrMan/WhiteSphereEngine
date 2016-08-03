@@ -18,6 +18,12 @@ class QueueManager {
 		deviceQueueInfoAndIndexForQueueByName[name] = Tuple!(DeviceQueueInfoHelper, uint)(deviceQueueInfo, queueIndex);
 	}
 	
+	public final DeviceQueueInfoHelper getDeviceQueueInfoByName(string name) {
+		Tuple!(DeviceQueueInfoHelper, uint) deviceQueueInfoAndIndexTuple = deviceQueueInfoAndIndexForQueueByName[name];
+		DeviceQueueInfoHelper deviceQueueInfo = deviceQueueInfoAndIndexTuple[0];
+		return deviceQueueInfo;
+	}
+	
 	public final VkQueue getQueueByName(string name) {
 		Tuple!(DeviceQueueInfoHelper, uint) deviceQueueInfoAndIndexTuple = deviceQueueInfoAndIndexForQueueByName[name];
 		DeviceQueueInfoHelper deviceQueueInfo = deviceQueueInfoAndIndexTuple[0];

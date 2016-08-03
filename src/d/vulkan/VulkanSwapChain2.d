@@ -63,6 +63,10 @@ class VulkanSwapChain2 {
 		VkSwapchainKHR swapchain;
 		
 		VkImage[] swapchainImages; // no need to destroy(?)
+		
+		VkFormat swapchainFormat;
+		
+		uint32_t desiredNumberOfSwapchainImages;
 	}
 	
 	private Context context; // stores all created handles
@@ -78,6 +82,14 @@ class VulkanSwapChain2 {
 	// accessors for access from outside
 	public final @property VkImage[] swapchainImages() {
 		return context.swapchainImages;
+	}
+	
+	public final @property VkFormat swapchainFormat() {
+		return context.swapchainFormat;
+	}
+	
+	public final @property uint32_t desiredNumberOfSwapchainImages() {
+		return context.desiredNumberOfSwapchainImages;
 	}
 	
 	
@@ -191,15 +203,14 @@ class VulkanSwapChain2 {
 		}
 		
 		uint numberOfImagesToOwnRequest = 2; // Application desires to own 2 images at a time
-	    uint32_t desiredNumberOfSwapchainImages = cast(uint32_t)getSwapChainNumImages(numberOfImagesToOwnRequest);
+	    context.desiredNumberOfSwapchainImages = cast(uint32_t)getSwapChainNumImages(numberOfImagesToOwnRequest);
 		
 		// TODO< log >
 	    {
 	    	import std.stdio;
-	    	writeln("desiredNumberOfSwapchainImages ", desiredNumberOfSwapchainImages);
+	    	writeln("desiredNumberOfSwapchainImages ", context.desiredNumberOfSwapchainImages);
 	    }
 		
-	    VkFormat swapchainFormat;
 	    VkColorSpaceKHR swapchainColorSpace;
 	    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
 	    // the surface has no preferred format.  Otherwise, at least one
@@ -207,12 +218,12 @@ class VulkanSwapChain2 {
 	    // vkGetPhysicalDeviceSurfaceSupportKHR function, in the
 	    // VK_KHR_surface extension returned support for the surface).
 	    if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
-	        swapchainFormat = VK_FORMAT_R8G8B8_UNORM;
+	        context.swapchainFormat = VK_FORMAT_R8G8B8_UNORM;
 	        swapchainColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	    }
 	    else {
 	        assert(formatCount >= 1);
-	        swapchainFormat = surfaceFormats[0].format;
+	        context.swapchainFormat = surfaceFormats[0].format;
 	        swapchainColorSpace = surfaceFormats[0].colorSpace;
 	    }
 	    
@@ -282,6 +293,35 @@ class VulkanSwapChain2 {
 		}
 	}
 	
+	// Get the next available swapchain image
+	public final VkResult acquireNextImage(VkSemaphore aquireSemaphore, uint32_t *imageIndexPtr) {
+        return fpAcquireNextImageKHR(
+            device.value,
+            context.swapchain,
+            UINT64_MAX,
+            aquireSemaphore,
+            VK_NULL_HANDLE,
+            
+            imageIndexPtr
+        );
+	}
+	
+	public final VkResult queuePresent(VkQueue presentationQueue, VkSemaphore waitSemaphore, uint32_t imageIndex) {
+		 // Submit present operation to present queue
+        const VkPresentInfoKHR presentInfo = {
+            VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,     // sType
+            null,                                   // pNext
+            1,                                      // waitSemaphoreCount
+            cast(immutable(VkSemaphore)*)&waitSemaphore,            // pWaitSemaphores
+            1,                                      // swapchainCount
+            cast(immutable(VkSwapchainKHR)*)&context.swapchain,                             // pSwapchains
+            cast(immutable(uint32_t)*)&imageIndex,                            // pImageIndices
+            null                                    // pResults
+        };
+        
+        return fpQueuePresentKHR(presentationQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
+	}
+	
 	private final VkResult createSurface(
 		// for windows
 		HINSTANCE platformHandle, HWND platformWindow
@@ -322,7 +362,7 @@ class VulkanSwapChain2 {
 	private final void destroySurface() {
 		assert(surface.isValid);
 		
-		vkDestroySurfaceKHR(instance.value, surface, null);
+		vkDestroySurfaceKHR(instance.value, surface.value, null);
 		
 		surface.invalidate();
 	}
