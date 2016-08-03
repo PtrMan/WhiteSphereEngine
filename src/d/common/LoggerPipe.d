@@ -2,6 +2,7 @@ module common.LoggerPipe;
 
 import std.stdio : writeln;
 
+import common.IShutdown;
 import common.IPipe;
 import common.Logger;
 
@@ -9,28 +10,27 @@ import common.Logger;
  *
  * Pipe for logging
  */
-class LoggerPipe : IPipe
-{
-   private Logger mLogger;
-   static private string[] LevelText = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "OFF"];
+class LoggerPipe : IPipe, IShutdown {
+	private Logger logger;
+	static private string[] levelText = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "OFF"];
 
-   // NODOC
-   final void init()
-   {
-      this.mLogger = new Logger();
+	// NODOC
+	final void init() {
+		logger = new Logger();
 
-      // NOTE< we throw the return value away, its not that clever >
-      this.mLogger.openFile("log.txt");
+		// NOTE< we throw the return value away, its not that clever >
+		logger.openFile("log.txt");
    }
 
-   // SEE IPipe
-   final void write(IPipe.EnumLevel Level, string FunctionName, string Text = "", string Subsystem = "")
-   {
-      string Message;
+	// SEE IPipe
+	final void write(IPipe.EnumLevel level, string functionName, string text = "", string subsystem = "") {
+		string message = levelText[cast(size_t)level] ~ " " ~ functionName ~ " " ~ subsystem ~ " " ~ text;
 
-      Message = LoggerPipe.LevelText[cast(uint)Level] ~ " " ~ FunctionName ~ " " ~ Subsystem ~ " " ~ Text;
-
-      writeln(Message);
-      this.mLogger.log(Message);
-   }
+		writeln(message);
+		logger.log(message);
+	}
+	
+	final void shutdown() {
+		logger.closeFile();
+	}
 }

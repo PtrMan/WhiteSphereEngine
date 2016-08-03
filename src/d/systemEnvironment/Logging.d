@@ -4,7 +4,7 @@ import common.LoggerPipe;
 
 public void platformLogging(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	chainContext.loggerPipe = new LoggerPipe();
-	// TODO< tear down with scope(exit)
+	scope(exit) chainContext.loggerPipe.shutdown();
 	
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
