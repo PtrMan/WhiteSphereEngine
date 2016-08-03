@@ -984,8 +984,18 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         	semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
         	imageIndex
         );
-        if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Presentation failed!");
+        
+        switch(result) {
+			case VK_SUCCESS:
+		    break;
+			
+			case VK_ERROR_OUT_OF_DATE_KHR:
+			case VK_SUBOPTIMAL_KHR:
+			// TODO< window size changed > 
+			break;
+			
+			default:
+			throw new EngineException(true, true, "Problem occurred during image presentation!");
 		}
         
         semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
