@@ -559,7 +559,6 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
 }
 
-import vulkan.VulkanSwapChain;
 static import vulkan.Messages;
 
 /**

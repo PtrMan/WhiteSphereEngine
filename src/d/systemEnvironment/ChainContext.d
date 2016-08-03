@@ -4,7 +4,6 @@ import std.stdint;
 
 import api.vulkan.Vulkan;
 import memory.NonGcHandle : NonGcHandle;
-import vulkan.VulkanSwapChain;
 import vulkan.VulkanDevice;
 import vulkan.QueueManager;
 import common.LoggerPipe;
