@@ -13,7 +13,6 @@ version(Win32) {
 import api.vulkan.Vulkan;
 import vulkan.VulkanPlatform;
 import vulkan.VulkanHelpers;
-//static import vulkan.VulkanTools;
 import Exceptions;
 
 /*
@@ -90,11 +89,12 @@ class VulkanSwapChain2 {
 		// for windows
 		HINSTANCE platformHandle, HWND platformWindow
 	) {
-		surface.invalidate();
+		const string ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS = "Couldn't get physical device surface formats!";
+		const string ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION = "Couldn't get physical device present modes!";
 		
-		import TypedPointerWithLength : TypedPointerWithLength;
-		import std.string : toStringz;
 		VkResult vulkanResult;
+
+		surface.invalidate();
 		
 		import core.memory : GC;
 
@@ -105,20 +105,6 @@ class VulkanSwapChain2 {
 			throw new EngineException(true, true, "Couldn't create SwapChain Surface!");
 		}
 
-
-
-
-		
-		import std.stdio;
-		
-		
-		
-		
-		
-		
-		const string ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS = "Couldn't get physical device surface formats!";
-		const string ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION = "Couldn't get physical device present modes!";
-		
 		assert(device.isValid && surface.isValid);
 		
 		// Check the surface properties and formats
@@ -330,10 +316,12 @@ class VulkanSwapChain2 {
 	    for (size_t i = 0; i < swapchainImageCount; ++i) {
 			VkCommandBufferAllocateInfo commandBufferAllocationInfo;
 			initCommandBufferAllocateInfo(&commandBufferAllocationInfo);
+			with( commandBufferAllocationInfo ) {
+				level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+				commandBufferCount = 1; // we just want to allocate one command buffer in the target array
+			}
 			commandBufferAllocationInfo.commandPool = commandPool.value;
-			commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			commandBufferAllocationInfo.commandBufferCount = 1; // we just want to allocate one command buffer in the target array
-		
+			
 			// SYNC : this needs to be host synced with a mutex
 			vulkanResult = vkAllocateCommandBuffers(
 				device.value,
@@ -365,8 +353,7 @@ class VulkanSwapChain2 {
 	    
 		
 	    for (size_t i = 0; i < swapchainImageCount; ++i) {
-	        const VkImageViewCreateInfo viewInfo =
-	        {
+	        const VkImageViewCreateInfo viewInfo = {
 	            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // sType
 	            null,                                       // pNext
 	            0,                                          // flags
