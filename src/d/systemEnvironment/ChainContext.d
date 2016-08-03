@@ -33,7 +33,11 @@ class ChainContext {
 	
 	public LoggerPipe loggerPipe;
 	
-	struct Vulkan {
+	public static struct Vulkan {
+		// filled and used by Swapchain initialisation
+		public static class SwapchainContext {
+		}
+		
 		QueueManager queueManager = new QueueManager();
 		VulkanSurface surface;
 		
@@ -55,6 +59,8 @@ class ChainContext {
 
 		
 		VulkanSwapChain2 swapChain;
+		SwapchainContext swapchainContext = new SwapchainContext();
+		
 		/*
 			
 			VkCommandBuffer postPresentCmdBuffer;

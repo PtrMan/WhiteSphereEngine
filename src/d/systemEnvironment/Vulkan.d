@@ -708,10 +708,12 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
 	
+	ChainContext.Vulkan.SwapchainContext swapchainContext = chainContext.vulkan.swapchainContext;
+	
+	VkCommandBuffer[] cmdBuffers;
+	VkImageView[] views;
+	
     // Construct command buffers rendering to the presentable images
-    VkCommandBuffer[] cmdBuffers;
-    VkImageView[] views;
-    
     cmdBuffers.length = chainContext.vulkan.swapChain.swapchainImages.length;
     views.length = chainContext.vulkan.swapChain.swapchainImages.length;
     
@@ -719,13 +721,17 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 	// Allow a maximum of two outstanding presentation operations.
     const int FRAME_LAG = 2;
     
-    VkFence[FRAME_LAG] fences;
-	bool[FRAME_LAG] fencesInited;
+    VkFence[] fences;
+	bool[] fencesInited;
+	
+	fences.length = FRAME_LAG;
+	fencesInited.length = FRAME_LAG;
+	
 	int frameIdx = 0;
 	int imageIdx = 0;
 	int waitFrame;
 	
-	void createFences(VkDevice device, out VkFence[FRAME_LAG] fences) {
+	void createFences(VkDevice device, out VkFence[] fences) {
 		VkFenceCreateInfo fenceCreateInfo;
 		initFenceCreateInfo(&fenceCreateInfo);
 		fenceCreateInfo.flags = 0;
