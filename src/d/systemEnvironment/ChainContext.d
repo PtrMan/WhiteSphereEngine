@@ -9,6 +9,8 @@ import vulkan.VulkanDevice;
 import vulkan.QueueManager;
 import common.LoggerPipe;
 import vulkan.VulkanSwapChain2;
+import vulkan.VulkanSurface;
+import helpers.VariableValidator;
 
 // context which is passed between all chain functions for exchainging configuration information
 class ChainContext {
@@ -34,13 +36,16 @@ class ChainContext {
 	
 	struct Vulkan {
 		QueueManager queueManager = new QueueManager();
+		VulkanSurface surface;
 		
 		VulkanDevice chosenDevice;
 		
-		NonGcHandle!VkInstance instance;
+		VariableValidator!VkInstance instance;
 		
+		// TODO< rework to VariableValidator >
 		NonGcHandle!VkCommandPool cmdPool;
 		
+		// TODO< rework to VariableValidator >
 		NonGcHandle!VkFormat depthFormatMediumPrecision;
 		NonGcHandle!VkFormat depthFormatHighPrecision;
 		
@@ -48,16 +53,10 @@ class ChainContext {
 		
 		// prototyping
 			VkRenderPass renderPass;
-			
-			
 
-			
+		
 		VulkanSwapChain2 swapChain;
 		/*
-			VulkanSwapChain swapChain = null;
-			
-			// Active frame buffer index
-			uint32_t currentBuffer = 0;
 			
 			VkCommandBuffer postPresentCmdBuffer;
 			VkCommandBuffer setupCmdBuffer;			

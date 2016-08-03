@@ -24,6 +24,7 @@ import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
 import vulkan.VulkanPlatform;
+import vulkan.VulkanSurface;
 import vulkan.QueueManager;
 import vulkan.VulkanQueueHelpers : DeviceQueueInfoHelper, QueueInfo;
 static import vulkan.InitialisationHelpers;
@@ -101,13 +102,12 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	
 	
-	chainContext.vulkan.instance = NonGcHandle!VkInstance.createNotInitialized();
-	scope(exit) chainContext.vulkan.instance.dispose();
-	
+	chainContext.vulkan.instance.invalidate();
+
 	{
 		VkInstance instance;
 		vulkan.InitialisationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
-		chainContext.vulkan.instance.value = instance;
+		chainContext.vulkan.instance = instance;
 	}
 	scope(exit) vulkan.InitialisationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
 	
@@ -179,8 +179,16 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	vkGetPhysicalDeviceMemoryProperties(chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.physicalDeviceMemoryProperties);
 
 
-
-
+	// create surface
+	chainContext.vulkan.surface = new VulkanSurface();
+	version(Win32) {
+		vulkanResult = chainContext.vulkan.surface.createSurface(chainContext.vulkan.instance, chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create Surface!");
+		}
+	}
+	
+	scope(exit) chainContext.vulkan.surface.destroySurface(chainContext.vulkan.instance);
 
 
 
@@ -212,10 +220,8 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 		
 		VariableValidator!VkPhysicalDevice physicalDevice;
 		physicalDevice = chainContext.vulkan.chosenDevice.physicalDevice;
-		
-		// NOTE< this asserts because the surface is not set!, this is fine because we don't want to run this code >
-		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, surface);
-		
+
+		ExtendedQueueFamilyProperty[] availableQueueFamilyProperties = getSupportPresentForAllQueueFamiliesAndQueueInfo(physicalDevice, chainContext.vulkan.surface.surface);
 		
 		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndComputeAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
 		ExtendedQueueFamilyProperty queueFamilyPropertyForGraphicsAndPresentation = new ExtendedQueueFamilyProperty(true, false, false, true);
@@ -693,7 +699,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	chainContext.vulkan.swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
 	version(Win32) {
-		chainContext.vulkan.swapChain.initSurface(chainContext.windowsContext.hInstance, chainContext.windowsContext.hwnd);
+		chainContext.vulkan.swapChain.initSwapchain(chainContext.vulkan.surface.surface);
 	}
 	
 	scope(exit) {

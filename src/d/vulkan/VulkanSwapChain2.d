@@ -3,10 +3,6 @@ module vulkan.VulkanSwapChain2;
 import std.stdint;
 import Exceptions;
 
-version(Win32) {
-	import core.sys.windows.windows;
-}
-
 import api.vulkan.Vulkan;
 import vulkan.VulkanPlatform;
 import vulkan.VulkanHelpers;
@@ -54,7 +50,6 @@ private extern(System) VkBool32 vulkanDebugCallback2(VkFlags msgFlags, VkDebugRe
  * https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/xhtml/vkspec.html#_vk_khr_swapchain
  */
 class VulkanSwapChain2 {
-	private VariableValidator!VkSurfaceKHR surface;
 	private VariableValidator!VkInstance instance;
 	private VariableValidator!VkDevice device;
 	private VariableValidator!VkPhysicalDevice physicalDevice;
@@ -106,27 +101,15 @@ class VulkanSwapChain2 {
 		mixin(GET_DEVICE_PROC_ADDR!("device", "QueuePresentKHR"));
 	}
 	
-	public final void initSurface(
-		// for windows
-		HINSTANCE platformHandle, HWND platformWindow
-	) {
+	public final void initSwapchain(VariableValidator!VkSurfaceKHR surface) {
 		const string ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS = "Couldn't get physical device surface formats!";
 		const string ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION = "Couldn't get physical device present modes!";
 		
 		VkResult vulkanResult;
-
-		surface.invalidate();
 		
 		import core.memory : GC;
 
 		import vulkan.VulkanTools;
-
-		vulkanResult = createSurface(platformHandle, platformWindow);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Couldn't create SwapChain Surface!");
-		}
-		
-		scope(failure) destroySurface();
 
 		assert(device.isValid && surface.isValid);
 		
@@ -322,54 +305,8 @@ class VulkanSwapChain2 {
         return fpQueuePresentKHR(presentationQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
 	}
 	
-	private final VkResult createSurface(
-		// for windows
-		HINSTANCE platformHandle, HWND platformWindow
-	) {
-		VkResult vulkanResult;
-		
-		assert(!surface.isValid);
-		
-		// Create surface depending on OS
-		version(Win32) {
-		VkWin32SurfaceCreateInfoKHR surfaceCreateInfo;
-		VkSurfaceKHR surface;
-		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		surfaceCreateInfo.hinstance = platformHandle;
-		surfaceCreateInfo.hwnd = platformWindow;
-		vulkanResult = vkCreateWin32SurfaceKHR(instance.value, cast(const(VkWin32SurfaceCreateInfoKHR*))&surfaceCreateInfo, null, &surface);
-		}
-//#else
-//#ifdef __ANDROID__
-//		VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
-//		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-//		surfaceCreateInfo.window = window;
-//		vulkanResult = vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, NULL, &surface);
-//#else
-		version(Linux) {
-		VkXcbSurfaceCreateInfoKHR surfaceCreateInfo;
-		surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-		surfaceCreateInfo.connection = connection;
-		surfaceCreateInfo.window = window;
-		vulkanResult = vkCreateXcbSurfaceKHR(instance, &surfaceCreateInfo, null, &surface);
-		}
-		
-		this.surface = surface;
-		
-		return vulkanResult;
-	}
-	
-	private final void destroySurface() {
-		assert(surface.isValid);
-		
-		vkDestroySurfaceKHR(instance.value, surface.value, null);
-		
-		surface.invalidate();
-	}
 	
 	public final void shutdown() {
 		fpDestroySwapchainKHR(device.value, context.swapchain, null);
-		
-		destroySurface();
 	}
 }
