@@ -8,6 +8,7 @@ import vulkan.VulkanSwapChain;
 import vulkan.VulkanDevice;
 import vulkan.QueueManager;
 import common.LoggerPipe;
+import vulkan.VulkanSwapChain2;
 
 // context which is passed between all chain functions for exchainging configuration information
 class ChainContext {
@@ -43,9 +44,6 @@ class ChainContext {
 		NonGcHandle!VkFormat depthFormatMediumPrecision;
 		NonGcHandle!VkFormat depthFormatHighPrecision;
 		
-		//VkQueue highPriorityQueue, lowPriorityQueue;
-		
-		
 		
 		
 		// prototyping
@@ -54,7 +52,8 @@ class ChainContext {
 			
 
 			
-		// swapchain related
+		VulkanSwapChain2 swapChain;
+		/*
 			VulkanSwapChain swapChain = null;
 			
 			// Active frame buffer index
@@ -63,7 +62,7 @@ class ChainContext {
 			VkCommandBuffer postPresentCmdBuffer;
 			VkCommandBuffer setupCmdBuffer;			
 			TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
-			TypedPointerWithLength!VkFramebuffer frameBuffers;
+			TypedPointerWithLength!VkFramebuffer frameBuffers;*/
 	}
 	
 	public Vulkan vulkan;
