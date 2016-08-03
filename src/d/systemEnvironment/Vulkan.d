@@ -557,6 +557,9 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
+	
+	// before (out of scope triggered) destruction of vulkan resources we have to ensure that the decive idles
+    vkDeviceWaitIdle(chainContext.vulkan.chosenDevice.logicalDevice);
 }
 
 static import vulkan.Messages;
@@ -701,6 +704,9 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);
+	
+	// before (out of scope triggered) destruction of vulkan resources we have to ensure that the decive idles
+    vkDeviceWaitIdle(chainContext.vulkan.chosenDevice.logicalDevice);
 }
 
 // 03.08.2016 : new access and test of swapchain, refactored code from VulkanSwapchain2.d
@@ -1006,6 +1012,10 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
         
     } while (result >= 0);
+    
+    
+    // before (out of scope triggered) destruction of vulkan resources we have to ensure that the decive idles
+    vkDeviceWaitIdle(chainContext.vulkan.chosenDevice.logicalDevice);
 }
 
 
