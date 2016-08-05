@@ -136,67 +136,6 @@ uint32_t vulkanHelperSearchBestIndexOfMemoryType(VkPhysicalDeviceMemoryPropertie
 	return 0;
 }
 
-// https://github.com/SaschaWillems/Vulkan/blob/f5919fc988b61ed0c91372870a257c174147de00/base/vulkantools.cpp
-// MIT license
-/* doesn't work correctly, crashes in the application vulkan layer, doesn't matter
-
-VkShaderModule loadShaderGlSl(string fileName, VkDevice device, VkShaderStageFlagBits stage) {
-	import std.file : readText;
-	import core.stdc.string : memcpy;
-	import core.stdc.stdlib : malloc, free;
-
-	string shaderSrc = readText(fileName);
-	//assert(shaderSrc.length > 0);
-	
-	writeln(shaderSrc);
-	writeln("done reading file");
-	
-	
-	
-	import std.string : toStringz;
-	immutable(char)* layerArray;
-	layerArray = toStringz(shaderSrc);
-	
-	VkShaderModule shaderModule;
-	
-	VkResult vulkanResult;
-
-	VkShaderModuleCreateInfo moduleCreateInfo;
-	initShaderModuleCreateInfo(&moduleCreateInfo);
-
-	moduleCreateInfo.codeSize = 3 * uint32_t.sizeof + shaderSrc.length + 1;
-	moduleCreateInfo.pCode = cast(immutable(uint32_t)*)malloc(moduleCreateInfo.codeSize);
-	scope(exit) free(cast(void*)moduleCreateInfo.pCode);
-	moduleCreateInfo.flags = 0;
-
-	// Magic SPV number
-	(cast(uint32_t*)moduleCreateInfo.pCode)[0] = 0x07230203; 
-	(cast(uint32_t*)moduleCreateInfo.pCode)[1] = 0;
-	(cast(uint32_t*)moduleCreateInfo.pCode)[2] = stage;
-	
-	writeln(moduleCreateInfo.pCode);
-	writeln(cast(uint32_t*)moduleCreateInfo.pCode + 3);
-	writeln(3 * uint32_t.sizeof + shaderSrc.length + 1);
-	
-	memcpy((cast(uint32_t*)moduleCreateInfo.pCode + 3), toStringz(shaderSrc), shaderSrc.length + 1);
-	
-	writeln("create");
-	
-	vulkanResult = vkCreateShaderModule(device, &moduleCreateInfo, null, &shaderModule);
-	
-	writeln("vulkanSuccess(vulkanResult)");
-	
-	if( !vulkanSuccess(vulkanResult) ) {
-		writeln("Failed to load GLSL shader!");
-		return shaderModule;
-	}
-	
-	writeln("return");
-
-	return shaderModule;
-}
-*/
-
 import common.IDisposable;
 
 // returns a IDisposable object which hold the memory of the shader, must be freed by application after the creation of the renderpass
