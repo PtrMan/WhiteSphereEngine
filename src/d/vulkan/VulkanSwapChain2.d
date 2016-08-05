@@ -1,8 +1,8 @@
 module vulkan.VulkanSwapChain2;
 
 import std.stdint;
-import Exceptions;
 
+import Exceptions;
 import api.vulkan.Vulkan;
 import vulkan.VulkanPlatform;
 import vulkan.VulkanHelpers;

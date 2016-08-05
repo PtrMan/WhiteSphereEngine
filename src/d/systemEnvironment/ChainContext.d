@@ -1,15 +1,7 @@
 module systemEnvironment.ChainContext;
 
-import std.stdint;
-
-import api.vulkan.Vulkan;
-import memory.NonGcHandle : NonGcHandle;
-import vulkan.VulkanDevice;
-import vulkan.QueueManager;
 import common.LoggerPipe;
-import vulkan.VulkanSwapChain2;
-import vulkan.VulkanSurface;
-import helpers.VariableValidator;
+import graphics.vulkan.VulkanContext;
 
 // context which is passed between all chain functions for exchainging configuration information
 class ChainContext {
@@ -33,41 +25,5 @@ class ChainContext {
 	
 	public LoggerPipe loggerPipe;
 	
-	public static struct Vulkan {
-		// filled and used by Swapchain initialisation
-		public static class SwapchainContext {
-		}
-		
-		QueueManager queueManager = new QueueManager();
-		VulkanSurface surface;
-		
-		VulkanDevice chosenDevice;
-		
-		VariableValidator!VkInstance instance;
-		
-		// TODO< rework to VariableValidator >
-		NonGcHandle!VkCommandPool cmdPool;
-		
-		// TODO< rework to VariableValidator >
-		NonGcHandle!VkFormat depthFormatMediumPrecision;
-		NonGcHandle!VkFormat depthFormatHighPrecision;
-		
-		
-		
-		// prototyping
-			VkRenderPass renderPass;
-
-		
-		VulkanSwapChain2 swapChain;
-		SwapchainContext swapchainContext = new SwapchainContext();
-		
-		/*
-			
-			VkCommandBuffer postPresentCmdBuffer;
-			VkCommandBuffer setupCmdBuffer;			
-			TypedPointerWithLength!VkCommandBuffer drawCmdBuffers;
-			TypedPointerWithLength!VkFramebuffer frameBuffers;*/
-	}
-	
-	public Vulkan vulkan;
+	public VulkanContext vulkan = new VulkanContext();
 }

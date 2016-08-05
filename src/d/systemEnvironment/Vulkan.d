@@ -489,21 +489,23 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 	// create command pool
 	// TODO LOW< rename >
-	chainContext.vulkan.cmdPool = NonGcHandle!VkCommandPool.createNotInitialized();
-	
 	uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
 
 	VkCommandPoolCreateInfo commandPoolCreateInfo;
 	initCommandPoolCreateInfo(&commandPoolCreateInfo);
 	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
-
-	vulkanResult = vkCreateCommandPool(
-		chainContext.vulkan.chosenDevice.logicalDevice,
-		&commandPoolCreateInfo,
-		null,
-		chainContext.vulkan.cmdPool.ptr
-	);
+	
+	{
+		VkCommandPool cmdPool;
+		vulkanResult = vkCreateCommandPool(
+			chainContext.vulkan.chosenDevice.logicalDevice,
+			&commandPoolCreateInfo,
+			null,
+			&cmdPool
+		);
+		chainContext.vulkan.cmdPool = cmdPool;
+	}
 	if( !vulkanSuccess(vulkanResult) ) {
 		throw new EngineException(true, true, "Couldn't create command pool!");
 	}
@@ -534,20 +536,17 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &primaryCommandBuffer);
 
 
-	chainContext.vulkan.depthFormatMediumPrecision = NonGcHandle!VkFormat.createNotInitialized();
-	chainContext.vulkan.depthFormatHighPrecision = NonGcHandle!VkFormat.createNotInitialized();
-
 	// find best formats
 	{
 		bool calleeSuccess;
 		VkFormat[] preferedMediumPrecisionFormats = [VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D16_UNORM];
-		*(chainContext.vulkan.depthFormatMediumPrecision.ptr) = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedMediumPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
+		chainContext.vulkan.depthFormatMediumPrecision = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedMediumPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
 		if( !calleeSuccess ) {
 			throw new EngineException(true, true, "Couldn't find a format for '" ~ "depthFormatMediumPrecision" ~ "'!");
 		}
 
 		VkFormat[] preferedHighPrecisionFormats = [VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT];
-		*(chainContext.vulkan.depthFormatHighPrecision.ptr) = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedHighPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
+		chainContext.vulkan.depthFormatHighPrecision = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedHighPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
 		if( !calleeSuccess ) {
 			throw new EngineException(true, true, "Couldn't find a format for '" ~ "depthFormatHighPrecision" ~ "'!");
 		}
@@ -713,9 +712,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 // goes into an infinite loop
 public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
-	
-	ChainContext.Vulkan.SwapchainContext swapchainContext = chainContext.vulkan.swapchainContext;
-	
+		
 	VkCommandBuffer[] cmdBuffers;
 	VkImageView[] views;
 	
