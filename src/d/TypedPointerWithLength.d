@@ -1,7 +1,7 @@
 module TypedPointerWithLength;
 
 import MemoryAccessor;
-import IDisposable;
+import common.IDisposable;
 
 // doesn't support resizing
 class TypedPointerWithLength(Type) : IDisposable {

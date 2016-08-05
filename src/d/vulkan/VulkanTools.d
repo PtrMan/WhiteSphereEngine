@@ -197,7 +197,7 @@ VkShaderModule loadShaderGlSl(string fileName, VkDevice device, VkShaderStageFla
 }
 */
 
-import IDisposable;
+import common.IDisposable;
 
 // returns a IDisposable object which hold the memory of the shader, must be freed by application after the creation of the renderpass
 IDisposable loadShader(string fileName, VkDevice device, VkShaderStageFlagBits stage, VkShaderModule* ptrDestintionShaderModule) {
