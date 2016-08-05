@@ -1,6 +1,6 @@
-module ResourceDag;
+module common.ResourceDag;
 
-import IDisposable : IDisposable;
+import common.IDisposable;
 
 // is a unified GC for resources
 // does not depend on GC functionality
