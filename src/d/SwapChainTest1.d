@@ -4,6 +4,7 @@ import systemEnvironment.Vulkan;
 import systemEnvironment.Window;
 import systemEnvironment.ChainContext;
 import systemEnvironment.Logging;
+import systemEnvironment.Engine;
 
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
@@ -41,6 +42,7 @@ void main(string[] args) {
 	chainElements ~= new ChainElement(&platformVulkan2DeviceBase);
 	chainElements ~= new ChainElement(&platformVulkan3SwapChain);
 	chainElements ~= new ChainElement(&platformVulkanTestSwapChain);
+	chainElements ~= new ChainElement(&systemEnvironmentEngineEntry);
 	
 	processChain(chainElements, chainContext);
 
