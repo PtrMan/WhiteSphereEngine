@@ -1,7 +1,7 @@
 module memory.NonGcHandle;
 
 import MemoryAccessor;
-import IDisposable : IDisposable;
+import common.IDisposable;
 
 class NonGcHandle(Type) : IDisposable {
 	protected final this(Type* protectedPtr) {
