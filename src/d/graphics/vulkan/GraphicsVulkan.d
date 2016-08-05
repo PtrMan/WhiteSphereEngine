@@ -5,11 +5,21 @@ import api.vulkan.Vulkan;
 import graphics.vulkan.VulkanContext;
 import vulkan.VulkanHelpers;
 
+import common.ResourceDag;
+//import common.GenericResourceDagResource;
+import graphics.vulkan.resourceDag.VulkanResourceDagResource;
+
+
 class GraphicsVulkan {
+	public final this(ResourceDag resourceDag) {
+		this.resourceDag = resourceDag;
+	}
+	
 	public void setVulkanContext(VulkanContext vulkanContext) {
 		this.vulkanContext = vulkanContext;
 	}
 	
+	protected ResourceDag resourceDag;
 	protected VulkanContext vulkanContext;
 	
 	public final void initialisationEntry() {
@@ -17,7 +27,9 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
-		
+		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
+		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
+		ResourceDag.ResourceNode renderPassResourceNode;
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
@@ -25,7 +37,6 @@ class GraphicsVulkan {
 
 		
 
-		// TODO< link resources in >
 
 
 
@@ -84,71 +95,107 @@ class GraphicsVulkan {
 			  0,                                            // uint32_t                       dependencyCount
 			  null                                       // const VkSubpassDependency     *pDependencies
 			};
-
+			
+			const(VkAllocationCallbacks*) allocator = null;
+			
 			VkRenderPass renderpass;
-	 		vulkanResult = vkCreateRenderPass(vulkanContext.chosenDevice.logicalDevice, &render_pass_create_info, null, &renderpass);
+	 		vulkanResult = vkCreateRenderPass(vulkanContext.chosenDevice.logicalDevice, &render_pass_create_info, allocator, &renderpass);
 			if( !vulkanSuccess(vulkanResult) ) {
 				throw new EngineException(true, true, "Couldn't create render pass [vkCreateRenderPass]!");
-			}	
+			}
+			
+			
+			VulkanResourceDagResource!VkRenderPass renderPassDagResource = new VulkanResourceDagResource!VkRenderPass(vulkanContext.chosenDevice.logicalDevice, renderpass, allocator, &disposeRenderPass);
+			renderPassResourceNode = resourceDag.createNode(renderPassDagResource);
+			
+			// we hold this because else the resourceDag would dispose them
+			renderPassResourceNode.incrementExternalReferenceCounter();
 		}
 		
-		/+
+		
 		void createFramebuffer() {
-			// create image views
-
-			const std::vector<VkImage> &swap_chain_images = GetSwapChain().Images;
-			Vulkan.FramebufferObjects.resize( swap_chain_images.size() );
-			for( size_t i = 0; i < swap_chain_images.size(); ++i ) {
+			VkResult vulkanResult;
 			
+			// create image views
+			
+			foreach( i; 0..vulkanContext.swapChain.swapchainImages.length ) {
 				VkImageViewCreateInfo image_view_create_info = {
-				    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // VkStructureType                sType
-				    null,                                    // const void                    *pNext
-				    0,                                          // VkImageViewCreateFlags         flags
-				    swap_chain_images[i],                       // VkImage                        image
-				    VK_IMAGE_VIEW_TYPE_2D,                      // VkImageViewType                viewType
-				    GetSwapChain().Format,                      // VkFormat                       format
-				    {                                           // VkComponentMapping             components
-				      VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             r
-				      VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             g
-				      VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             b
-				      VK_COMPONENT_SWIZZLE_IDENTITY               // VkComponentSwizzle             a
-				    },
-				    {                                           // VkImageSubresourceRange        subresourceRange
-				      VK_IMAGE_ASPECT_COLOR_BIT,                  // VkImageAspectFlags             aspectMask
-				      0,                                          // uint32_t                       baseMipLevel
-				      1,                                          // uint32_t                       levelCount
-				      0,                                          // uint32_t                       baseArrayLayer
-				      1                                           // uint32_t                       layerCount
-				    }
-			  	};
-			 	
-			 	vulkanResult = vkCreateImageView( GetDevice(), &image_view_create_info, nullptr, &Vulkan.FramebufferObjects[i].ImageView );
-			  	if( !vulkanSuccess(vulkanResult) ) {
-			    	printf( "Could not create image view for framebuffer!\n" );
-			  	}
-		  	}
+					VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // VkStructureType                sType
+					null,                                    // const void                    *pNext
+					0,                                          // VkImageViewCreateFlags         flags
+					vulkanContext.swapChain.swapchainImages[i],                       // VkImage                        image
+					VK_IMAGE_VIEW_TYPE_2D,                      // VkImageViewType                viewType
+					vulkanContext.swapChain.swapchainFormat,                      // VkFormat                       format
+					{                                           // VkComponentMapping             components
+						VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             r
+						VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             g
+						VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             b
+						VK_COMPONENT_SWIZZLE_IDENTITY               // VkComponentSwizzle             a
+					},
+					{                                           // VkImageSubresourceRange        subresourceRange
+						VK_IMAGE_ASPECT_COLOR_BIT,                  // VkImageAspectFlags             aspectMask
+						0,                                          // uint32_t                       baseMipLevel
+						1,                                          // uint32_t                       levelCount
+						0,                                          // uint32_t                       baseArrayLayer
+						1                                           // uint32_t                       layerCount
+					}
+				};
+				
+				ResourceDag.ResourceNode imageViewResourceNode;
+				{ // brace to scope the allocator
+					const(VkAllocationCallbacks*) allocator = null;
+					
+					VkImageView createdImageView;
+					vulkanResult = vkCreateImageView(vulkanContext.chosenDevice.logicalDevice, &image_view_create_info, allocator, &createdImageView);
+					if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Couldn't create image view for framebuffer [vkCreateImageView]!");
+					}
+				  	
+					VulkanResourceDagResource!VkImageView imageViewDagResource = new VulkanResourceDagResource!VkImageView(vulkanContext.chosenDevice.logicalDevice, createdImageView, allocator, &disposeImageView);
+					imageViewResourceNode = resourceDag.createNode(imageViewDagResource);
+					
+					// we hold this because else the resourceDag would dispose them
+					imageViewResourceNode.incrementExternalReferenceCounter();
+					
+					framebufferImageViewsResourceNodes ~= imageViewResourceNode;
+				}
 
 
-		  	// specifiy framebuffer parameters
-		  	VkFramebufferCreateInfo framebuffer_create_info = {
-			    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,  // VkStructureType                sType
-			    nullptr,                                    // const void                    *pNext
-			    0,                                          // VkFramebufferCreateFlags       flags
-			    Vulkan.RenderPass,                          // VkRenderPass                   renderPass
-			    1,                                          // uint32_t                       attachmentCount
-			    &Vulkan.FramebufferObjects[i].ImageView,    // const VkImageView             *pAttachments
-			    300,                                        // uint32_t                       width
-			    300,                                        // uint32_t                       height
-			    1                                           // uint32_t                       layers
-			  };
 
-			vulkanResult = vkCreateFramebuffer( GetDevice(), &framebuffer_create_info, nullptr, &Vulkan.FramebufferObjects[i].Handle);
-			if( !vulkanSuccess(vulkanResult) ) {
-		        printf( "Could not create a framebuffer!\n" );
+				VkImageView imageViewForFramebuffer = (cast(VulkanResourceDagResource!VkImageView)imageViewResourceNode.resource).resource;
+				// specifiy framebuffer parameters
+				VkFramebufferCreateInfo framebuffer_create_info = {
+					VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,  // VkStructureType                sType
+					null,                                    // const void                    *pNext
+					0,                                          // VkFramebufferCreateFlags       flags
+					(cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource,                          // VkRenderPass                   renderPass
+					1,                                          // uint32_t                       attachmentCount
+					cast(immutable(ulong)*)&imageViewForFramebuffer,    // const VkImageView             *pAttachments
+					300,                                        // uint32_t                       width
+					300,                                        // uint32_t                       height
+					1                                           // uint32_t                       layers
+				};
+				
+				{ // brace to scope the allocator
+					const(VkAllocationCallbacks*) allocator = null;
+
+					VkFramebuffer createdFramebuffer;
+					vulkanResult = vkCreateFramebuffer(vulkanContext.chosenDevice.logicalDevice, &framebuffer_create_info, allocator, &createdFramebuffer);
+					if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Couldn't create a framebuffer [vkCreateFramebuffer]!");
+					}
+					
+					VulkanResourceDagResource!VkFramebuffer framebufferDagResource = new VulkanResourceDagResource!VkFramebuffer(vulkanContext.chosenDevice.logicalDevice, createdFramebuffer, allocator, &disposeFramebuffer);
+					ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource);
+					imageViewResourceNode.addChild(framebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
+					framebufferResourceNode.addChild(renderPassResourceNode); // link it because it depends on the renderpass
+	
+					framebufferFramebufferResourceNodes ~= framebufferResourceNode;
+				}
 			}
 		}
 
-
+		/+
 		nonvoid createShaderModule() {
 			const std::vector<char> code = Tools::GetBinaryFileContents( filename );
 			if( code.size() == 0 ) {
@@ -393,6 +440,11 @@ class GraphicsVulkan {
 			// TODO
 		}
 		
+		// resource mangement helpers
+		void releaseFramebufferResources() {
+			// TODO
+		}
+		
 		
 		
 		
@@ -409,8 +461,8 @@ class GraphicsVulkan {
 		// create framebuffer
 		/////////////////
 
-		//createFramebuffer();
-		//scope(exit) releaseFramebufferResources();
+		createFramebuffer();
+		scope(exit) releaseFramebufferResources();
 
 		//////////////////
 		// create graphics pipeline
