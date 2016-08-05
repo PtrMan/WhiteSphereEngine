@@ -61,7 +61,6 @@ import common.IDisposable;
 
 class ResourceDag {
 	public interface IResource : IDisposable {
-
 	}
 
 	public /*not static*/ class ResourceNode : IDisposable {
@@ -130,11 +129,14 @@ class ResourceDag {
 	}
 
 	// doesn't do anything, just holds references to childs
-	public static class EntryResourceNode : ResourceNode {
+	public /*not static*/ class EntryResourceNode : ResourceNode {
 		protected final this() {
 			super(null);
 		}
 	}
+	
+	
+	// TODO< method to free the elements in the resource-dag (and rewire the eventually changed child indices) >
 	
 	// TODO< maybe its better to first dispose the parent and then the childs and so on >
 	// disposes all resources
