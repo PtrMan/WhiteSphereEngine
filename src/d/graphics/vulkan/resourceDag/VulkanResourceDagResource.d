@@ -48,3 +48,13 @@ void disposeFramebuffer(VkDevice device, VkFramebuffer framebuffer, const(VkAllo
 void disposeRenderPass(VkDevice device, VkRenderPass renderPass, const(VkAllocationCallbacks*) allocator) {
 	vkDestroyRenderPass(device, renderPass, allocator);
 }
+
+/*
+void disposeShaderModule(VkDevice device, VkShaderModule shaderModule, const(VkAllocationCallbacks*) allocator) {
+	vkDestroyShaderModule(device, shaderModule, allocator);
+}
+*/
+
+void disposePipeline(VkDevice device, VkPipeline pipeline, const(VkAllocationCallbacks*) allocator) {
+	vkDestroyPipeline(device, pipeline, allocator);
+}
