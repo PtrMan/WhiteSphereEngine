@@ -21,6 +21,8 @@ class VulkanContext {
 	
 	VariableValidator!VkInstance instance;
 	
+	// TODO< actually we just need a commandpool for each queue type >
+	// TODO< each command pool needs an mutex too >
 	VariableValidator!VkCommandPool[string] commandPoolsByQueueName;
 	
 	VariableValidator!VkFormat depthFormatMediumPrecision;
