@@ -31,4 +31,8 @@ class QueueManager {
 		
 		return deviceQueueInfo.queues[queueIndex];
 	}
+	
+	public final @property string[] queueNames() {
+		return deviceQueueInfoAndIndexForQueueByName.keys;
+	}
 }

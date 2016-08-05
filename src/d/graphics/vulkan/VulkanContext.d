@@ -21,7 +21,7 @@ class VulkanContext {
 	
 	VariableValidator!VkInstance instance;
 	
-	VariableValidator!VkCommandPool cmdPool;
+	VariableValidator!VkCommandPool[string] commandPoolsByQueueName;
 	
 	VariableValidator!VkFormat depthFormatMediumPrecision;
 	VariableValidator!VkFormat depthFormatHighPrecision;

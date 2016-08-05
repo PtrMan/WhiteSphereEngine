@@ -487,16 +487,15 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 
 
-	// create command pool
-	// TODO LOW< rename >
-	uint32_t queueFamilyIndex = 0; // HACK< TODO< lookup index > >
+	// create command pools
+	foreach( iterationQueueName; chainContext.vulkan.queueManager.queueNames ) {
+		uint32_t queueFamilyIndex = chainContext.vulkan.queueManager.getDeviceQueueInfoByName(iterationQueueName).queueFamilyIndex;
 
-	VkCommandPoolCreateInfo commandPoolCreateInfo;
-	initCommandPoolCreateInfo(&commandPoolCreateInfo);
-	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
-	
-	{
+		VkCommandPoolCreateInfo commandPoolCreateInfo;
+		initCommandPoolCreateInfo(&commandPoolCreateInfo);
+		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+		
 		VkCommandPool cmdPool;
 		vulkanResult = vkCreateCommandPool(
 			chainContext.vulkan.chosenDevice.logicalDevice,
@@ -504,12 +503,21 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 			null,
 			&cmdPool
 		);
-		chainContext.vulkan.cmdPool = cmdPool;
+	
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't create command pool!");
+		}
+		
+		chainContext.vulkan.commandPoolsByQueueName[iterationQueueName] = VariableValidator!VkCommandPool();
+		chainContext.vulkan.commandPoolsByQueueName[iterationQueueName] = cmdPool;
 	}
-	if( !vulkanSuccess(vulkanResult) ) {
-		throw new EngineException(true, true, "Couldn't create command pool!");
+	
+	scope(exit) {
+		foreach( iterationQueueName; chainContext.vulkan.queueManager.queueNames ) {
+			VkCommandPool cmdPool = chainContext.vulkan.commandPoolsByQueueName[iterationQueueName].value;
+			vkDestroyCommandPool(chainContext.vulkan.chosenDevice.logicalDevice, cmdPool, null);
+		}
 	}
-	scope(exit) vkDestroyCommandPool(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, null);
 
 
 
@@ -521,7 +529,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	
 	VkCommandBufferAllocateInfo commandBufferAllocationInfo;
 	initCommandBufferAllocateInfo(&commandBufferAllocationInfo);
-	commandBufferAllocationInfo.commandPool = chainContext.vulkan.cmdPool.value;
+	commandBufferAllocationInfo.commandPool = chainContext.vulkan.commandPoolsByQueueName["primary"].value;
 	commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	commandBufferAllocationInfo.commandBufferCount = 1; // we just want to allocate one command buffer in the target array
 
@@ -533,7 +541,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	if( !vulkanSuccess(vulkanResult) ) {
 		throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
 	}
-	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.cmdPool.value, 1, &primaryCommandBuffer);
+	scope(exit) vkFreeCommandBuffers(chainContext.vulkan.chosenDevice.logicalDevice, chainContext.vulkan.commandPoolsByQueueName["primary"].value, 1, &primaryCommandBuffer);
 
 
 	// find best formats
@@ -761,7 +769,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 			level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			commandBufferCount = 1; // we just want to allocate one command buffer in the target array
 		}
-		commandBufferAllocationInfo.commandPool = chainContext.vulkan.cmdPool.value;
+		commandBufferAllocationInfo.commandPool = chainContext.vulkan.commandPoolsByQueueName["primary"].value;
 		
 		// SYNC : this needs to be host synced with a mutex
 		vulkanResult = vkAllocateCommandBuffers(
