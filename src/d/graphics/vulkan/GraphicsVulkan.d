@@ -455,6 +455,111 @@ class GraphicsVulkan {
 			pipelineResourceNode.incrementExternalReferenceCounter();
 		}
 		
+		// function just for the example code, eeds to get refactored later
+		void recordingCommandBuffers(VkCommandBuffer[] commandBuffersForRendering) {
+			VkResult vulkanResult;
+			
+			
+			VkCommandBufferBeginInfo graphics_commandd_buffer_begin_info = {
+				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,    // VkStructureType                        sType
+				null,                                        // const void                            *pNext
+				VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,   // VkCommandBufferUsageFlags              flags
+				null                                         // const VkCommandBufferInheritanceInfo  *pInheritanceInfo
+			};
+
+			VkImageSubresourceRange image_subresource_range = {
+				VK_IMAGE_ASPECT_COLOR_BIT,                      // VkImageAspectFlags             aspectMask
+				0,                                              // uint32_t                       baseMipLevel
+				1,                                              // uint32_t                       levelCount
+				0,                                              // uint32_t                       baseArrayLayer
+				1                                               // uint32_t                       layerCount
+			};
+
+			VkClearValue clear_value;
+			clear_value.color.float32 =
+  				[ 1.0f, 0.8f, 0.4f, 0.0f ];
+
+			VkImage[] swap_chain_images = vulkanContext.swapChain.swapchainImages;
+
+			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
+			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
+			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
+			VkQueue presentQueue = vulkanContext.queueManager.getQueueByName("present");;
+			
+			VkRenderPass renderPass = (cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource;
+			VkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!VkPipeline)pipelineResourceNode.resource).resource;
+
+			for( size_t i = 0; i < commandBuffersForRendering.length; ++i ) {
+				vkBeginCommandBuffer( commandBuffersForRendering[i], &graphics_commandd_buffer_begin_info);
+
+				if( presentQueue != graphicsQueue ) {
+					VkImageMemoryBarrier barrier_from_present_to_draw = {
+						VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,     // VkStructureType                sType
+						null,                                    // const void                    *pNext
+						VK_ACCESS_MEMORY_READ_BIT,                  // VkAccessFlags                  srcAccessMask
+						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,       // VkAccessFlags                  dstAccessMask
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // VkImageLayout                  oldLayout
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // VkImageLayout                  newLayout
+						presentQueueFamilyIndex,              // uint32_t                       srcQueueFamilyIndex
+						graphicsQueueFamilyIndex,             // uint32_t                       dstQueueFamilyIndex
+						swap_chain_images[i],                       // VkImage                        image
+						image_subresource_range                     // VkImageSubresourceRange        subresourceRange
+					};
+					
+					vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
+				}
+				
+				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[i].resource).resource;
+
+				VkRenderPassBeginInfo render_pass_begin_info = {
+					VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,     // VkStructureType                sType
+					null,                                      // const void                    *pNext
+					renderPass,                            // VkRenderPass                   renderPass
+					framebuffer,          // VkFramebuffer                  framebuffer
+					{                                             // VkRect2D                       renderArea
+						{                                           // VkOffset2D                     offset
+							0,                                          // int32_t                        x
+							0                                           // int32_t                        y
+						},
+						{                                           // VkExtent2D                     extent
+							300,                                        // int32_t                        width
+							300,                                        // int32_t                        height
+						}
+					},
+					1,                                            // uint32_t                       clearValueCount
+					cast(immutable(VkClearValue)*)&clear_value                                  // const VkClearValue            *pClearValues
+				};
+				
+				vkCmdBeginRenderPass(commandBuffersForRendering[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+				
+				vkCmdBindPipeline(commandBuffersForRendering[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+				
+				vkCmdDraw(commandBuffersForRendering[i], 3, 1, 0, 0);
+				
+				vkCmdEndRenderPass(commandBuffersForRendering[i]);
+
+				if( presentQueue != graphicsQueue ) {
+					VkImageMemoryBarrier barrier_from_draw_to_present = {
+						VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,       // VkStructureType              sType
+						null,                                      // const void                  *pNext
+						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         // VkAccessFlags                srcAccessMask
+						VK_ACCESS_MEMORY_READ_BIT,                    // VkAccessFlags                dstAccessMask
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,              // VkImageLayout                oldLayout
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,              // VkImageLayout                newLayout
+						graphicsQueueFamilyIndex,               // uint32_t                     srcQueueFamilyIndex
+						presentQueueFamilyIndex,               // uint32_t                     dstQueueFamilyIndex
+						swap_chain_images[i],                         // VkImage                      image
+						image_subresource_range                       // VkImageSubresourceRange      subresourceRange
+					};
+					vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_draw_to_present);
+				}
+
+				if( vkEndCommandBuffer(commandBuffersForRendering[i]) != VK_SUCCESS ) {
+					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+				}
+			}
+		}
+		
 		
 		
 		
@@ -498,7 +603,32 @@ class GraphicsVulkan {
 
 		createPipeline();
 		scope(exit) releasePipelineResources();
+		
+		
+		//////////////////
+		// allocate command buffers for swapchain images(?)
+		//////////////////
+		
+		uint count = vulkanContext.swapChain.swapchainImages.length;
+		VkCommandBuffer[] commandBuffersForRendering = allocateCommandBuffers(vulkanContext.commandPoolsByQueueName["graphics"].value, count);
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+		    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
 
+			vkFreeCommandBuffers(
+				vulkanContext.chosenDevice.logicalDevice,
+				vulkanContext.commandPoolsByQueueName["graphics"].value,
+				cast(uint32_t)commandBuffersForRendering.length,
+				commandBuffersForRendering.ptr
+			);
+		}
+		//////////////////
+		// record command buffers
+		//////////////////
+		
+		recordingCommandBuffers(commandBuffersForRendering);
+		
+		
 
 
 		// TODO< call next function for initialisation >
@@ -512,5 +642,30 @@ class GraphicsVulkan {
 
 		
 		// TODO< invoke resourceDag >
+	}
+	
+	protected final VkCommandBuffer[] allocateCommandBuffers(VkCommandPool pool, uint count) {
+		VkResult vulkanResult;
+		
+		// from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
+		// chapter "allocating command buffers"
+		
+		VkCommandBuffer[] commandBuffers;
+		commandBuffers.length = count;
+		
+		VkCommandBufferAllocateInfo command_buffer_allocate_info = {			
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // VkStructureType                sType
+			null,                                        // const void                    *pNext
+			pool,                                           // VkCommandPool                  commandPool
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY,                // VkCommandBufferLevel           level
+			cast(uint32_t)count                                           // uint32_t                       bufferCount
+		};
+			
+		vulkanResult = vkAllocateCommandBuffers(vulkanContext.chosenDevice.logicalDevice, &command_buffer_allocate_info, commandBuffers.ptr);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Couldn't allocate command buffers [vkAllocateCommandBuffers]");
+		}
+		
+		return commandBuffers;
 	}
 }
