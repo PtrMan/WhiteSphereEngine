@@ -716,8 +716,6 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
     vkDeviceWaitIdle(chainContext.vulkan.chosenDevice.logicalDevice);
 }
 
-// 03.08.2016 : new access and test of swapchain, refactored code from VulkanSwapchain2.d
-// goes into an infinite loop
 public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
 		
@@ -761,6 +759,11 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 
 	createFences(chainContext.vulkan.chosenDevice.logicalDevice, fences);
 	
+	scope(exit) {
+		// TODO< free fences >
+	}
+
+	
     // create command buffers
     for (size_t i = 0; i < chainContext.vulkan.swapChain.swapchainImages.length; ++i) {
 		VkCommandBufferAllocateInfo commandBufferAllocationInfo;
@@ -781,6 +784,10 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 			throw new EngineException(true, true, vulkan.Messages.COULDNT_COMMAND_BUFFER);
 		}
     }
+    
+    scope(exit) {
+		// TODO< free command buffers >
+	}
     
     // see hack #0000
     VkFence additionalFence;
@@ -885,14 +892,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
     }
 	
 	// we need a pair of semaphores for each image we display
-	struct SemaphorePair {
-		VkSemaphore imageAcquiredSemaphore;
-		VkSemaphore chainSemaphore;
-		VkSemaphore renderingCompleteSemaphore;
-	}
-	
-	SemaphorePair[] semaphorePairs;
-	semaphorePairs.length = chainContext.vulkan.swapChain.desiredNumberOfSwapchainImages;
+	chainContext.vulkan.swapChain.semaphorePairs.length = chainContext.vulkan.swapChain.desiredNumberOfSwapchainImages;
 	
     const VkSemaphoreCreateInfo semaphoreCreateInfo = {
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
@@ -905,119 +905,31 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 		
 		vulkanResults[0] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
                       &semaphoreCreateInfo, null,
-                      &semaphorePairs[i].imageAcquiredSemaphore);
+                      &chainContext.vulkan.swapChain.semaphorePairs[i].imageAcquiredSemaphore);
     	
     	vulkanResults[1] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
                       &semaphoreCreateInfo, null,
-                      &semaphorePairs[i].chainSemaphore);
+                      &chainContext.vulkan.swapChain.semaphorePairs[i].chainSemaphore);
     	
     	vulkanResults[2] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
                       &semaphoreCreateInfo, null,
-                      &semaphorePairs[i].renderingCompleteSemaphore);
+                      &chainContext.vulkan.swapChain.semaphorePairs[i].renderingCompleteSemaphore);
 	    
 	    if( !vulkanSuccess(vulkanResults[0]) || !vulkanSuccess(vulkanResults[1]) || !vulkanSuccess(vulkanResults[2]) ) {
 			throw new EngineException(true, true, "Couldn't create semaphore [vkCreateSemaphore]!");		    	
 	    }
 	}
 	
-	uint semaphorePairIndex = 0;	
+	scope(exit) {
+		// TODO< free semaphore pairs >
+	}
 	
+	//uint semaphorePairIndex = 0;	
 	
-    VkResult result;
-    do {
-        uint32_t imageIndex = UINT32_MAX;
+	chainIndex++;
+	chainElements[chainIndex](chainContext, chainElements, chainIndex);
 
-        // get the next available swapchain image
-        result = chainContext.vulkan.swapChain.acquireNextImage(semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, &imageIndex);
-        
-        // Swapchain cannot be used for presentation if failed to acquired new image.
-        if (result < 0) {
-        	break;
-        }
-        
-        {
-        	immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        	VkSubmitInfo submitInfo;
-        	initSubmitInfo(&submitInfo);
-        	with (submitInfo) {
-        		waitSemaphoreCount = 1;
-	        	pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
-	        	pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
-	        	signalSemaphoreCount = 1;
-	        	pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
-        	}
-        	
-        	vulkanResult = vkQueueSubmit(chainContext.vulkan.queueManager.getQueueByName("present"), 1, &submitInfo, additionalFence);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Queue submit failed! (2)");
-			}
-        }
-		vulkanResult = vkWaitForFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence, VK_TRUE, UINT64_MAX);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Wait for fences failed!");
-		}
-		vulkanResult = vkResetFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence);
-        if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Fence reset failed!");
-		}
 
-        
-            
-
-        // Submit rendering work to the graphics queue
-        const VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        VkSubmitInfo submitInfo;
-        initSubmitInfo(&submitInfo);
-        with (submitInfo) {
-            waitSemaphoreCount = 1;
-            pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
-            pWaitDstStageMask = cast(const(immutable(VkPipelineStageFlags)*))&waitDstStageMask;
-            commandBufferCount = 1;
-            pCommandBuffers = cast(immutable(VkCommandBuffer)*)&cmdBuffers[imageIndex];
-            signalSemaphoreCount = 1;
-            pSignalSemaphores = cast(immutable(VkSemaphore)*)&semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore;
-        }
-        
-        vulkanResult = vkQueueSubmit(chainContext.vulkan.queueManager.getQueueByName("graphics"), 1, &submitInfo, additionalFence);
-        if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Queue submit failed! (3)");
-		}
-    	
-    	vulkanResult = vkWaitForFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence, VK_TRUE, UINT64_MAX);
-		if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Wait for fences failed!");
-		}
-		vulkanResult = vkResetFences(chainContext.vulkan.chosenDevice.logicalDevice, 1, &additionalFence);
-        if( !vulkanSuccess(vulkanResult) ) {
-			throw new EngineException(true, true, "Fence reset failed!");
-		}
-
-        
-        
-        // Submit present operation to present queue
-        result = chainContext.vulkan.swapChain.queuePresent(
-        	chainContext.vulkan.queueManager.getQueueByName("present"),
-        	semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
-        	imageIndex
-        );
-        
-        switch(result) {
-			case VK_SUCCESS:
-		    break;
-			
-			case VK_ERROR_OUT_OF_DATE_KHR:
-			case VK_SUBOPTIMAL_KHR:
-			// TODO< window size changed > 
-			break;
-			
-			default:
-			throw new EngineException(true, true, "Problem occurred during image presentation!");
-		}
-        
-        semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
-        
-    } while (result >= 0);
-    
     
     // before (out of scope triggered) destruction of vulkan resources we have to ensure that the decive idles
     vkDeviceWaitIdle(chainContext.vulkan.chosenDevice.logicalDevice);

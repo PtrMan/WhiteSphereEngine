@@ -62,6 +62,15 @@ class VulkanSwapChain2 {
 		VkFormat swapchainFormat;
 		
 		uint32_t desiredNumberOfSwapchainImages;
+		
+		public static struct SemaphorePair {
+			VkSemaphore imageAcquiredSemaphore;
+			VkSemaphore chainSemaphore;
+			VkSemaphore renderingCompleteSemaphore;
+		}
+	
+		SemaphorePair[] semaphorePairs;
+	
 	}
 	
 	private Context context; // stores all created handles
@@ -85,6 +94,10 @@ class VulkanSwapChain2 {
 	
 	public final @property uint32_t desiredNumberOfSwapchainImages() {
 		return context.desiredNumberOfSwapchainImages;
+	}
+	
+	public final @property Context.SemaphorePair[] semaphorePairs() {
+		return context.semaphorePairs;
 	}
 	
 	

@@ -560,6 +560,76 @@ class GraphicsVulkan {
 			}
 		}
 		
+		void loop() {
+			VkResult result;
+		    
+		    do {
+		        uint32_t imageIndex = UINT32_MAX;
+		
+		        // get the next available swapchain image
+		        result = vulkanContext.swapChain.acquireNextImage(vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, &imageIndex);
+		        
+		        switch(result) {
+					case VK_SUCCESS:
+				    break;
+					
+					case VK_ERROR_OUT_OF_DATE_KHR:
+					case VK_SUBOPTIMAL_KHR:
+					// TODO< window size changed > 
+					break;
+					
+					default:
+					throw new EngineException(true, true, "Problem occurred during image presentation!");
+				}
+
+		        {
+		        	immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		        	VkSubmitInfo submitInfo;
+		        	initSubmitInfo(&submitInfo);
+		        	with (submitInfo) {
+		        		waitSemaphoreCount = 1;
+			        	pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+			        	pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
+						commandBufferCount = 1;
+						pCommandBuffers = &Vulkan.GraphicsCommandBuffers[image_index];
+			        	signalSemaphoreCount = 1;
+			        	pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
+		        	}
+		        	
+		        	vulkanResult = vkQueueSubmit(chainContext.vulkan.queueManager.getQueueByName("graphics"), 1, &submitInfo, additionalFence);
+					if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Queue submit failed! [vkQueueSubmit]");
+					}
+		        }
+		
+		        
+		        
+		        // Submit present operation to present queue
+		        result = chainContext.vulkan.swapChain.queuePresent(
+		        	chainContext.vulkan.queueManager.getQueueByName("present"),
+		        	semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
+		        	imageIndex
+		        );
+		        
+		        switch(result) {
+					case VK_SUCCESS:
+				    break;
+					
+					case VK_ERROR_OUT_OF_DATE_KHR:
+					case VK_SUBOPTIMAL_KHR:
+					// TODO< window size changed > 
+					break;
+					
+					default:
+					throw new EngineException(true, true, "Problem occurred during image presentation!");
+				}
+		        
+		        semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
+		        
+		    } while (result >= 0);
+		    
+		}
+		
 		
 		
 		
