@@ -492,7 +492,8 @@ class GraphicsVulkan {
 
 			for( size_t i = 0; i < commandBuffersForRendering.length; ++i ) {
 				vkBeginCommandBuffer( commandBuffersForRendering[i], &graphics_commandd_buffer_begin_info);
-
+				
+				/* uncommented because its impossible to test with this hardware of the developer ;)
 				if( presentQueue != graphicsQueue ) {
 					VkImageMemoryBarrier barrier_from_present_to_draw = {
 						VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,     // VkStructureType                sType
@@ -509,7 +510,52 @@ class GraphicsVulkan {
 					
 					vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
 				}
+				*/
 				
+				
+				 // NOTE< not 100% sure if this is right for multiple queues, test on hardware where the queues are different ones > 
+				VkImageMemoryBarrier barrier_from_present_to_clear;
+				with (barrier_from_present_to_clear) {
+					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+					pNext = null;
+					srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+					dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					srcQueueFamilyIndex = graphicsQueueFamilyIndex;
+					dstQueueFamilyIndex = presentQueueFamilyIndex;
+					image = vulkanContext.swapChain.swapchainImages[i];
+					subresourceRange = image_subresource_range;
+				}
+				
+				VkImageMemoryBarrier barrier_from_clear_to_present;
+				with (barrier_from_clear_to_present) {
+					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+					pNext = null;
+					srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+					oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+					srcQueueFamilyIndex = presentQueueFamilyIndex;
+					dstQueueFamilyIndex = graphicsQueueFamilyIndex;
+					image = vulkanContext.swapChain.swapchainImages[i];
+					subresourceRange = image_subresource_range;	
+				}
+				
+				VkImageSubresourceRange imageSubresourceRangeForCopy = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+				
+				VkClearColorValue clear_color;
+				clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
+				
+				
+				vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
+				vkCmdClearColorImage(commandBuffersForRendering[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &imageSubresourceRangeForCopy);
+				vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
+				
+				
+				
+				
+				/+
 				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[i].resource).resource;
 
 				VkRenderPassBeginInfo render_pass_begin_info = {
@@ -538,7 +584,8 @@ class GraphicsVulkan {
 				vkCmdDraw(commandBuffersForRendering[i], 3, 1, 0, 0);
 				
 				vkCmdEndRenderPass(commandBuffersForRendering[i]);
-
+				
+				/* uncommented because its impossible to test with this hardware of the developer ;)
 				if( presentQueue != graphicsQueue ) {
 					VkImageMemoryBarrier barrier_from_draw_to_present = {
 						VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,       // VkStructureType              sType
@@ -553,7 +600,9 @@ class GraphicsVulkan {
 						image_subresource_range                       // VkImageSubresourceRange      subresourceRange
 					};
 					vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_draw_to_present);
-				}
+				}*/
+				
+				+/
 
 				if( vkEndCommandBuffer(commandBuffersForRendering[i]) != VK_SUCCESS ) {
 					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
