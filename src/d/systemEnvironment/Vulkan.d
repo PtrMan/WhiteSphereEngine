@@ -702,7 +702,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	chainContext.vulkan.swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
 	version(Win32) {
-		chainContext.vulkan.swapChain.initSwapchain(chainContext.vulkan.surface.surface);
+		chainContext.vulkan.swapChain.initSwapchain(chainContext.loggerPipe, chainContext.vulkan.surface.surface);
 	}
 	
 	scope(exit) {

@@ -1,6 +1,7 @@
 module vulkan.VulkanSwapChain2;
 
 import std.stdint;
+import std.format : format;
 
 import Exceptions;
 import api.vulkan.Vulkan;
@@ -8,6 +9,8 @@ import vulkan.VulkanPlatform;
 import vulkan.VulkanHelpers;
 import helpers.VariableValidator;
 import common.LoggerPipe;
+import common.IPipe;
+
 
 /*
 private template GET_INSTANCE_PROC_ADDR(string inst, string entrypoint) {
@@ -307,7 +310,7 @@ class VulkanSwapChain2 {
 	
 	public final VkResult queuePresent(VkQueue presentationQueue, VkSemaphore waitSemaphore, uint32_t imageIndex) {
 		// Submit present operation to present queue
-		const VkPresentInfoKHR presentInfo;
+		VkPresentInfoKHR presentInfo;
 		with( presentInfo ) {
 			sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 			pNext = null;
@@ -317,7 +320,7 @@ class VulkanSwapChain2 {
 			pSwapchains = cast(immutable(VkSwapchainKHR)*)&context.swapchain;
 			pImageIndices = cast(immutable(uint32_t)*)&imageIndex;
 			pResults = null;
-		};
+		}
 		
 		return fpQueuePresentKHR(presentationQueue, cast(immutable(VkPresentInfoKHR)*)&presentInfo);
 	}
