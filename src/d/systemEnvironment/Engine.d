@@ -5,7 +5,7 @@ import systemEnvironment.ChainContext;
 import EngineEntry;
 
 public void systemEnvironmentEngineEntry(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
-	engineEntry();
+	engineEntry(chainContext.vulkan);
 	
 	// we dont call deeper chain elements because it should be the top chain element
 }
