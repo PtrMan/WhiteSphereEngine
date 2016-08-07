@@ -253,10 +253,10 @@ class GraphicsVulkan {
 			// prepare description of stages
 			
 			VkShaderModule vertexShaderModule, fragmentShaderModule;
-			IDisposable vertexShaderMemory = loadShader("testHardcoded.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
+			IDisposable vertexShaderMemory = loadShader("TestHardcoded.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
 			scope(exit) vertexShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, vertexShaderModule, null);
-			IDisposable fragmentShaderMemory = loadShader("simple1.frag.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
+			IDisposable fragmentShaderMemory = loadShader("Simple1.frag.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
 			scope(exit) fragmentShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, fragmentShaderModule, null);
 
@@ -713,7 +713,7 @@ class GraphicsVulkan {
 
 		// TODO< call next function for initialisation >
 		//TODO();
-
+		loop();
 	}
 	
 	protected final void checkForReleasedResourcesAndRelease() {
