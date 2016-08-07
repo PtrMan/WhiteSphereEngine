@@ -36,6 +36,7 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode renderPassResourceNode;
 		ResourceDag.ResourceNode pipelineResourceNode;
 		
+		VkCommandBuffer[] commandBuffersForRendering; // no need to manage this with the resource dag, because we need it just once
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
@@ -456,7 +457,7 @@ class GraphicsVulkan {
 		}
 		
 		// function just for the example code, eeds to get refactored later
-		void recordingCommandBuffers(VkCommandBuffer[] commandBuffersForRendering) {
+		void recordingCommandBuffers() {
 			VkResult vulkanResult;
 			
 			
@@ -561,15 +562,15 @@ class GraphicsVulkan {
 		}
 		
 		void loop() {
-			VkResult result;
+			VkResult vulkanResult;
 		    
+			uint semaphorePairIndex = 0;
 		    do {
 		        uint32_t imageIndex = UINT32_MAX;
 		
 		        // get the next available swapchain image
-		        result = vulkanContext.swapChain.acquireNextImage(vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, &imageIndex);
-		        
-		        switch(result) {
+		        vulkanResult = vulkanContext.swapChain.acquireNextImage(vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, &imageIndex);
+		        switch(vulkanResult) {
 					case VK_SUCCESS:
 				    break;
 					
@@ -588,30 +589,40 @@ class GraphicsVulkan {
 		        	initSubmitInfo(&submitInfo);
 		        	with (submitInfo) {
 		        		waitSemaphoreCount = 1;
-			        	pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+			        	pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
 			        	pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 						commandBufferCount = 1;
-						pCommandBuffers = &Vulkan.GraphicsCommandBuffers[image_index];
+						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForRendering[imageIndex];
 			        	signalSemaphoreCount = 1;
-			        	pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&semaphorePairs[semaphorePairIndex].chainSemaphore;
+			        	pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
 		        	}
 		        	
-		        	vulkanResult = vkQueueSubmit(chainContext.vulkan.queueManager.getQueueByName("graphics"), 1, &submitInfo, additionalFence);
+		        	vulkanResult = vkQueueSubmit(vulkanContext.queueManager.getQueueByName("graphics"), 1, &submitInfo, vulkanContext.swapChain.context.additionalFence);
 					if( !vulkanSuccess(vulkanResult) ) {
 						throw new EngineException(true, true, "Queue submit failed! [vkQueueSubmit]");
 					}
-		        }
+					
+					vulkanResult = vkWaitForFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence, VK_TRUE, UINT64_MAX);
+					if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Wait for fences failed! [vkWaitForFences]");
+					}
+					
+					vulkanResult = vkResetFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence);
+			        if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Fence reset failed! [vkResetFrences]");
+					}
+				}
 		
 		        
 		        
-		        // Submit present operation to present queue
-		        result = chainContext.vulkan.swapChain.queuePresent(
-		        	chainContext.vulkan.queueManager.getQueueByName("present"),
-		        	semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
-		        	imageIndex
-		        );
+				// Submit present operation to present queue
+				vulkanResult = vulkanContext.swapChain.queuePresent(
+					vulkanContext.queueManager.getQueueByName("present"),
+					vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
+					imageIndex
+				);
 		        
-		        switch(result) {
+		        switch(vulkanResult) {
 					case VK_SUCCESS:
 				    break;
 					
@@ -623,10 +634,9 @@ class GraphicsVulkan {
 					default:
 					throw new EngineException(true, true, "Problem occurred during image presentation!");
 				}
-		        
-		        semaphorePairIndex = (semaphorePairIndex+1) % semaphorePairs.length;
-		        
-		    } while (result >= 0);
+				
+				semaphorePairIndex = (semaphorePairIndex+1) % vulkanContext.swapChain.semaphorePairs.length;
+			} while (vulkanResult >= 0);
 		    
 		}
 		
@@ -680,7 +690,7 @@ class GraphicsVulkan {
 		//////////////////
 		
 		uint count = vulkanContext.swapChain.swapchainImages.length;
-		VkCommandBuffer[] commandBuffersForRendering = allocateCommandBuffers(vulkanContext.commandPoolsByQueueName["graphics"].value, count);
+		commandBuffersForRendering = allocateCommandBuffers(vulkanContext.commandPoolsByQueueName["graphics"].value, count);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
 		    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
@@ -696,7 +706,7 @@ class GraphicsVulkan {
 		// record command buffers
 		//////////////////
 		
-		recordingCommandBuffers(commandBuffersForRendering);
+		recordingCommandBuffers();
 		
 		
 

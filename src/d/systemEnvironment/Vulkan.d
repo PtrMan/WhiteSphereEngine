@@ -790,7 +790,6 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 	}
     
     // see hack #0000
-    VkFence additionalFence;
     {
     	VkFenceCreateInfo fenceCreateInfo;
 		initFenceCreateInfo(&fenceCreateInfo);
@@ -800,7 +799,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 			chainContext.vulkan.chosenDevice.logicalDevice,
 			&fenceCreateInfo,
 			null,
-			&additionalFence);
+			&chainContext.vulkan.swapChain.context.additionalFence);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't create fences!");
 		}
@@ -900,7 +899,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         0                                           // flags
     };
 	
-	for( uint i = 0; i < semaphorePairs.length; i++ ) {
+	foreach( i; 0..chainContext.vulkan.swapChain.semaphorePairs.length ) {
 		VkResult vulkanResults[3];
 		
 		vulkanResults[0] = vkCreateSemaphore(chainContext.vulkan.chosenDevice.logicalDevice,
@@ -924,7 +923,6 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
 		// TODO< free semaphore pairs >
 	}
 	
-	//uint semaphorePairIndex = 0;	
 	
 	chainIndex++;
 	chainElements[chainIndex](chainContext, chainElements, chainIndex);

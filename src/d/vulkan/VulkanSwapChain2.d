@@ -70,10 +70,11 @@ class VulkanSwapChain2 {
 		}
 	
 		SemaphorePair[] semaphorePairs;
-	
+		
+		VkFence additionalFence;
 	}
 	
-	private Context context; // stores all created handles
+	public Context context; // stores all created handles
 	
 	// Function pointers
 	private PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
@@ -96,9 +97,14 @@ class VulkanSwapChain2 {
 		return context.desiredNumberOfSwapchainImages;
 	}
 	
-	public final @property Context.SemaphorePair[] semaphorePairs() {
+	public final @property ref Context.SemaphorePair[] semaphorePairs() {
 		return context.semaphorePairs;
 	}
+		
+	// HACK COMPILER< to allow us to use .length from the outside >
+	//public final @property Context.SemaphorePair[] semaphorePairs(Context.SemaphorePair[] semaphorePairs) {
+	//	return context.semaphorePairs = semaphorePairs;
+	//}
 	
 	
 	// Connect to the instance und device and get all required function pointers
