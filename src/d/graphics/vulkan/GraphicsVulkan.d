@@ -10,9 +10,7 @@ import vulkan.VulkanTools;
 import common.IDisposable;
 
 import common.ResourceDag;
-//import common.GenericResourceDagResource;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
-
 
 class GraphicsVulkan {
 	public final this(ResourceDag resourceDag) {
@@ -40,7 +38,7 @@ class GraphicsVulkan {
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
-		// license seem to be without license
+		// license is intel license
 
 		
 
@@ -202,29 +200,6 @@ class GraphicsVulkan {
 				}
 			}
 		}
-
-		/+
-		nonvoid createShaderModule() {
-			const std::vector<char> code = Tools::GetBinaryFileContents( filename );
-			if( code.size() == 0 ) {
-				return Tools::AutoDeleter<VkShaderModule, PFN_vkDestroyShaderModule>();
-			}
-
-			VkShaderModuleCreateInfo shader_module_create_info = {
-				VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,    // VkStructureType                sType
-				null,                                        // const void                    *pNext
-				0,                                              // VkShaderModuleCreateFlags      flags
-				code.size(),                                    // size_t                         codeSize
-				reinterpret_cast<const uint32_t*>(&code[0])     // const uint32_t                *pCode
-			};
-			 
-			VkShaderModule shader_module;
-			if( vkCreateShaderModule( GetDevice(), &shader_module_create_info, nullptr, &shader_module ) != VK_SUCCESS ) {
-				printf( "Could not create shader module from a %s file!\n", filename );
-				return Tools::AutoDeleter<VkShaderModule, PFN_vkDestroyShaderModule>();
-			}
-			return Tools::AutoDeleter<VkShaderModule, PFN_vkDestroyShaderModule>( shader_module, vkDestroyShaderModule, GetDevice() );
-		}+/
 		
 		void createPipeline() {
 			VkResult vulkanResult;
@@ -259,11 +234,7 @@ class GraphicsVulkan {
 			IDisposable fragmentShaderMemory = loadShader("Simple1.frag.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
 			scope(exit) fragmentShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, fragmentShaderModule, null);
-
-			//Tools::AutoDeleter<VkShaderModule, PFN_vkDestroyShaderModule> vertex_shader_module = CreateShaderModule( "Data03/vert.spv" );
-			//Tools::AutoDeleter<VkShaderModule, PFN_vkDestroyShaderModule> fragment_shader_module = CreateShaderModule( "Data03/frag.spv" );
-
-
+			
 			VkPipelineShaderStageCreateInfo[] shader_stage_create_infos = [
 				// Vertex shader
 				{
@@ -275,7 +246,7 @@ class GraphicsVulkan {
 					"main",                                                     // const char                                    *pName
 					null                                                     // const VkSpecializationInfo                    *pSpecializationInfo
 				},
-
+				
 				// Fragment shader
 				{
 					VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,        // VkStructureType                                sType
@@ -616,7 +587,7 @@ class GraphicsVulkan {
 			uint semaphorePairIndex = 0;
 			do {
 				uint32_t imageIndex = UINT32_MAX;
-		
+				
 				// get the next available swapchain image
 				vulkanResult = vulkanContext.swapChain.acquireNextImage(vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore, &imageIndex);
 				switch(vulkanResult) {
@@ -661,7 +632,7 @@ class GraphicsVulkan {
 						throw new EngineException(true, true, "Fence reset failed! [vkResetFrences]");
 					}
 				}
-		
+				
 				
 				
 				// Submit present operation to present queue
@@ -775,20 +746,21 @@ class GraphicsVulkan {
 	
 	protected final VkCommandBuffer[] allocateCommandBuffers(VkCommandPool pool, uint count) {
 		VkResult vulkanResult;
+		VkCommandBuffer[] commandBuffers;
 		
-		// from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
+		// inspired by https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// chapter "allocating command buffers"
 		
-		VkCommandBuffer[] commandBuffers;
 		commandBuffers.length = count;
 		
-		VkCommandBufferAllocateInfo command_buffer_allocate_info = {			
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // VkStructureType                sType
-			null,                                        // const void                    *pNext
-			pool,                                           // VkCommandPool                  commandPool
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,                // VkCommandBufferLevel           level
-			cast(uint32_t)count                                           // uint32_t                       bufferCount
-		};
+		VkCommandBufferAllocateInfo command_buffer_allocate_info;
+		with(command_buffer_allocate_info) {
+			sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			pNext = null;
+			commandPool = pool;
+			level =VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			commandBufferCount = cast(uint32_t)count;
+		}
 			
 		vulkanResult = vkAllocateCommandBuffers(vulkanContext.chosenDevice.logicalDevice, &command_buffer_allocate_info, commandBuffers.ptr);
 		if( !vulkanSuccess(vulkanResult) ) {
