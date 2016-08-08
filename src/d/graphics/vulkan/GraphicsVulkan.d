@@ -34,7 +34,8 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode renderPassResourceNode;
 		ResourceDag.ResourceNode pipelineResourceNode;
 		
-		VkCommandBuffer[] commandBuffersForRendering; // no need to manage this with the resource dag, because we need it just once
+		VkCommandBuffer[] commandBuffersForCopy; // no need to manage this with the resource dag, because we need it just once
+		VkCommandBuffer commandBufferForRendering;
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
@@ -461,8 +462,8 @@ class GraphicsVulkan {
 			VkRenderPass renderPass = (cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource;
 			VkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!VkPipeline)pipelineResourceNode.resource).resource;
 
-			for( size_t i = 0; i < commandBuffersForRendering.length; ++i ) {
-				vkBeginCommandBuffer( commandBuffersForRendering[i], &graphics_commandd_buffer_begin_info);
+			for( size_t i = 0; i < commandBuffersForCopy.length; ++i ) {
+				vkBeginCommandBuffer( commandBuffersForCopy[i], &graphics_commandd_buffer_begin_info);
 				
 				/* uncommented because its impossible to test with this hardware of the developer ;)
 				if( presentQueue != graphicsQueue ) {
@@ -479,7 +480,7 @@ class GraphicsVulkan {
 						image_subresource_range                     // VkImageSubresourceRange        subresourceRange
 					};
 					
-					vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
+					vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
 				}
 				*/
 				
@@ -519,15 +520,43 @@ class GraphicsVulkan {
 				clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
 				
 				
-				vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
-				vkCmdClearColorImage(commandBuffersForRendering[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &imageSubresourceRangeForCopy);
-				vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
+				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
+				vkCmdClearColorImage(commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &imageSubresourceRangeForCopy);
+				
+				VkImageCopy[] imageCopyRegions = [
+				
+				];
+				/*
+				vkCmdCopyImage(
+					commandBuffersForCopy[i], // commandBuffer
+					VkImage srcImage, // srcImage
+					VkImageLayout srcImageLayout, // srcImageLayout
+					vulkanContext.swapChain.swapchainImages[i], // dstImage
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
+					1, // regionCount
+					imageCopyRegions.ptr// pRegions
+				);
+				*/
+				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
 				
 				
 				
 				
-				/+
-				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[i].resource).resource;
+				if( vkEndCommandBuffer(commandBuffersForCopy[i]) != VK_SUCCESS ) {
+					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+				}
+			}
+			
+			
+			// for actual rendering
+			{
+				vkBeginCommandBuffer( commandBufferForRendering, &graphics_commandd_buffer_begin_info);
+				
+								
+				
+				
+				
+				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 
 				VkRenderPassBeginInfo render_pass_begin_info = {
 					VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,     // VkStructureType                sType
@@ -548,37 +577,19 @@ class GraphicsVulkan {
 					cast(immutable(VkClearValue)*)&clear_value                                  // const VkClearValue            *pClearValues
 				};
 				
-				vkCmdBeginRenderPass(commandBuffersForRendering[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBeginRenderPass(commandBufferForRendering, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 				
-				vkCmdBindPipeline(commandBuffersForRendering[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+				vkCmdBindPipeline(commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 				
-				vkCmdDraw(commandBuffersForRendering[i], 3, 1, 0, 0);
+				vkCmdDraw(commandBufferForRendering, 3, 1, 0, 0);
 				
-				vkCmdEndRenderPass(commandBuffersForRendering[i]);
+				vkCmdEndRenderPass(commandBufferForRendering);
 				
-				/* uncommented because its impossible to test with this hardware of the developer ;)
-				if( presentQueue != graphicsQueue ) {
-					VkImageMemoryBarrier barrier_from_draw_to_present = {
-						VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,       // VkStructureType              sType
-						null,                                      // const void                  *pNext
-						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,         // VkAccessFlags                srcAccessMask
-						VK_ACCESS_MEMORY_READ_BIT,                    // VkAccessFlags                dstAccessMask
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,              // VkImageLayout                oldLayout
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,              // VkImageLayout                newLayout
-						graphicsQueueFamilyIndex,               // uint32_t                     srcQueueFamilyIndex
-						presentQueueFamilyIndex,               // uint32_t                     dstQueueFamilyIndex
-						swap_chain_images[i],                         // VkImage                      image
-						image_subresource_range                       // VkImageSubresourceRange      subresourceRange
-					};
-					vkCmdPipelineBarrier(commandBuffersForRendering[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_draw_to_present);
-				}*/
-				
-				+/
-
-				if( vkEndCommandBuffer(commandBuffersForRendering[i]) != VK_SUCCESS ) {
+				if( vkEndCommandBuffer(commandBufferForRendering) != VK_SUCCESS ) {
 					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
 				}
 			}
+
 		}
 		
 		void loop() {
@@ -641,7 +652,7 @@ class GraphicsVulkan {
 						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
 						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 						commandBufferCount = 1;
-						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForRendering[imageIndex];
+						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForCopy[imageIndex];
 						signalSemaphoreCount = 1;
 						pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore;
 					}
@@ -735,11 +746,11 @@ class GraphicsVulkan {
 		
 		
 		//////////////////
-		// allocate command buffers for swapchain images(?)
+		// allocate command buffers for swapchain image copy and rendering
 		//////////////////
 		
 		uint count = vulkanContext.swapChain.swapchainImages.length;
-		commandBuffersForRendering = allocateCommandBuffers(vulkanContext.commandPoolsByQueueName["graphics"].value, count);
+		commandBuffersForCopy = allocateCommandBuffers(vulkanContext.commandPoolsByQueueName["graphics"].value, count);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
 			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
@@ -747,10 +758,26 @@ class GraphicsVulkan {
 			vkFreeCommandBuffers(
 				vulkanContext.chosenDevice.logicalDevice,
 				vulkanContext.commandPoolsByQueueName["graphics"].value,
-				cast(uint32_t)commandBuffersForRendering.length,
-				commandBuffersForRendering.ptr
+				cast(uint32_t)commandBuffersForCopy.length,
+				commandBuffersForCopy.ptr
 			);
 		}
+		
+		VkCommandBuffer[] commandBuffersForRendering = allocateCommandBuffers(vulkanContext.commandPoolsByQueueName["graphics"].value, 1);
+		commandBufferForRendering = commandBuffersForRendering[0];
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+
+			vkFreeCommandBuffers(
+				vulkanContext.chosenDevice.logicalDevice,
+				vulkanContext.commandPoolsByQueueName["graphics"].value,
+				1,
+				&commandBufferForRendering
+			);
+		}
+
+		
 		//////////////////
 		// record command buffers
 		//////////////////
