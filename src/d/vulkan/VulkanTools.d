@@ -104,7 +104,7 @@ void setImageLayout(VkCommandBuffer cmdbuffer, VkImage image, VkImageAspectFlags
 }
 
 
-VkFormat vulkanHelperFindBestFormatTry(VkPhysicalDevice physicalDevice, VkFormat[] preferedFormats, VkFormatFeatureFlags formatFeatureMask, out bool calleeSuccess) {
+private VkFormat vulkanHelperFindBestFormatTry(VkPhysicalDevice physicalDevice, VkFormat[] preferedFormats, VkFormatFeatureFlags formatFeatureMask, out bool calleeSuccess) {
 	calleeSuccess = false;
 
 	foreach( VkFormat preferedFormat; preferedFormats ) {
@@ -117,6 +117,16 @@ VkFormat vulkanHelperFindBestFormatTry(VkPhysicalDevice physicalDevice, VkFormat
 	}
 
 	return 0;
+}
+
+// helper which throws
+VkFormat vulkanHelperFindBestFormatTryThrows(VkPhysicalDevice physicalDevice, VkFormat[] preferedFormats, VkFormatFeatureFlags formatFeatureMask, string usageString) {
+	bool calleeSuccess;
+	VkFormat result = vulkanHelperFindBestFormatTry(physicalDevice, preferedFormats, formatFeatureMask, calleeSuccess);
+	if( !calleeSuccess ) {
+		throw new EngineException(true, true, "Couldn't find a format for '" ~ usageString ~ "'!");
+	}
+	return result;
 }
 
 // see Vulkan 1.0.0 reference page 181

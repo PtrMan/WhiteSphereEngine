@@ -133,15 +133,16 @@ class GraphicsVulkan {
 			
 			VkExtent3D framebufferImageExtent = {300, 300, 1};
 			
-			// search best format
+			
 			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
 			  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
 			  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
-			bool calleeSuccess;
-			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTry(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_R8G8B8A8_UNORM], requiredFramebufferImageFormatFeatures, calleeSuccess);
-			if( !calleeSuccess ) {
-				throw new EngineException(true, true, "Couldn't find a format for '" ~ "Framebuffer" ~ "'!");
-			}
+			VkImageUsageFlagBits usageFlags =
+				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | //
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			
+			// search best format
+			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_A2B10G10R10_UINT_PACK32], requiredFramebufferImageFormatFeatures, "Framebuffer");
 			
 			
 			
@@ -168,7 +169,7 @@ class GraphicsVulkan {
 					arrayLayers = 1; // mydefault
 					samples = VK_SAMPLE_COUNT_1_BIT; // mydefault
 					tiling = VK_IMAGE_TILING_OPTIMAL; // mydefault, is fine
-					usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+					usage = usageFlags;
 					sharingMode = 0; // mydefault
 					queueFamilyIndexCount = 2;
 					pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;

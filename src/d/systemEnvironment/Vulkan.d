@@ -546,18 +546,11 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 	// find best formats
 	{
-		bool calleeSuccess;
 		VkFormat[] preferedMediumPrecisionFormats = [VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D16_UNORM];
-		chainContext.vulkan.depthFormatMediumPrecision = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedMediumPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
-		if( !calleeSuccess ) {
-			throw new EngineException(true, true, "Couldn't find a format for '" ~ "depthFormatMediumPrecision" ~ "'!");
-		}
+		chainContext.vulkan.depthFormatMediumPrecision = vulkanHelperFindBestFormatTryThrows(chainContext.vulkan.chosenDevice.physicalDevice, preferedMediumPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, "depthFormatMediumPrecision");
 
 		VkFormat[] preferedHighPrecisionFormats = [VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT];
-		chainContext.vulkan.depthFormatHighPrecision = vulkanHelperFindBestFormatTry(chainContext.vulkan.chosenDevice.physicalDevice, preferedHighPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, calleeSuccess);
-		if( !calleeSuccess ) {
-			throw new EngineException(true, true, "Couldn't find a format for '" ~ "depthFormatHighPrecision" ~ "'!");
-		}
+		chainContext.vulkan.depthFormatHighPrecision = vulkanHelperFindBestFormatTryThrows(chainContext.vulkan.chosenDevice.physicalDevice, preferedHighPrecisionFormats, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, "depthFormatHighPrecision");
 	}
 	
 	
