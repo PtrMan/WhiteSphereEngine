@@ -602,6 +602,35 @@ class GraphicsVulkan {
 					default:
 					throw new EngineException(true, true, "Problem occurred during image presentation!");
 				}
+				
+				
+				{
+					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+					VkSubmitInfo submitInfo;
+					initSubmitInfo(&submitInfo);
+					with (submitInfo) {
+						waitSemaphoreCount = 1;
+						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
+						signalSemaphoreCount = 1;
+						pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
+					}
+					
+					vulkanResult = vkQueueSubmit(vulkanContext.queueManager.getQueueByName("present"), 1, &submitInfo, vulkanContext.swapChain.context.additionalFence);
+					if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Queue submit failed! (2)");
+					}
+				}
+				
+				vulkanResult = vkWaitForFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence, VK_TRUE, UINT64_MAX);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Wait for fences failed!");
+				}
+				
+				vulkanResult = vkResetFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Fence reset failed!");
+				}
 
 				{
 					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -609,14 +638,14 @@ class GraphicsVulkan {
 					initSubmitInfo(&submitInfo);
 					with (submitInfo) {
 						waitSemaphoreCount = 1;
-						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
+						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
 						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 						commandBufferCount = 1;
 						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForRendering[imageIndex];
 						signalSemaphoreCount = 1;
-					pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
-				}
-				
+						pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore;
+					}
+					
 					vulkanResult = vkQueueSubmit(vulkanContext.queueManager.getQueueByName("graphics"), 1, &submitInfo, vulkanContext.swapChain.context.additionalFence);
 					if( !vulkanSuccess(vulkanResult) ) {
 						throw new EngineException(true, true, "Queue submit failed! [vkQueueSubmit]");
