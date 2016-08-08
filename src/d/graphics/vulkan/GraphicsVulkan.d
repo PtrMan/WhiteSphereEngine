@@ -12,6 +12,10 @@ import common.IDisposable;
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
+// some parts are from
+// https://av.dfki.de/~jhenriques/development.html#tutorial_011
+// (really copyleft as stated on the site)
+
 class GraphicsVulkan {
 	public final this(ResourceDag resourceDag) {
 		this.resourceDag = resourceDag;
@@ -30,12 +34,16 @@ class GraphicsVulkan {
 	
 	protected final void vulkanSetupRendering() {
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
+		VkImage framebufferImage;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
 		ResourceDag.ResourceNode renderPassResourceNode;
 		ResourceDag.ResourceNode pipelineResourceNode;
 		
 		VkCommandBuffer[] commandBuffersForCopy; // no need to manage this with the resource dag, because we need it just once
 		VkCommandBuffer commandBufferForRendering;
+		
+		VkCommandBuffer setupCommandBuffer; // used for setup of images and such
+		VkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
@@ -123,28 +131,137 @@ class GraphicsVulkan {
 		void createFramebuffer() {
 			VkResult vulkanResult;
 			
+			VkExtent3D framebufferImageExtent = {300, 300, 1};
+			
+			// search best format
+			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
+			  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
+			  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
+			bool calleeSuccess;
+			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTry(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_R8G8B8A8_UNORM], requiredFramebufferImageFormatFeatures, calleeSuccess);
+			if( !calleeSuccess ) {
+				throw new EngineException(true, true, "Couldn't find a format for '" ~ "Framebuffer" ~ "'!");
+			}
+			
+			
+			
+			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
+			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
+			
+			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
+			
+			
+			
+			// for image creation we actually have to check if the extent is valid (should always be the case)
+			// TODO< vkGetPhysicalDeviceImageFormatProperties >
+			
+			// create image (as a "render target")
+			{
+				VkImageCreateInfo imageCreateInfo;
+				initImageCreateInfo(&imageCreateInfo);
+				with(imageCreateInfo) {
+					flags = 0; // mydefault
+					imageType = VK_IMAGE_TYPE_2D; // mydefault
+					format = framebufferImageFormat;
+					extent = framebufferImageExtent;
+					mipLevels = 1; // mydefault
+					arrayLayers = 1; // mydefault
+					samples = VK_SAMPLE_COUNT_1_BIT; // mydefault
+					tiling = VK_IMAGE_TILING_OPTIMAL; // mydefault, is fine
+					usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+					sharingMode = 0; // mydefault
+					queueFamilyIndexCount = 2;
+					pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
+					initialLayout =  VK_IMAGE_LAYOUT_UNDEFINED; // mydefault, should be hardcoded this way
+				}
+				
+				
+				vulkanResult = vkCreateImage(
+					vulkanContext.chosenDevice.logicalDevice,
+					&imageCreateInfo,
+					null,
+					&framebufferImage
+				);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Couldn't create image for framebuffer [vkCreateImage]!");
+				}
+				
+				////////////////////
+				// transition layout
+				
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				vkBeginCommandBuffer( setupCommandBuffer, &beginInfo );
+
+				
+				setImageLayout(
+				      setupCommandBuffer, // cmdBuffer
+				      framebufferImage, // image
+				      VK_IMAGE_ASPECT_COLOR_BIT, // aspectMask
+				      VK_IMAGE_LAYOUT_UNDEFINED, // oldImageLayout
+				      VK_IMAGE_LAYOUT_GENERAL // newImageLayout
+				);
+				
+				vkEndCommandBuffer(setupCommandBuffer);
+				
+				
+				VkPipelineStageFlags[] waitStageMask = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
+				VkSubmitInfo submitInfo = {};
+				with(submitInfo) {
+					sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+					waitSemaphoreCount = 0;
+					pWaitSemaphores = null;
+					pWaitDstStageMask = cast(immutable(uint)*)waitStageMask.ptr;
+					commandBufferCount = 1;
+					pCommandBuffers = cast(immutable(VkCommandBuffer)*)&setupCommandBuffer;
+					signalSemaphoreCount = 0;
+					pSignalSemaphores = null;
+				}
+				vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, setupCommandBufferFence);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Queue submit failed [vkQueueSubmit]!");
+				}
+				
+				vulkanResult = vkWaitForFences(vulkanContext.chosenDevice.logicalDevice, 1, &setupCommandBufferFence, VK_TRUE, UINT64_MAX);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Wait for fences failed! [vkWaitForFences]");
+				}
+				
+				vulkanResult = vkResetFences(vulkanContext.chosenDevice.logicalDevice, 1, &setupCommandBufferFence);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Fence reset failed! [vkResetFrences]");
+				}
+				
+				vulkanResult = vkResetCommandBuffer(setupCommandBuffer, 0);
+				if( !vulkanSuccess(vulkanResult) ) {
+					throw new EngineException(true, true, "Reset command buffer failed! [vkResetCommandBuffer]");
+				}
+				
+			}
+			
+			
 			// create image views
 			
 			foreach( i; 0..vulkanContext.swapChain.swapchainImages.length ) {
-				VkImageViewCreateInfo image_view_create_info = {
-					VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,   // VkStructureType                sType
-					null,                                    // const void                    *pNext
-					0,                                          // VkImageViewCreateFlags         flags
-					vulkanContext.swapChain.swapchainImages[i],                       // VkImage                        image
-					VK_IMAGE_VIEW_TYPE_2D,                      // VkImageViewType                viewType
-					vulkanContext.swapChain.swapchainFormat,                      // VkFormat                       format
-					{                                           // VkComponentMapping             components
-						VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             r
-						VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             g
-						VK_COMPONENT_SWIZZLE_IDENTITY,              // VkComponentSwizzle             b
-						VK_COMPONENT_SWIZZLE_IDENTITY               // VkComponentSwizzle             a
-					},
-					{                                           // VkImageSubresourceRange        subresourceRange
-						VK_IMAGE_ASPECT_COLOR_BIT,                  // VkImageAspectFlags             aspectMask
-						0,                                          // uint32_t                       baseMipLevel
-						1,                                          // uint32_t                       levelCount
-						0,                                          // uint32_t                       baseArrayLayer
-						1                                           // uint32_t                       layerCount
+				VkImageViewCreateInfo image_view_create_info;
+				with( image_view_create_info ) {
+					sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+					pNext = null;
+					flags = 0;
+					image = framebufferImage;
+					viewType = VK_IMAGE_VIEW_TYPE_2D;
+					format = framebufferImageFormat;
+					with( components ) {
+						r = g = b = a = VK_COMPONENT_SWIZZLE_IDENTITY;
+					}
+					
+					with( subresourceRange ) {
+						aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						baseMipLevel = 0;
+						levelCount = 1;
+						baseArrayLayer = 0;
+						layerCount = 1;
 					}
 				};
 				
@@ -709,9 +826,14 @@ class GraphicsVulkan {
 		}
 		
 		void releaseFramebufferResources() {
-			foreach( iterationImageView; framebufferImageViewsResourceNodes ) {
-				iterationImageView.decrementExternalReferenceCounter();
+			scope(exit) vkDestroyImage(vulkanContext.chosenDevice.logicalDevice, framebufferImage, null);
+			
+			scope(exit) {
+				foreach( iterationImageView; framebufferImageViewsResourceNodes ) {
+					iterationImageView.decrementExternalReferenceCounter();
+				}
 			}
+			
 		}
 		
 		void releasePipelineResources() {
@@ -722,6 +844,44 @@ class GraphicsVulkan {
 		
 		
 		scope(exit) checkForReleasedResourcesAndRelease();
+		
+		//////////////////
+		// allocate setup command buffer and fence
+		
+		setupCommandBuffer = allocateCommandBuffer(vulkanContext.commandPoolsByQueueName["graphics"].value);
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+
+			vkFreeCommandBuffers(
+				vulkanContext.chosenDevice.logicalDevice,
+				vulkanContext.commandPoolsByQueueName["graphics"].value,
+				1,
+				&setupCommandBuffer
+			);
+		}
+		
+		{
+			VkResult vulkanResult;
+			
+			VkFenceCreateInfo fenceCreateInfo;
+			initFenceCreateInfo(&fenceCreateInfo);
+			fenceCreateInfo.flags = 0;
+			
+    		vulkanResult = vkCreateFence(
+				vulkanContext.chosenDevice.logicalDevice,
+				&fenceCreateInfo,
+				null,
+				&setupCommandBufferFence
+    		);
+			if( !vulkanSuccess(vulkanResult) ) {
+				throw new EngineException(true, true, "Couldn't create fence [vkCreateFence]!");
+			}
+		}
+		scope (exit) {
+			vkDestroyFence(vulkanContext.chosenDevice.logicalDevice, setupCommandBufferFence, null);
+		}
+		
 
 		//////////////////
 		// create renderpass
@@ -824,6 +984,11 @@ class GraphicsVulkan {
 		}
 		
 		return commandBuffers;
+	}
+	
+	protected final VkCommandBuffer allocateCommandBuffer(VkCommandPool pool) {
+		VkCommandBuffer[] commandBuffers = allocateCommandBuffers(pool, 1);
+		return commandBuffers[0];
 	}
 }
 

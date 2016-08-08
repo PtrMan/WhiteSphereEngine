@@ -110,7 +110,6 @@ VkFormat vulkanHelperFindBestFormatTry(VkPhysicalDevice physicalDevice, VkFormat
 	foreach( VkFormat preferedFormat; preferedFormats ) {
 		VkFormatProperties formatProperties;
 		vkGetPhysicalDeviceFormatProperties(physicalDevice, preferedFormat, &formatProperties);
-		// Format must support depth stencil attachment for optimal tiling
 		if (formatProperties.optimalTilingFeatures & formatFeatureMask) {
 			calleeSuccess = true;
 			return preferedFormat;
