@@ -54,6 +54,7 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		bool granularisationInRange;
 		size_t size = granularizeAndCheckIfPossible(requestedSize, granularisationInRange);
 		
+		Type resultAdress;
 		if( granularisationInRange ) {
 			return allocateElementWithSizeInternal(size, alignment, outOfMemory);
 		}
@@ -66,8 +67,11 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 			size_t insertIndex = parentAllocations.findIndexInArrayWhere(parentAllocatedMemory);
 			parentAllocations.insertInPlace(insertIndex, parentAllocatedMemory);
 			
-			return parentAllocatedMemory;
+			resultAdress = parentAllocatedMemory;
 		}
+		
+		assert((resultAdress % alignment) == 0);
+		return resultAdress;
 	}
 	
 	protected final size_t granularizeAndCheckIfPossible(size_t requestedSize, out bool granularisationInRange) {
@@ -123,16 +127,9 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 	
 	protected final void addFreeListWithSize(FreeListWithSize toAdd) {
 		assert(!logarithmicCanFindForFreeListsBySortedSize(toAdd.size));
-		
-		/*
-		bool compareGreater(FreeListWithSize element) {
-			return element.size > toAdd;
-		}
-		*/
-		
+				
 		size_t foundIndex = freeListsBySortedSize.findIndexInArrayWhere!(FreeListWithSize, Type, "a.size >= b")(toAdd.size);
 		
-		//import std.array : insertInPlace;
 		freeListsBySortedSize.insertInPlace(foundIndex, toAdd);
 	}
 	

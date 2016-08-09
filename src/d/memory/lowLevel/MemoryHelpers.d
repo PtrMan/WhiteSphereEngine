@@ -1,33 +1,5 @@
 module memory.lowLevel.MemoryHelpers;
 
-/+
-// TODO< unittest >
-size_t findIndexInArrayWhere(Type)(Type[] array, bool delegate(Type element) comparisionGreater) {
-	size_t findRecursive(size_t minIndex, size_t maxIndex) {
-		assert(minIndex <= maxIndex);
-		
-		bool found = minIndex == maxIndex;
-		if( found ) {
-			size_t foundIndex = minIndex;
-			return foundIndex;
-		}
-		
-		size_t midIndex = minIndex + (maxIndex - minIndex) / 2;
-		if( comparisionGreater(array[midIndex]) ) {
-			return findRecursive(minIndex, midIndex);
-		}
-		else {
-			return findRecursive(midIndex + 1, maxIndex);
-		}
-	}
-
-	
-	size_t minIndex = 0;
-	size_t maxIndex = array.length;
-	return findRecursive(minIndex, maxIndex);
-}
-+/
-
 static import std.array;
 import std.range : SortedRange;
 import std.algorithm.searching : until;
