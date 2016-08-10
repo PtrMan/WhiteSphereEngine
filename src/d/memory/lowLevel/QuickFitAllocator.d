@@ -26,6 +26,26 @@ class QuickFitAllocator(Type, ParentAllocatorType, SizeType = size_t) {
 		public SizeType size;
 	}
 	
+	// type for the allocated size with an hint
+	public static struct HintAllocatedSize {
+		public final this(SizeType size, bool wasParentAllocated) {
+			this.protectedSize = size;
+			this.protectedWasParentAllocated = wasParentAllocated;
+		}
+		
+		public final @property bool wasParentAllocated() {
+			return protectedWasParentAllocated;
+		}
+		
+		public final @property SizeType size() {
+			assert(!wasParentAllocated);
+			return protectedSize;
+		}
+		
+		protected SizeType protectedSize;
+		protected bool protectedWasParentAllocated;
+	}
+	
 	import std.range : SortedRange;
 	
 	protected SortedRange!(SizeType[]) freeListSizes;
@@ -53,11 +73,9 @@ class QuickFitAllocator(Type, ParentAllocatorType, SizeType = size_t) {
 		this.parentAllocator = parentAllocator;
 	}
 	
-	// TODO< wrap the hintAllocatedSize into an own struct "HintAllocatedSize"
 	// hintAllocatedSize will hold the size of the chunk it got allocated from/to
-	// is null if it got allocated directly by the parentAllocation
 	// is just an hint to speed up freeing
-	public final Type allocate(SizeType requestedSize, SizeType alignment, out bool outOfMemory, out Nullable!SizeType hintAllocatedSize) {
+	public final Type allocate(SizeType requestedSize, SizeType alignment, out bool outOfMemory, out HintAllocatedSize hintAllocatedSize) {
 		bool granularisationInRange;
 		SizeType size = granularizeAndCheckIfPossible(requestedSize, granularisationInRange);
 		
@@ -69,7 +87,7 @@ class QuickFitAllocator(Type, ParentAllocatorType, SizeType = size_t) {
 		
 		Type resultAdress;
 		if( granularisationInRange ) {
-			hintAllocatedSize = size;
+			hintAllocatedSize = HintAllocatedSize(size, false);
 			return allocateElementWithSizeInternal(size, alignment, outOfMemory);
 		}
 		else {
@@ -82,32 +100,33 @@ class QuickFitAllocator(Type, ParentAllocatorType, SizeType = size_t) {
 			parentAllocations.insertInPlace(insertIndex, parentAllocatedMemory);
 			
 			resultAdress = parentAllocatedMemory;
-			hintAllocatedSize.nullify();
+			
+			hintAllocatedSize = HintAllocatedSize(0, true);
 		}
 		
 		assert((resultAdress % alignment) == 0);
 		return resultAdress;
 	}
 	
-	public final void deallocate(Type offset, out bool cantFindAdress, Nullable!SizeType hintAllocatedSize) {
+	public final void deallocate(Type offset, out bool cantFindAdress, HintAllocatedSize hintAllocatedSize) {
 		cantFindAdress = true;
 		
-		if( hintAllocatedSize.isNull ) { // check if it got allocated by the parent allocator directly
+		if( hintAllocatedSize.wasParentAllocated ) { // check if it got allocated by the parent allocator directly
 			parentAllocator.deallocate(offset, cantFindAdress);
 		}
 		else {
-			assert(hintAllocatedSize >= 0);
+			assert(hintAllocatedSize.size >= 0);
 			
 			bool granularisationInRange;
-			SizeType granularizedSize = granularizeAndCheckIfPossible(cast(size_t)hintAllocatedSize, granularisationInRange);
+			SizeType granularizedSize = granularizeAndCheckIfPossible(hintAllocatedSize.size, granularisationInRange);
 			assert(granularisationInRange); // must be in range, else we have an internal error
-			assert(granularizedSize == hintAllocatedSize);
+			assert(granularizedSize == hintAllocatedSize.size);
 			if( !granularisationInRange ) {
 				cantFindAdress = true;
 				return;
 			}
 			
-			FreeListWithSize freeListBySize = getFreeListBySize(cast(SizeType)hintAllocatedSize);
+			FreeListWithSize freeListBySize = getFreeListBySize(hintAllocatedSize.size);
 			freeListBySize.freeList.free(offset);
 			cantFindAdress = false;
 			return;
