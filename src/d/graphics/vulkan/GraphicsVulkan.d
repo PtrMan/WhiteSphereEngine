@@ -427,7 +427,6 @@ class GraphicsVulkan {
 
 
 			// prepare description of input assembly
-
 			VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
 				VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,  // VkStructureType                                sType
 				null,                                                      // const void                                    *pNext
@@ -439,7 +438,6 @@ class GraphicsVulkan {
 
 
 			// prepare viewport description
-
 			VkViewport viewport = {
 				0.0f,                                                         // float                                          x
 				0.0f,                                                         // float                                          y
@@ -459,8 +457,8 @@ class GraphicsVulkan {
 					300                                                           // int32_t                                        height
 				}
 			};
-
-
+			
+			
 			VkPipelineViewportStateCreateInfo viewport_state_create_info = {
 				VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,        // VkStructureType                                sType
 				null,                                                      // const void                                    *pNext
@@ -470,12 +468,9 @@ class GraphicsVulkan {
 				1,                                                            // uint32_t                                       scissorCount
 				cast(immutable(VkRect2D)*)&scissor                                                      // const VkRect2D                                *pScissors
 			};
-
-
-
-
+			
+			
 			// prepare rasterisatio state description
-
 			VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {
 				VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,   // VkStructureType                                sType
 				null,                                                      // const void                                    *pNext
@@ -491,25 +486,19 @@ class GraphicsVulkan {
 				0.0f,                                                         // float                                          depthBiasSlopeFactor
 				1.0f                                                          // float                                          lineWidth
 			};
-
-
+			
 			// setting multisample state description
-
-			VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {
-				VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,     // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineMultisampleStateCreateFlags          flags
-				VK_SAMPLE_COUNT_1_BIT,                                        // VkSampleCountFlagBits                          rasterizationSamples
-				VK_FALSE,                                                     // VkBool32                                       sampleShadingEnable
-				1.0f,                                                         // float                                          minSampleShading
-				null,                                                      // const VkSampleMask                            *pSampleMask
-				VK_FALSE,                                                     // VkBool32                                       alphaToCoverageEnable
-				VK_FALSE                                                      // VkBool32                                       alphaToOneEnable
-			};
-
-
+			VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.init;
+			with(multisampleStateCreateInfo) {
+				sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+				flags = 0;
+				rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+				sampleShadingEnable = VK_FALSE;
+				minSampleShading = 1.0f;
+				alphaToCoverageEnable = alphaToOneEnable = VK_FALSE;
+			}
+			
 			// setting blending state description
-
 			VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
 				VK_FALSE,                                                     // VkBool32                                       blendEnable
 				VK_BLEND_FACTOR_ONE,                                          // VkBlendFactor                                  srcColorBlendFactor
@@ -521,8 +510,8 @@ class GraphicsVulkan {
 				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |         // VkColorComponentFlags                          colorWriteMask
 				VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
 			};
-
-
+			
+			
 			VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
 				VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,     // VkStructureType                                sType
 				null,                                                      // const void                                    *pNext
@@ -552,7 +541,7 @@ class GraphicsVulkan {
 				null,                                                      // const VkPipelineTessellationStateCreateInfo   *pTessellationState
 				cast(immutable(VkPipelineViewportStateCreateInfo)*)&viewport_state_create_info,                                  // const VkPipelineViewportStateCreateInfo       *pViewportState
 				cast(immutable(VkPipelineRasterizationStateCreateInfo)*)&rasterization_state_create_info,                             // const VkPipelineRasterizationStateCreateInfo  *pRasterizationState
-				cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&multisample_state_create_info,                               // const VkPipelineMultisampleStateCreateInfo    *pMultisampleState
+				cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&multisampleStateCreateInfo,                               // const VkPipelineMultisampleStateCreateInfo    *pMultisampleState
 				null,                                                      // const VkPipelineDepthStencilStateCreateInfo   *pDepthStencilState
 				cast(immutable(VkPipelineColorBlendStateCreateInfo)*)&color_blend_state_create_info,                               // const VkPipelineColorBlendStateCreateInfo     *pColorBlendState
 				null,                                                      // const VkPipelineDynamicStateCreateInfo        *pDynamicState
