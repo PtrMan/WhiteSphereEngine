@@ -3,6 +3,7 @@ module memory.lowLevel.QuickFitAllocator;
 import std.range : SortedRange;
 import std.algorithm.searching : find, until;
 import std.array : array;
+import std.typecons : Nullable;
 
 
 import memory.FreeList;
@@ -15,19 +16,19 @@ private const bool DEBUG = true;
 // If it failed it allocates from the ParentAllocator (and will return it back to the corresponding freelist)
 // For big allocations it just allocates from the ParentAllocator directly. 
 // The parent allocator is usually first fit
-class QuickFitAllocator(Type, ParentAllocatorType) {
+class QuickFitAllocator(Type, ParentAllocatorType, SizeType = size_t) {
 	protected static class FreeListWithSize {
-		public final this(size_t size) {
+		public final this(SizeType size) {
 			this.size = size;
 		}
 		
 		public FreeList!Type freeList;
-		public size_t size;
+		public SizeType size;
 	}
 	
 	import std.range : SortedRange;
 	
-	protected SortedRange!(size_t[]) freeListSizes;
+	protected SortedRange!(SizeType[]) freeListSizes;
 	protected SortedRange!(FreeListWithSize[]) freeListsBySortedSize;
 	
 	protected SortedRange!(Type[]) parentAllocations; // allocations done with the parent allocator because they were too large
@@ -35,33 +36,30 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 	
 	// allocations up to maxAllocationSize are handled over the freelist mechanism
 	// minAllocationSize is to avoid extremly small allocations
-	public final this(size_t minAllocationSize, size_t maxAllocationSize) {
+	public final this(SizeType minAllocationSize, SizeType maxAllocationSize) {
 		fillAllocationSizes(minAllocationSize, maxAllocationSize);
 	}
 	
-	public final void setParentInitialChunk(Type offset, size_t size) {
-		parentAllocator.setInitialChunk(offset, size);
-	}
-	
-	protected final void fillAllocationSizes(size_t minAllocationSize, size_t maxAllocationSize) {
-		static size_t exponentialSizeStrategy(size_t lastSize, size_t index) {
+	protected final void fillAllocationSizes(SizeType minAllocationSize, SizeType maxAllocationSize) {
+		static SizeType exponentialSizeStrategy(SizeType lastSize, SizeType index) {
 			import std.math : pow;
-			return cast(size_t)pow(1.5, cast(double)index);
+			return cast(SizeType)pow(1.5, cast(double)index);
 		}
 		
-		freeListSizes = SortedRange!(size_t[])(generateSizeList(minAllocationSize, maxAllocationSize, &exponentialSizeStrategy));
+		freeListSizes = SortedRange!(SizeType[])(generateSizeList(minAllocationSize, maxAllocationSize, &exponentialSizeStrategy));
 	}
 	
 	public final void setParentAllocator(ParentAllocatorType parentAllocator) {
 		this.parentAllocator = parentAllocator;
 	}
 	
+	// TODO< wrap the hintAllocatedSize into an own struct "HintAllocatedSize"
 	// hintAllocatedSize will hold the size of the chunk it got allocated from/to
-	// is -1 if it got allocated directly by the parentAllocation
+	// is null if it got allocated directly by the parentAllocation
 	// is just an hint to speed up freeing
-	public final Type allocate(size_t requestedSize, size_t alignment, out bool outOfMemory, out ptrdiff_t hintAllocatedSize) {
+	public final Type allocate(SizeType requestedSize, SizeType alignment, out bool outOfMemory, out Nullable!SizeType hintAllocatedSize) {
 		bool granularisationInRange;
-		size_t size = granularizeAndCheckIfPossible(requestedSize, granularisationInRange);
+		SizeType size = granularizeAndCheckIfPossible(requestedSize, granularisationInRange);
 		
 		static if(DEBUG) {
 			import std.format;
@@ -84,24 +82,24 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 			parentAllocations.insertInPlace(insertIndex, parentAllocatedMemory);
 			
 			resultAdress = parentAllocatedMemory;
-			hintAllocatedSize = -1;
+			hintAllocatedSize.nullify();
 		}
 		
 		assert((resultAdress % alignment) == 0);
 		return resultAdress;
 	}
 	
-	public final void deallocate(Type offset, out bool cantFindAdress, ptrdiff_t hintAllocatedSize) {
+	public final void deallocate(Type offset, out bool cantFindAdress, Nullable!SizeType hintAllocatedSize) {
 		cantFindAdress = true;
 		
-		if( hintAllocatedSize == -1 ) { // check if it got allocated by the parent allocator directly
+		if( hintAllocatedSize.isNull ) { // check if it got allocated by the parent allocator directly
 			parentAllocator.deallocate(offset, cantFindAdress);
 		}
 		else {
 			assert(hintAllocatedSize >= 0);
 			
 			bool granularisationInRange;
-			size_t granularizedSize = granularizeAndCheckIfPossible(cast(size_t)hintAllocatedSize, granularisationInRange);
+			SizeType granularizedSize = granularizeAndCheckIfPossible(cast(size_t)hintAllocatedSize, granularisationInRange);
 			assert(granularisationInRange); // must be in range, else we have an internal error
 			assert(granularizedSize == hintAllocatedSize);
 			if( !granularisationInRange ) {
@@ -109,17 +107,17 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 				return;
 			}
 			
-			FreeListWithSize freeListBySize = getFreeListBySize(cast(size_t)hintAllocatedSize);
+			FreeListWithSize freeListBySize = getFreeListBySize(cast(SizeType)hintAllocatedSize);
 			freeListBySize.freeList.free(offset);
 			cantFindAdress = false;
 			return;
 		}
 	}
 	
-	protected final size_t granularizeAndCheckIfPossible(size_t requestedSize, out bool granularisationInRange) {
+	protected final SizeType granularizeAndCheckIfPossible(SizeType requestedSize, out bool granularisationInRange) {
 		granularisationInRange = false;
 		
-		size_t[] foundUntilResult = freeListSizes.until!("a >= b")(requestedSize).array;
+		SizeType[] foundUntilResult = freeListSizes.until!("a >= b")(requestedSize).array;
 		
 		if( foundUntilResult.length == freeListSizes.length ) {
 			granularisationInRange = false;
@@ -127,13 +125,13 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		}
 		else {
 			size_t sizeIndex = foundUntilResult.length;
-			size_t foundSize = freeListSizes[sizeIndex];
+			SizeType foundSize = freeListSizes[sizeIndex];
 			granularisationInRange = true;
 			return foundSize;
 		}
 	}
 	
-	protected final Type allocateElementWithSizeInternal(size_t size, size_t alignment, out bool outOfMemory) {
+	protected final Type allocateElementWithSizeInternal(SizeType size, SizeType alignment, out bool outOfMemory) {
 		checkForAndAddAllocatorForSize(size);
 		
 		FreeListWithSize freeListWithSize = getFreeListBySize(size);
@@ -142,7 +140,7 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		// try to find a element in freelist with the right alignment
 		// TODO< if this is too slow we might sort the freelist after the alignments and binary search witht the standard algorithms >
 		{
-			static bool condition(Type element, size_t alignment) {
+			static bool condition(Type element, SizeType alignment) {
 				return (cast(size_t)element % alignment) == 0;
 			}
 			
@@ -160,7 +158,7 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		}
 	}
 	
-	protected final FreeListWithSize getFreeListBySize(size_t size) {
+	protected final FreeListWithSize getFreeListBySize(SizeType size) {
 		auto foundElements = freeListsBySortedSize.find!"a.size == b"(size);
 		assert(foundElements.length == 1);
 		
@@ -168,14 +166,14 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		return freeListWithSize;
 	}
 	
-	protected final void checkForAndAddAllocatorForSize(size_t size) {
+	protected final void checkForAndAddAllocatorForSize(SizeType size) {
 		bool sizeExists = logarithmicCanFindForFreeListsBySortedSize(size);
 		if( !sizeExists ) {
 			addFreeListWithSize(new FreeListWithSize(size));
 		}
 	}
 	
-	protected bool logarithmicCanFindForFreeListsBySortedSize(size_t size) {
+	protected bool logarithmicCanFindForFreeListsBySortedSize(SizeType size) {
 		import std.algorithm.searching : find;
 		
 		auto foundElements = freeListsBySortedSize.find!("a.size == b")(size);

@@ -10,26 +10,26 @@ private const bool DEBUG = true;
 
 // for description of first fit see
 // http://odl.sysworks.biz/disk$cddoc03jul11/decw$book/d32va122.p78.decw$book
-class FirstFitAllocator(Type) {
+class FirstFitAllocator(Type, SizeType = size_t) {
 	protected static class ElementWithSize {
 		public Type offset;
-		public size_t size;
+		public SizeType size;
 		
-		public final this(Type offset, size_t size) {
+		public final this(Type offset, SizeType size) {
 			this.offset = offset;
 			this.size = size;
 		}
 	}
 	
-	public size_t threshold = 0; // used to combat fragmentation
+	public SizeType threshold = 0; // used to combat fragmentation
 	                             // see https://www.cs.rit.edu/~ark/lectures/gc/03_03_02.html
 	
 	protected SortedRange!(ElementWithSize[]) freeList; // sorted after offset
 	protected SortedRange!(ElementWithSize[]) usedList; // sorted after offset, used to retrive size information
 	
-	protected size_t overallMemorySize;
+	protected SizeType overallMemorySize;
 	
-	public final void setInitialChunk(Type offset, size_t size) {
+	public final void setInitialChunk(Type offset, SizeType size) {
 		assert(freeList.length() == 0 && usedList.length() == 0);
 		if( freeList.length() != 0 && usedList.length() != 0 ) {
 			// inconsistent call, this should not happen, we just ignore it
@@ -41,7 +41,7 @@ class FirstFitAllocator(Type) {
 	}
 	
 	// alloction is satisfied by first block which is large enough
-	public final Type allocate(size_t size, size_t alignment, out bool outOfMemory) {
+	public final Type allocate(SizeType size, SizeType alignment, out bool outOfMemory) {
 		outOfMemory = true;
 		
 		static if( DEBUG ) {
@@ -72,10 +72,10 @@ class FirstFitAllocator(Type) {
 		
 		// split the element
 		//  we do this in place to save some cycles and GC preasure
-		size_t allocatedSizeWithAlignment = alignAt(size, alignment);
+		SizeType allocatedSizeWithAlignment = alignAt(size, alignment);
 		assert(foundElementWithAtLeastFreeMemory.size >= allocatedSizeWithAlignment);
 		Type nextFreeOffset = foundElementWithAtLeastFreeMemory.offset + allocatedSizeWithAlignment;
-		size_t nextFreeSize = foundElementWithAtLeastFreeMemory.size - allocatedSizeWithAlignment;
+		SizeType nextFreeSize = foundElementWithAtLeastFreeMemory.size - allocatedSizeWithAlignment;
 		
 		Type resultOffset = foundElementWithAtLeastFreeMemory.offset;
 		
@@ -120,7 +120,7 @@ class FirstFitAllocator(Type) {
 			return;
 		}
 		
-		size_t associatedSize = usedList[foundIndexInUsed].size;
+		SizeType associatedSize = usedList[foundIndexInUsed].size;
 		
 		
 		static if( DEBUG ) {
@@ -164,7 +164,7 @@ class FirstFitAllocator(Type) {
 		assert(candidateIndex < freeList.length);
 		
 		bool tryToMergeWithNextAtIndex(size_t index) {
-			bool mergeNeeded = cast(size_t)freeList[index].offset + freeList[index].size == cast(size_t)freeList[index+1].offset;
+			bool mergeNeeded = cast(SizeType)freeList[index].offset + freeList[index].size == cast(SizeType)freeList[index+1].offset;
 			if( mergeNeeded ) {
 				freeList[index].size += freeList[index+1].size;
 				freeList = SortedRange!(ElementWithSize[])(freeList.array.remove(index+1));
@@ -185,7 +185,7 @@ class FirstFitAllocator(Type) {
 		}
 	}
 	
-	protected final ElementWithSize searchFirstFreeElementWithAtLeastFreeMemory(size_t atLeastSize, out size_t foundIndex, out bool found) {
+	protected final ElementWithSize searchFirstFreeElementWithAtLeastFreeMemory(SizeType atLeastSize, out size_t foundIndex, out bool found) {
 		found = false;
 		
 		foundIndex = 0;
@@ -213,7 +213,7 @@ class FirstFitAllocator(Type) {
 			*/
 			
 			foreach( i; 0..cast(ptrdiff_t)list.length-1 ) {
-				assert(cast(size_t)list[i].offset < cast(size_t)list[i+1].offset);
+				assert(cast(SizeType)list[i].offset < cast(SizeType)list[i+1].offset);
 			}
 		}
 		
@@ -228,11 +228,11 @@ class FirstFitAllocator(Type) {
 		
 		// check if the freeblocks dont overlap
 		foreach( i; 0..cast(ptrdiff_t)freeList.length-1 ) {
-			assert(cast(size_t)freeList[i].offset + freeList[i].size <= cast(size_t)freeList[i+1].offset);
+			assert(cast(SizeType)freeList[i].offset + freeList[i].size <= cast(SizeType)freeList[i+1].offset);
 		}
 		
 		// check that the sum of all used and unused entries is overallMemorySize
-		size_t sumOfSizes = 0;
+		SizeType sumOfSizes = 0;
 		
 		foreach( iterationFreeElement; freeList ) {
 			sumOfSizes += iterationFreeElement.size;

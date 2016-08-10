@@ -44,7 +44,7 @@ void tooBigAllocation() {
 		size_t allocation0 = quickFit.allocate((1 << 17) + 1, 4, outOfMemory, hintAllocatedSize0);
 		assert(!outOfMemory);
 		assert(allocation0 == 0); // guranteed to be 0!
-		assert(hintAllocatedSize0 == -1);
+		assert(hintAllocatedSize0.isNull);
 		
 		quickFit.deallocate(allocation0, cantFindAdress, hintAllocatedSize0);
 		assert(!cantFindAdress);

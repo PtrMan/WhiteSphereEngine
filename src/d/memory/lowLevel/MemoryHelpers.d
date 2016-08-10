@@ -19,14 +19,14 @@ void insertInPlace(Type)(ref SortedRange!(Type[]) arr, size_t index, Type elemen
 }
 
 // lower and upper bound are inclusive
-size_t[] generateSizeList(size_t lowerBound, size_t upperBound, size_t function(size_t lastValue, size_t counter) generator) {
+SizeType[] generateSizeList(SizeType)(SizeType lowerBound, SizeType upperBound, SizeType function(SizeType lastValue, SizeType counter) generator) {
 	assert(lowerBound <= upperBound);
 	
-	size_t[] resultList;
-	size_t lastValue = 0;
-	size_t counter = 0;
+	SizeType[] resultList;
+	SizeType lastValue = 0;
+	SizeType counter = 0;
 	for(;;) {
-		size_t currentValue = generator(lastValue, counter);
+		SizeType currentValue = generator(lastValue, counter);
 		
 		if( currentValue > upperBound ) {
 			break;
