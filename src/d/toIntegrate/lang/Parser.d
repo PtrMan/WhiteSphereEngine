@@ -120,9 +120,6 @@ abstract class Parser(EnumOperationType) {
 
             return EnumRecursionReturn.OK;
 
-            break;
-
-
             default:
             ErrorMessage = "Internal Error!";
             return EnumRecursionReturn.ERROR;
