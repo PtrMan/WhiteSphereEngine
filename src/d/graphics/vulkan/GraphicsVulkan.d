@@ -78,7 +78,8 @@ class GraphicsVulkan {
 			VkAttachmentDescription attachment_descriptions[] = [
 				{
 					0,                                   // VkAttachmentDescriptionFlags   flags
-					vulkanContext.swapChain.swapchainFormat,               // VkFormat                       format
+					// TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
+					VK_FORMAT_A2B10G10R10_UINT_PACK32,               // VkFormat                       format
 					VK_SAMPLE_COUNT_1_BIT,               // VkSampleCountFlagBits          samples
 					VK_ATTACHMENT_LOAD_OP_CLEAR,         // VkAttachmentLoadOp             loadOp
 					VK_ATTACHMENT_STORE_OP_STORE,        // VkAttachmentStoreOp            storeOp
