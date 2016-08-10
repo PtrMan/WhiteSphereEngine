@@ -130,6 +130,7 @@ VkFormat vulkanHelperFindBestFormatTryThrows(VkPhysicalDevice physicalDevice, Vk
 }
 
 // see Vulkan 1.0.0 reference page 181
+// TODO< rename, make private >
 uint32_t vulkanHelperSearchBestIndexOfMemoryType(VkPhysicalDeviceMemoryProperties* physicalDeviceMemoryProperties, uint32_t typeBits, VkFlags queriedProperties, out bool calleeSuccess) {
 	calleeSuccess = false;
 
@@ -143,6 +144,15 @@ uint32_t vulkanHelperSearchBestIndexOfMemoryType(VkPhysicalDeviceMemoryPropertie
 		typeBits >>= 1;
 	}
 	return 0;
+}
+
+uint32_t searchBestIndexOfMemoryTypeThrows(VkPhysicalDeviceMemoryProperties* physicalDeviceMemoryProperties, uint32_t typeBits, VkFlags queriedProperties) {
+	bool calleeSuccess;
+	uint32_t result = vulkanHelperSearchBestIndexOfMemoryType(physicalDeviceMemoryProperties, typeBits, queriedProperties, calleeSuccess);
+	if( !result ) {
+		throw new EngineException(true, true, "searchBestIndexOfMemoryType() failed!");
+	}
+	return result;
 }
 
 import common.IDisposable;
