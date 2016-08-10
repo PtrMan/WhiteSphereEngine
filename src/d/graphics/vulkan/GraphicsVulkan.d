@@ -681,20 +681,35 @@ class GraphicsVulkan {
 				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
 				vkCmdClearColorImage(commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &imageSubresourceRangeForCopy);
 				
-				VkImageCopy[] imageCopyRegions = [
+				VkImageSubresourceLayers imageSubresourceLayersForCopy;
+				with(imageSubresourceLayersForCopy) {
+					aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					mipLevel = 0;
+					baseArrayLayer = 0;
+					layerCount = 1;
+				}
 				
-				];
-				/*
+				VkImageCopy[1] imageCopyRegions;
+				with(imageCopyRegions[0]) {
+					srcSubresource = imageSubresourceLayersForCopy;
+					with(srcOffset) {x=y=z=0;}
+					dstSubresource = imageSubresourceLayersForCopy;
+					with(dstOffset) {x=y=z=0;}
+					with(extent) {width=300,height=300,depth=0;};
+				}
+				
+				
+				
 				vkCmdCopyImage(
 					commandBuffersForCopy[i], // commandBuffer
-					VkImage srcImage, // srcImage
-					VkImageLayout srcImageLayout, // srcImageLayout
+					framebufferImageResource.resource, // srcImage
+					VK_IMAGE_LAYOUT_GENERAL, // srcImageLayout
 					vulkanContext.swapChain.swapchainImages[i], // dstImage
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
 					1, // regionCount
 					imageCopyRegions.ptr// pRegions
 				);
-				*/
+				
 				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
 				
 				
