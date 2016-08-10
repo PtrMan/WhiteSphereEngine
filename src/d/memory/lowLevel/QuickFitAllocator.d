@@ -3,7 +3,6 @@ module memory.lowLevel.QuickFitAllocator;
 import std.range : SortedRange;
 import std.algorithm.searching : find, until;
 import std.array : array;
-import std.typecons : Nullable;
 
 
 import memory.FreeList;
