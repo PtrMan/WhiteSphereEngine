@@ -1,7 +1,7 @@
 #version 400
 
-layout(location = 0) out vec4 out_Color;
+layout(location = 0) out uvec4 out_Color;
 
 void main() {
-  out_Color = vec4( 0.0, 0.4, 1.0, 1.0 );
+  out_Color = uvec4( 0.0, 255, 512, 1024 );
 }
