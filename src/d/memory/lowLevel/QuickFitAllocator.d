@@ -8,6 +8,8 @@ import std.array : array;
 import memory.FreeList;
 import memory.lowLevel.MemoryHelpers;
 
+private const bool DEBUG = true;
+
 // tries to allocate from a set of Freelist allocators (for different sizes) for the closest fitting size
 // for small allocations.
 // If it failed it allocates from the ParentAllocator (and will return it back to the corresponding freelist)
@@ -37,6 +39,10 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		fillAllocationSizes(minAllocationSize, maxAllocationSize);
 	}
 	
+	public final void setParentInitialChunk(Type offset, size_t size) {
+		parentAllocator.setInitialChunk(offset, size);
+	}
+	
 	protected final void fillAllocationSizes(size_t minAllocationSize, size_t maxAllocationSize) {
 		static size_t exponentialSizeStrategy(size_t lastSize, size_t index) {
 			import std.math : pow;
@@ -50,12 +56,22 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 		this.parentAllocator = parentAllocator;
 	}
 	
-	public final Type allocate(size_t requestedSize, size_t alignment, out bool outOfMemory) {
+	// hintAllocatedSize will hold the size of the chunk it got allocated from/to
+	// is -1 if it got allocated directly by the parentAllocation
+	// is just an hint to speed up freeing
+	public final Type allocate(size_t requestedSize, size_t alignment, out bool outOfMemory, out ptrdiff_t hintAllocatedSize) {
 		bool granularisationInRange;
 		size_t size = granularizeAndCheckIfPossible(requestedSize, granularisationInRange);
 		
+		static if(DEBUG) {
+			import std.format;
+			debugFunction(format("quickfit allocate called with size=%s, alignment=%s", requestedSize, alignment));
+			debugFunction(format("\tgranluarized size=%s, granularisation in range=%s", size, granularisationInRange));
+		}
+		
 		Type resultAdress;
 		if( granularisationInRange ) {
+			hintAllocatedSize = size;
 			return allocateElementWithSizeInternal(size, alignment, outOfMemory);
 		}
 		else {
@@ -68,10 +84,36 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 			parentAllocations.insertInPlace(insertIndex, parentAllocatedMemory);
 			
 			resultAdress = parentAllocatedMemory;
+			hintAllocatedSize = -1;
 		}
 		
 		assert((resultAdress % alignment) == 0);
 		return resultAdress;
+	}
+	
+	public final void deallocate(Type offset, out bool cantFindAdress, ptrdiff_t hintAllocatedSize) {
+		cantFindAdress = true;
+		
+		if( hintAllocatedSize == -1 ) { // check if it got allocated by the parent allocator directly
+			parentAllocator.deallocate(offset, cantFindAdress);
+		}
+		else {
+			assert(hintAllocatedSize >= 0);
+			
+			bool granularisationInRange;
+			size_t granularizedSize = granularizeAndCheckIfPossible(cast(size_t)hintAllocatedSize, granularisationInRange);
+			assert(granularisationInRange); // must be in range, else we have an internal error
+			assert(granularizedSize == hintAllocatedSize);
+			if( !granularisationInRange ) {
+				cantFindAdress = true;
+				return;
+			}
+			
+			FreeListWithSize freeListBySize = getFreeListBySize(cast(size_t)hintAllocatedSize);
+			freeListBySize.freeList.free(offset);
+			cantFindAdress = false;
+			return;
+		}
 	}
 	
 	protected final size_t granularizeAndCheckIfPossible(size_t requestedSize, out bool granularisationInRange) {
@@ -94,20 +136,36 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 	protected final Type allocateElementWithSizeInternal(size_t size, size_t alignment, out bool outOfMemory) {
 		checkForAndAddAllocatorForSize(size);
 		
-		auto foundElements = freeListsBySortedSize.find!("a.size == b")(size);
+		FreeListWithSize freeListWithSize = getFreeListBySize(size);
+		assert(freeListWithSize.size == size);
+		
+		// try to find a element in freelist with the right alignment
+		// TODO< if this is too slow we might sort the freelist after the alignments and binary search witht the standard algorithms >
+		{
+			static bool condition(Type element, size_t alignment) {
+				return (cast(size_t)element % alignment) == 0;
+			}
+			
+			alias FreeList!Type.EnumAllocateWhereResult AllocResultEnumType;
+			AllocResultEnumType freeListAllocateWhereResult;
+			Type allocatedElement = freeListWithSize.freeList.allocateWhere(&condition, alignment, freeListAllocateWhereResult);
+			final switch(freeListAllocateWhereResult) with (AllocResultEnumType) {
+				case ISEMPTY: case COULDNTFIND:
+				return parentAllocator.allocate(size, alignment, outOfMemory);
+				
+				case FOUND:
+				outOfMemory = false;
+				return allocatedElement;
+			}
+		}
+	}
+	
+	protected final FreeListWithSize getFreeListBySize(size_t size) {
+		auto foundElements = freeListsBySortedSize.find!"a.size == b"(size);
 		assert(foundElements.length == 1);
 		
 		FreeListWithSize freeListWithSize = foundElements[0];
-		assert(freeListWithSize.size == size);
-		
-		bool isEmpty;
-		// TODO< iterate over freelist until an element with the right alignment was hit, if we didn't hit one then we have to call the parentAllocator >
-		Type allocatedElement = freeListWithSize.freeList.allocate(isEmpty);
-		if( isEmpty ) {
-			allocatedElement = parentAllocator.allocate(size, alignment, outOfMemory);
-		}
-		
-		return allocatedElement;
+		return freeListWithSize;
 	}
 	
 	protected final void checkForAndAddAllocatorForSize(size_t size) {
@@ -136,4 +194,10 @@ class QuickFitAllocator(Type, ParentAllocatorType) {
 	unittest {
 		// TODO< unittest addFreeListWithSize >
 	}
+	
+	protected final void debugFunction(string text) {
+		import std.stdio;
+		writeln(text);
+	}
+
 }

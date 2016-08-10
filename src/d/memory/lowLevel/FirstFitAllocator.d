@@ -6,7 +6,7 @@ import std.algorithm.mutation : remove;
 
 import memory.lowLevel.MemoryHelpers : findIndexInArrayWhere, insertInPlace;
 
-private const bool DEBUG = false;
+private const bool DEBUG = true;
 
 // for description of first fit see
 // http://odl.sysworks.biz/disk$cddoc03jul11/decw$book/d32va122.p78.decw$book
