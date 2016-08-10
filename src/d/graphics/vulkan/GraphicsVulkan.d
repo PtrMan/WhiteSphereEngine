@@ -264,15 +264,7 @@ class GraphicsVulkan {
 					throw new EngineException(true, true, "Queue submit failed [vkQueueSubmit]!");
 				}
 				
-				vulkanResult = vkWaitForFences(vulkanContext.chosenDevice.logicalDevice, 1, &setupCommandBufferFence, VK_TRUE, UINT64_MAX);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Wait for fences failed! [vkWaitForFences]");
-				}
-				
-				vulkanResult = vkResetFences(vulkanContext.chosenDevice.logicalDevice, 1, &setupCommandBufferFence);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Fence reset failed! [vkResetFrences]");
-				}
+				vkDevFacade.fenceWaitAndReset(setupCommandBufferFence);
 				
 				vulkanResult = vkResetCommandBuffer(setupCommandBuffer, 0);
 				if( !vulkanSuccess(vulkanResult) ) {
@@ -806,16 +798,8 @@ class GraphicsVulkan {
 					}
 				}
 				
-				vulkanResult = vkWaitForFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence, VK_TRUE, UINT64_MAX);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Wait for fences failed!");
-				}
+				vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				
-				vulkanResult = vkResetFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Fence reset failed!");
-				}
-
 				{
 					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 					VkSubmitInfo submitInfo;
@@ -835,15 +819,7 @@ class GraphicsVulkan {
 						throw new EngineException(true, true, "Queue submit failed! [vkQueueSubmit]");
 					}
 					
-					vulkanResult = vkWaitForFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence, VK_TRUE, UINT64_MAX);
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Wait for fences failed! [vkWaitForFences]");
-					}
-					
-					vulkanResult = vkResetFences(vulkanContext.chosenDevice.logicalDevice, 1, &vulkanContext.swapChain.context.additionalFence);
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Fence reset failed! [vkResetFrences]");
-					}
+					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
 				
 				

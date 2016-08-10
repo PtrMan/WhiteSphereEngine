@@ -1,5 +1,7 @@
 module graphics.vulkan.abstraction.VulkanDeviceFacade;
 
+import core.stdc.stdint;
+
 import Exceptions;
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
@@ -24,6 +26,20 @@ class VulkanDeviceFacade {
 		if( !result.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't bind memory! [vkBindImageMemory]");
 		}
+	}
+	
+	// meta function
+	public final void fenceWaitAndReset(VkFence fence) {
+		VkResult vulkanResult = vkWaitForFences(protectedDevice, 1, &fence, VK_TRUE, UINT64_MAX);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Wait for fences failed! [vkWaitForFences]");
+		}
+		
+		vulkanResult = vkResetFences(protectedDevice, 1, &fence);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Fence reset failed! [vkResetFrences]");
+		}
+
 	}
 	
 	public final @property device() {
