@@ -685,7 +685,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 
 
 
-import vulkan.VulkanSwapChain2;
+import vulkan.VulkanSwapChain2 : VulkanSwapChain2;
 
 public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
@@ -694,8 +694,13 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 
 	chainContext.vulkan.swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
+	VulkanSwapChain2.InitSwapChainArguments swapchainArgument = VulkanSwapChain2.InitSwapChainArguments.init;
+	swapchainArgument.imageUsageBits = VK_IMAGE_USAGE_TRANSFER_DST_BIT; // required for render to image(texture) and copy to swapchain images
+	swapchainArgument.loggerPipe = chainContext.loggerPipe;
+	swapchainArgument.surface = chainContext.vulkan.surface.surface;
+	
 	version(Win32) {
-		chainContext.vulkan.swapChain.initSwapchain(chainContext.loggerPipe, chainContext.vulkan.surface.surface);
+		chainContext.vulkan.swapChain.initSwapchain(swapchainArgument);
 	}
 	
 	scope(exit) {
