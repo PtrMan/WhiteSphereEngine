@@ -63,8 +63,11 @@ class GraphicsVulkan {
 		VkSemaphore chainSemaphore2;
 		
 		
-		// TODO< initialize this somehwere outside and only once >
+		// TODO< initialize this somewhere outside and only once >
 		VulkanDeviceFacade vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
+		
+		VkBuffer vboPositionBuffer;
+		
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
@@ -980,7 +983,21 @@ class GraphicsVulkan {
 		recordingCommandBuffers();
 		
 		
-
+		
+		//////////////////
+		// create buffer for vertex information and fill it 
+		//////////////////
+		VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
+		createBufferArguments.size = /*vertex.sizeof*/16   * 3;
+		createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		vboPositionBuffer = vkDevFacade.createBuffer(createBufferArguments);
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+		    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			
+			vkDevFacade.destroyBuffer(vboPositionBuffer);
+		}
 
 		// TODO< call next function for initialisation >
 		//TODO();
