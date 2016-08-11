@@ -775,30 +775,18 @@ class GraphicsVulkan {
 				}
 				
 				
-				{
-					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-					VkSubmitInfo submitInfo;
-					initSubmitInfo(&submitInfo);
-					with (submitInfo) {
-						waitSemaphoreCount = 1;
-						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore;
-						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
-						signalSemaphoreCount = 1;
-						pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
-					}
-					
-					vulkanResult = vkQueueSubmit(vulkanContext.queueManager.getQueueByName("present"), 1, &submitInfo, vulkanContext.swapChain.context.additionalFence);
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Queue submit failed! (2)");
-					}
-					
+				{ // present
+					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
+					VkSemaphore[1] waitSemaphores = [vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].imageAcquiredSemaphore];
+					VkSemaphore[1] signalSemaphores = [vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
+					VkCommandBuffer[0] commandBuffers;
+					DevicelessFacade.queueSubmit(
+						vulkanContext.queueManager.getQueueByName("present"),
+						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+						vulkanContext.swapChain.context.additionalFence
+					);
 					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
-				
-				
-				
-				
-				
 				
 				{ // do rendering work and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
@@ -813,26 +801,16 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
 				
-				
-				{
-					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-					VkSubmitInfo submitInfo;
-					initSubmitInfo(&submitInfo);
-					with (submitInfo) {
-						waitSemaphoreCount = 1;
-						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&chainSemaphore2;
-						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
-						commandBufferCount = 1;
-						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForCopy[imageIndex];
-						signalSemaphoreCount = 1;
-						pSignalSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore;
-					}
-					
-					vulkanResult = vkQueueSubmit(vulkanContext.queueManager.getQueueByName("graphics"), 1, &submitInfo, vulkanContext.swapChain.context.additionalFence);
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Queue submit failed! [vkQueueSubmit]");
-					}
-					
+				{ // do copy
+					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_TRANSFER_BIT];
+					VkSemaphore[1] waitSemaphores = [chainSemaphore2];
+					VkSemaphore[1] signalSemaphores = [vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore];
+					VkCommandBuffer[1] commandBuffers = [commandBuffersForCopy[imageIndex]];
+					DevicelessFacade.queueSubmit(
+						vulkanContext.queueManager.getQueueByName("graphics"),
+						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+						vulkanContext.swapChain.context.additionalFence
+					);
 					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
 				
