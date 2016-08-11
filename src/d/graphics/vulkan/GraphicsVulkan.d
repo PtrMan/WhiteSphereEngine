@@ -685,7 +685,7 @@ class GraphicsVulkan {
 				}
 				
 				
-				/+
+				
 				vkCmdCopyImage(
 					commandBuffersForCopy[i], // commandBuffer
 					framebufferImageResource.resource, // srcImage
@@ -694,7 +694,7 @@ class GraphicsVulkan {
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
 					1, // regionCount
 					imageCopyRegions.ptr// pRegions
-				);+/
+				);
 				
 				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
 				
@@ -813,10 +813,6 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
 				
-				for(;;) {
-					
-				}
-				
 				
 				{
 					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -824,7 +820,7 @@ class GraphicsVulkan {
 					initSubmitInfo(&submitInfo);
 					with (submitInfo) {
 						waitSemaphoreCount = 1;
-						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;//chainSemaphore2;
+						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&chainSemaphore2;
 						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 						commandBufferCount = 1;
 						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForCopy[imageIndex];
