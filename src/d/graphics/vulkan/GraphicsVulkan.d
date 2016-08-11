@@ -11,7 +11,7 @@ import graphics.vulkan.abstraction.VulkanDevicelessFacade : DevicelessFacade = V
 import vulkan.VulkanHelpers;
 import vulkan.VulkanTools;
 import common.IDisposable;
-
+import helpers.VariableValidator;
 
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
@@ -21,6 +21,22 @@ import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 // (really copyleft as stated on the site)
 
 class GraphicsVulkan {
+	// TODO< refactor to outside into the right class >
+	// vulkan resource (for example VkImage) with the offset of the bind, size, alignment, memory hint
+	static class VulkanResourceWithMemoryDecoration(Datatype) {
+		static struct DerivedInformation {
+			uint32_t typeIndex; // type index of the resource as reported by vkGet*MemoryRequirements
+		
+			VulkanMemoryAllocator.OffsetType offset; // allocated offset in the heap
+			VulkanMemoryAllocator.HintAllocatedSizeType hintAllocatedSize; // real size allocated by the allocator, for an hint of the allocator
+			                                                               // the nullable indicates to the allocator which tpye of alloction it was actually
+		}
+		
+		VariableValidator!Datatype resource;
+		VariableValidator!DerivedInformation derivedInformation;
+	}
+	
+	
 	public final this(ResourceDag resourceDag) {
 		this.resourceDag = resourceDag;
 	}
@@ -37,15 +53,6 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
-		// vulkan resource (for example VkImage) with the offset of the bind, size, alignment, memory hint
-		static class VulkanResourceWithMemoryDecoration(Datatype) {
-			Datatype resource;
-			uint32_t typeIndex; // type index of the resource as reported by vkGet*MemoryRequirements
-			
-			VulkanMemoryAllocator.OffsetType offset; // allocated offset in the heap
-			VulkanMemoryAllocator.HintAllocatedSizeType hintAllocatedSize; // real size allocated by the allocator, for an hint of the allocator
-			                                                               // the nullable indicates to the allocator which tpye of alloction it was actually
-		}
 		
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
@@ -64,7 +71,7 @@ class GraphicsVulkan {
 		
 		
 		// TODO< initialize this somewhere outside and only once >
-		VulkanDeviceFacade vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
+		vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
 		
 		VkBuffer vboPositionBuffer;
 		
@@ -206,37 +213,24 @@ class GraphicsVulkan {
 					initialLayout =  VK_IMAGE_LAYOUT_UNDEFINED; // mydefault, should be hardcoded this way
 				}
 				
-				
-				vulkanResult = vkCreateImage(
-					vulkanContext.chosenDevice.logicalDevice,
-					&imageCreateInfo,
-					null,
-					&framebufferImageResource.resource
-				);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Couldn't create image for framebuffer [vkCreateImage]!");
+				{ // scope the variable imageResult
+					VkImage imageResult;
+					vulkanResult = vkCreateImage(
+						vulkanContext.chosenDevice.logicalDevice,
+						&imageCreateInfo,
+						null,
+						&imageResult
+					);
+					framebufferImageResource.resource = imageResult;
+					if( !vulkanSuccess(vulkanResult) ) {
+						throw new EngineException(true, true, "Couldn't create image for framebuffer [vkCreateImage]!");
+					}
+					
 				}
 				
 				/////
 				// allocate and bind memory
-				// TODO< abstract this out to a method >
-				{
-					// see https://av.dfki.de/~jhenriques/development.html#tutorial_011
-					VkMemoryRequirements memRequirements;
-					vkDevFacade.getMemoryRequirements(framebufferImageResource.resource, /*out*/ memRequirements);
-					// search for heap index that match requirements
-					framebufferImageResource.typeIndex = searchBestIndexOfMemoryTypeThrows(vulkanContext.chosenDevice.physicalDeviceMemoryProperties, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-					
-					// allocate
-					VulkanMemoryAllocator.AllocatorConfiguration allocatorConfiguration = getDefaultAllocatorConfigurationByTypeIndexAndUsage(framebufferImageResource.typeIndex, "image");
-					VulkanMemoryAllocator allocatorForImage = vulkanContext.retriveOrCreateMemoryAllocatorByTypeIndex(framebufferImageResource.typeIndex, allocatorConfiguration);
-					framebufferImageResource.offset = allocatorForImage.allocate(memRequirements.size, memRequirements.alignment, /* out */framebufferImageResource.hintAllocatedSize);
-					
-					// bind
-					vkDevFacade.bindMemory(framebufferImageResource.resource, allocatorForImage.deviceMemory, framebufferImageResource.offset);
-				}
-				
-				
+				resourceQueryAllocateBind(framebufferImageResource, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "image");
 				
 				////////////////////
 				// transition layout
@@ -249,7 +243,7 @@ class GraphicsVulkan {
 				
 				setImageLayout(
 				    setupCommandBuffer, // cmdBuffer
-				    framebufferImageResource.resource, // image
+				    framebufferImageResource.resource.value, // image
 				    VK_IMAGE_ASPECT_COLOR_BIT, // aspectMask
 				    VK_IMAGE_LAYOUT_UNDEFINED, // oldImageLayout
 				    VK_IMAGE_LAYOUT_GENERAL // newImageLayout
@@ -293,7 +287,7 @@ class GraphicsVulkan {
 					sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 					pNext = null;
 					flags = 0;
-					image = framebufferImageResource.resource;
+					image = framebufferImageResource.resource.value;
 					viewType = VK_IMAGE_VIEW_TYPE_2D;
 					format = framebufferImageFormat;
 					with( components ) {
@@ -689,7 +683,7 @@ class GraphicsVulkan {
 				
 				vkCmdCopyImage(
 					commandBuffersForCopy[i], // commandBuffer
-					framebufferImageResource.resource, // srcImage
+					framebufferImageResource.resource.value, // srcImage
 					VK_IMAGE_LAYOUT_GENERAL, // srcImageLayout
 					vulkanContext.swapChain.swapchainImages[i], // dstImage
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
@@ -848,7 +842,7 @@ class GraphicsVulkan {
 		}
 		
 		void releaseFramebufferResources() {
-			scope(exit) vkDestroyImage(vulkanContext.chosenDevice.logicalDevice, framebufferImageResource.resource, null);
+			scope(exit) vkDestroyImage(vulkanContext.chosenDevice.logicalDevice, framebufferImageResource.resource.value, null);
 			
 			scope(exit) {
 				foreach( iterationImageView; framebufferImageViewsResourceNodes ) {
@@ -1046,5 +1040,69 @@ class GraphicsVulkan {
 		resultAllocatorConfiguration.memoryTypeIndex = typeIndex;
 		return resultAllocatorConfiguration;
 	}
+	
+	
+	
+	
+	
+	// the internal helper returns the used allocator
+	protected /*protected*/ final VulkanMemoryAllocator resourceQueryAllocateInternal(VulkanResourceType)(VulkanResourceWithMemoryDecoration!VulkanResourceType resourceWithMemDeco, VkFlags requiredMemoryProperties, string usage)
+	in {
+		assert(resourceWithMemDeco.resource.isValid);
+		assert(!resourceWithMemDeco.derivedInformation.isValid);
+	}
+	body {
+		/////
+		// validation
+		
+		if( !resourceWithMemDeco.resource.isValid ) { // if there is no resource
+			// TODO< maybe we should log this, as a nonfatal error >
+			return null;
+		}
+		
+		if( resourceWithMemDeco.derivedInformation.isValid ) { // if the resource was already allocated and bound
+			// TODO< maybe we should log this, as a nonfatal error >
+			return null;
+		}
+		
+		/////
+		// body
+		
+		{	auto initValue = VulkanResourceWithMemoryDecoration!VulkanResourceType.DerivedInformation.init;
+			resourceWithMemDeco.derivedInformation = initValue;
+		}
+		
+		// see https://av.dfki.de/~jhenriques/development.html#tutorial_011 to know on how the query and allocation and binding works and what the core of the algorithm is
+		VkMemoryRequirements memRequirements;
+		vkDevFacade.getMemoryRequirements(resourceWithMemDeco.resource.value, /*out*/ memRequirements);
+		// search for heap index that match requirements
+		resourceWithMemDeco.derivedInformation.value.typeIndex = searchBestIndexOfMemoryTypeThrows(vulkanContext.chosenDevice.physicalDeviceMemoryProperties, memRequirements.memoryTypeBits, requiredMemoryProperties);
+		
+		// allocate
+		VulkanMemoryAllocator.AllocatorConfiguration allocatorConfiguration = getDefaultAllocatorConfigurationByTypeIndexAndUsage(resourceWithMemDeco.derivedInformation.value.typeIndex, usage);
+		VulkanMemoryAllocator allocatorForResource = vulkanContext.retriveOrCreateMemoryAllocatorByTypeIndex(resourceWithMemDeco.derivedInformation.value.typeIndex, allocatorConfiguration);
+		resourceWithMemDeco.derivedInformation.value.offset = allocatorForResource.allocate(memRequirements.size, memRequirements.alignment, /* out */resourceWithMemDeco.derivedInformation.value.hintAllocatedSize);
+		
+		return allocatorForResource;
+	}
+	
+	/**
+	 * * query the size and required memory attributes of the vulkan handle
+	 * * find a suitable allocator or create a new one for the memory
+	 * * allocate the memory from the allocator
+	 */
+	protected final void resourceQueryAllocate(VulkanResourceType)(VulkanResourceWithMemoryDecoration!VulkanResourceType resourceWithMemDeco, VkFlags requiredMemoryProperties, string usage) {
+		resourceQueryAllocateInternal(resourceWithMemDeco, requiredMemoryProperties, usage);
+	}
+	
+	protected final void resourceQueryAllocateBind(VulkanResourceType)(VulkanResourceWithMemoryDecoration!VulkanResourceType resourceWithMemDeco, VkFlags requiredMemoryProperties, string usage) {
+		VulkanMemoryAllocator allocatorForMemoryOfResource = resourceQueryAllocateInternal(resourceWithMemDeco, requiredMemoryProperties, usage);
+		
+		// bind
+		vkDevFacade.bind(resourceWithMemDeco.resource.value, allocatorForMemoryOfResource.deviceMemory, resourceWithMemDeco.derivedInformation.value.offset);
+	}
+	
+	// we need this here for the resource* method family
+	protected VulkanDeviceFacade vkDevFacade;
 }
 
