@@ -21,7 +21,7 @@ class VulkanDeviceFacade {
 		memRequirements = internalMemRequirements;
 	}
 	
-	public final void bindMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) {
+	public final void bind(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) {
 		VkResult result = vkBindImageMemory(device, image, memory, memoryOffset);
 		if( !result.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't bind memory! [vkBindImageMemory]");
