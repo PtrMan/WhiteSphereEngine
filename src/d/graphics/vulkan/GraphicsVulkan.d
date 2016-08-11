@@ -7,6 +7,7 @@ import api.vulkan.Vulkan;
 import graphics.vulkan.VulkanContext;
 import graphics.vulkan.VulkanMemoryAllocator;
 import graphics.vulkan.abstraction.VulkanDeviceFacade;
+import graphics.vulkan.abstraction.VulkanDevicelessFacade : DevicelessFacade = VulkanDevicelessFacade;
 import vulkan.VulkanHelpers;
 import vulkan.VulkanTools;
 import common.IDisposable;
@@ -57,6 +58,10 @@ class GraphicsVulkan {
 		
 		VkCommandBuffer setupCommandBuffer; // used for setup of images and such
 		VkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
+		
+		// semaphores for chaining
+		VkSemaphore chainSemaphore2;
+		
 		
 		// TODO< initialize this somehwere outside and only once >
 		VulkanDeviceFacade vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
@@ -785,9 +790,28 @@ class GraphicsVulkan {
 					if( !vulkanSuccess(vulkanResult) ) {
 						throw new EngineException(true, true, "Queue submit failed! (2)");
 					}
+					
+					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
 				
-				vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
+				
+				
+				
+				
+				{ // do rendering work and wait for it
+					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
+					VkSemaphore[1] waitSemaphores = [vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
+					VkSemaphore[1] signalSemaphores = [chainSemaphore2];
+					VkCommandBuffer[1] commandBuffers = [commandBufferForRendering];
+					DevicelessFacade.queueSubmit(
+						vulkanContext.queueManager.getQueueByName("graphics"),
+						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+						vulkanContext.swapChain.context.additionalFence
+					);
+					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
+				}
+				
+				
 				
 				{
 					immutable VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -795,7 +819,7 @@ class GraphicsVulkan {
 					initSubmitInfo(&submitInfo);
 					with (submitInfo) {
 						waitSemaphoreCount = 1;
-						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;
+						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&chainSemaphore2;
 						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 						commandBufferCount = 1;
 						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForCopy[imageIndex];
@@ -864,7 +888,18 @@ class GraphicsVulkan {
 		
 		
 		
+		
+		
 		scope(exit) checkForReleasedResourcesAndRelease();
+		
+		chainSemaphore2 = vkDevFacade.createSemaphore();
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			
+			vkDevFacade.destroySemaphore(chainSemaphore2);
+		}
+		
 		
 		//////////////////
 		// allocate setup command buffer and fence

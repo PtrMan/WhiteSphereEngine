@@ -13,6 +13,9 @@ import Exceptions;
 // an image and put it into an active command buffer
 // See chapter 11.4 "Image Layout" for details
 //todo : rename
+// from https://github.com/SaschaWillems/Vulkan/blob/master/base/vulkantools.cpp
+// license MIT
+// is actually copied(?) from the lunarG SDK under Apache 2.0
 void setImageLayout(VkCommandBuffer cmdbuffer, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout) {
 	// Create an image barrier object
 	VkImageMemoryBarrier imageMemoryBarrier;
