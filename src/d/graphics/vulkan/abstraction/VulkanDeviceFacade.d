@@ -28,7 +28,7 @@ class VulkanDeviceFacade {
 		}
 	}
 	
-	public final VkSemaphore createSemaphore() {
+	public final VkSemaphore createSemaphore(const VkAllocationCallbacks* allocator = null) {
 		VkSemaphore resultSemaphore;
 		const VkSemaphoreCreateInfo semaphoreCreateInfo = {
 			VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
@@ -36,7 +36,7 @@ class VulkanDeviceFacade {
 			0                                           // flags
 		};
 		
-		VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, null, &resultSemaphore);
+		VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, allocator, &resultSemaphore);
 		if( !result.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't create semaphore! [vkCreateSemaphore]");
 		}
@@ -44,17 +44,59 @@ class VulkanDeviceFacade {
 		return resultSemaphore;
 	}
 	
-	public final void destroySemaphore(VkSemaphore semaphore) {
+	public final void destroySemaphore(VkSemaphore semaphore, const VkAllocationCallbacks* allocator = null) {
 		VkSemaphore[1] semaphores = [semaphore];
-		destroySemaphores(semaphores);
+		destroySemaphores(semaphores, allocator);
 	}
 	
 	// meta function
-	public final void destroySemaphores(VkSemaphore[] semaphores) {
+	public final void destroySemaphores(VkSemaphore[] semaphores, const VkAllocationCallbacks* allocator = null) {
 		foreach( iterationSemaphore; semaphores ) {
-			vkDestroySemaphore(device, iterationSemaphore, null);
+			vkDestroySemaphore(device, iterationSemaphore, allocator);
 		}
 	}
+	
+	public static struct CreateBufferArguments {
+		VkBufferCreateFlags flags = 0;
+		VkDeviceSize size;
+		VkBufferUsageFlags usage;
+		VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		uint32_t[] queueFamilyIndices;
+	}
+	
+	public final VkBuffer createBuffer(CreateBufferArguments arguments, const VkAllocationCallbacks* allocator = null) {
+		VkBuffer resultBuffer;
+		
+		VkBufferCreateInfo createInfo = VkBufferCreateInfo.init;
+		with(createInfo) {
+			sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			flags = arguments.flags;
+			size = arguments.size;
+			usage = arguments.usage;
+			sharingMode = arguments.sharingMode;
+			queueFamilyIndexCount = arguments.queueFamilyIndices.length;
+			pQueueFamilyIndices = cast(immutable(uint)*)arguments.queueFamilyIndices.ptr;
+		}
+		
+		VkResult result = vkCreateBuffer(device, &createInfo, allocator, &resultBuffer);
+		if( !result.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create buffer! [vkCreateBuffer]");
+		}
+		return resultBuffer;
+	}
+	
+	public final void destroyBuffer(VkBuffer buffer, const VkAllocationCallbacks* allocator = null) {
+		VkBuffer[1] buffers = [buffer];
+		destroyBuffers(buffers, allocator);
+	}
+	
+	// meta function
+	public final void destroyBuffers(VkBuffer[] buffers, const VkAllocationCallbacks* allocator = null) {
+		foreach( iterationBuffer; buffers ) {
+			vkDestroyBuffer(device, iterationBuffer, allocator);
+		}
+	}
+	
 	
 	// meta function
 	public final void fenceWaitAndReset(VkFence fence) {
