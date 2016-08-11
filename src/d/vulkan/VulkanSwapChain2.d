@@ -124,7 +124,14 @@ class VulkanSwapChain2 {
 		mixin(GET_DEVICE_PROC_ADDR!("device", "QueuePresentKHR"));
 	}
 	
-	public final void initSwapchain(LoggerPipe loggerPipe, VariableValidator!VkSurfaceKHR surface) {
+	public static struct InitSwapChainArguments {
+		VkImageUsageFlagBits imageUsageBits = 0; 
+	
+		LoggerPipe loggerPipe;
+		VariableValidator!VkSurfaceKHR surface;
+	}
+	
+	public final void initSwapchain(InitSwapChainArguments arguments) {
 		const string ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS = "Couldn't get physical device surface formats!";
 		const string ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION = "Couldn't get physical device present modes!";
 		
@@ -134,17 +141,17 @@ class VulkanSwapChain2 {
 		
 		import vulkan.VulkanTools;
 		
-		assert(device.isValid && surface.isValid);
+		assert(device.isValid && arguments.surface.isValid);
 		
 		// Check the surface properties and formats
 		VkSurfaceCapabilitiesKHR surfaceProperties;
-		vulkanResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, surface.value, &surfaceProperties);
+		vulkanResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.value, arguments.surface.value, &surfaceProperties);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't get physical device surface capabilities!");
 		}
 		
 		uint32_t formatCount;
-		vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, null);
+		vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, arguments.surface.value, &formatCount, null);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
 		}
@@ -152,13 +159,13 @@ class VulkanSwapChain2 {
 		VkSurfaceFormatKHR[] surfaceFormats;
 		surfaceFormats.length = formatCount;
 		
-		vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, surface.value, &formatCount, surfaceFormats.ptr);
+		vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, arguments.surface.value, &formatCount, surfaceFormats.ptr);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS);
 		}
 	
 		uint32_t presentModeCount;
-		vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, null);
+		vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, arguments.surface.value, &presentModeCount, null);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
 		}
@@ -166,7 +173,7 @@ class VulkanSwapChain2 {
 		VkPresentModeKHR[] presentModes;
 		presentModes.length = presentModeCount;
 		
-		vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, surface.value, &presentModeCount, presentModes.ptr);
+		vulkanResult = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.value, arguments.surface.value, &presentModeCount, presentModes.ptr);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION);
 		}
@@ -212,7 +219,7 @@ class VulkanSwapChain2 {
 		context.desiredNumberOfSwapchainImages = cast(uint32_t)getSwapChainNumImages(numberOfImagesToOwnRequest);
 		
 		
-		loggerPipe.write(IPipe.EnumLevel.INFO, "", format("desiredNumberOfSwapchainImages %s", context.desiredNumberOfSwapchainImages), "vulkan");
+		arguments.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("desiredNumberOfSwapchainImages %s", context.desiredNumberOfSwapchainImages), "vulkan");
 		
 		VkColorSpaceKHR swapchainColorSpace;
 		// If the format list includes just one entry of VK_FORMAT_UNDEFINED,
@@ -258,7 +265,7 @@ class VulkanSwapChain2 {
 			imageColorSpace = swapchainColorSpace;
 			imageExtent = swapchainExtent;
 			imageArrayLayers = 1;
-			imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | arguments.imageUsageBits;
 			imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			queueFamilyIndexCount = 0;
 			pQueueFamilyIndices = null;
@@ -268,7 +275,7 @@ class VulkanSwapChain2 {
 			clipped = VK_TRUE;
 			oldSwapchain = VK_NULL_HANDLE;
 		}
-		createInfo.surface = surface.value; // outside because ambiguous
+		createInfo.surface = arguments.surface.value; // outside because ambiguous
 		
 		
 		vulkanResult = fpCreateSwapchainKHR(device.value, cast(immutable(VkSwapchainCreateInfoKHR)*)&createInfo, null, &context.swapchain);
