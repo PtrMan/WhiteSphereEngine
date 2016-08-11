@@ -582,20 +582,20 @@ class GraphicsVulkan {
 		void recordingCommandBuffers() {
 			VkResult vulkanResult;
 			
-			
-			VkCommandBufferBeginInfo graphics_commandd_buffer_begin_info = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,    // VkStructureType                        sType
-				null,                                        // const void                            *pNext
-				VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,   // VkCommandBufferUsageFlags              flags
-				null                                         // const VkCommandBufferInheritanceInfo  *pInheritanceInfo
+			VkCommandBufferBeginInfo graphicsCommandBufferBeginInfo = VkCommandBufferBeginInfo.init;
+			with(graphicsCommandBufferBeginInfo) {
+				sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				pInheritanceInfo = null;
 			};
 
-			VkImageSubresourceRange image_subresource_range = {
-				VK_IMAGE_ASPECT_COLOR_BIT,                      // VkImageAspectFlags             aspectMask
-				0,                                              // uint32_t                       baseMipLevel
-				1,                                              // uint32_t                       levelCount
-				0,                                              // uint32_t                       baseArrayLayer
-				1                                               // uint32_t                       layerCount
+			VkImageSubresourceRange imageSubresourceRange;
+			with(imageSubresourceRange) {
+				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				baseMipLevel = 0;
+				levelCount = 1;
+				baseArrayLayer = 0;
+				layerCount = 1;
 			};
 
 			VkClearValue clear_value;
@@ -609,8 +609,8 @@ class GraphicsVulkan {
 			VkRenderPass renderPass = (cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource;
 			VkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!VkPipeline)pipelineResourceNode.resource).resource;
 
-			for( size_t i = 0; i < commandBuffersForCopy.length; ++i ) {
-				vkBeginCommandBuffer( commandBuffersForCopy[i], &graphics_commandd_buffer_begin_info);
+			foreach( i; 0..commandBuffersForCopy.length ) {
+				vkBeginCommandBuffer(commandBuffersForCopy[i], &graphicsCommandBufferBeginInfo);
 				
 				/* uncommented because its impossible to test with this hardware of the developer ;)
 				if( presentQueue != graphicsQueue ) {
@@ -633,10 +633,9 @@ class GraphicsVulkan {
 				
 				
 				 // NOTE< not 100% sure if this is right for multiple queues, test on hardware where the queues are different ones > 
-				VkImageMemoryBarrier barrier_from_present_to_clear;
-				with (barrier_from_present_to_clear) {
+				VkImageMemoryBarrier barrierFromPresentToClear = VkImageMemoryBarrier.init;
+				with (barrierFromPresentToClear) {
 					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					pNext = null;
 					srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 					dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 					oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -644,13 +643,12 @@ class GraphicsVulkan {
 					srcQueueFamilyIndex = graphicsQueueFamilyIndex;
 					dstQueueFamilyIndex = presentQueueFamilyIndex;
 					image = vulkanContext.swapChain.swapchainImages[i];
-					subresourceRange = image_subresource_range;
+					subresourceRange = imageSubresourceRange;
 				}
 				
-				VkImageMemoryBarrier barrier_from_clear_to_present;
-				with (barrier_from_clear_to_present) {
+				VkImageMemoryBarrier barrierFromClearToPresent = VkImageMemoryBarrier.init;
+				with (barrierFromClearToPresent) {
 					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					pNext = null;
 					srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 					dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 					oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -658,7 +656,7 @@ class GraphicsVulkan {
 					srcQueueFamilyIndex = presentQueueFamilyIndex;
 					dstQueueFamilyIndex = graphicsQueueFamilyIndex;
 					image = vulkanContext.swapChain.swapchainImages[i];
-					subresourceRange = image_subresource_range;	
+					subresourceRange = imageSubresourceRange;	
 				}
 				
 				VkImageSubresourceRange imageSubresourceRangeForCopy = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
@@ -667,7 +665,7 @@ class GraphicsVulkan {
 				clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
 				
 				
-				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_clear);
+				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &imageSubresourceRangeForCopy);
 				
 				VkImageSubresourceLayers imageSubresourceLayersForCopy;
@@ -699,7 +697,7 @@ class GraphicsVulkan {
 					imageCopyRegions.ptr// pRegions
 				);
 				
-				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
+				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
 				
 				
 				
@@ -712,10 +710,7 @@ class GraphicsVulkan {
 			
 			// for actual rendering
 			{
-				vkBeginCommandBuffer( commandBufferForRendering, &graphics_commandd_buffer_begin_info);
-				
-								
-				
+				vkBeginCommandBuffer(commandBufferForRendering, &graphicsCommandBufferBeginInfo);
 				
 				
 				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
