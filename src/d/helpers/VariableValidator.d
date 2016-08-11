@@ -21,7 +21,8 @@ struct VariableValidator(Type) {
 		return valid;
 	}
 	
-	public final @property Type value() {
+	// TODO< do only ref if Type is struct >
+	public final @property ref Type value() {
 		assert(isValid);
 		
 		return protectedValue;
