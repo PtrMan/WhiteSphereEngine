@@ -28,6 +28,34 @@ class VulkanDeviceFacade {
 		}
 	}
 	
+	public final VkSemaphore createSemaphore() {
+		VkSemaphore resultSemaphore;
+		const VkSemaphoreCreateInfo semaphoreCreateInfo = {
+			VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
+			null,                                       // pNext
+			0                                           // flags
+		};
+		
+		VkResult result = vkCreateSemaphore(device, &semaphoreCreateInfo, null, &resultSemaphore);
+		if( !result.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create semaphore! [vkCreateSemaphore]");
+		}
+		
+		return resultSemaphore;
+	}
+	
+	public final void destroySemaphore(VkSemaphore semaphore) {
+		VkSemaphore[1] semaphores = [semaphore];
+		destroySemaphores(semaphores);
+	}
+	
+	// meta function
+	public final void destroySemaphores(VkSemaphore[] semaphores) {
+		foreach( iterationSemaphore; semaphores ) {
+			vkDestroySemaphore(device, iterationSemaphore, null);
+		}
+	}
+	
 	// meta function
 	public final void fenceWaitAndReset(VkFence fence) {
 		VkResult vulkanResult = vkWaitForFences(protectedDevice, 1, &fence, VK_TRUE, UINT64_MAX);
