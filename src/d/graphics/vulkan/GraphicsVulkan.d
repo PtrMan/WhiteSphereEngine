@@ -90,8 +90,11 @@ class GraphicsVulkan {
 					VK_ATTACHMENT_STORE_OP_STORE,        // VkAttachmentStoreOp            storeOp
 					VK_ATTACHMENT_LOAD_OP_DONT_CARE,     // VkAttachmentLoadOp             stencilLoadOp
 					VK_ATTACHMENT_STORE_OP_DONT_CARE,    // VkAttachmentStoreOp            stencilStoreOp
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,     // VkImageLayout                  initialLayout;
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR      // VkImageLayout                  finalLayout
+					
+					VK_IMAGE_LAYOUT_UNDEFINED, // we overwrite it so it shouldn't matter      //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,     // VkImageLayout                  initialLayout;
+					
+					// TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
+					VK_IMAGE_LAYOUT_GENERAL//VK_IMAGE_LAYOUT_PRESENT_SRC_KHR      // VkImageLayout                  finalLayout
 				}
 			];
 
@@ -593,11 +596,8 @@ class GraphicsVulkan {
 			};
 
 			VkClearValue clear_value;
-			clear_value.color.float32 =
-				[ 1.0f, 0.8f, 0.4f, 0.0f ];
-
-			VkImage[] swap_chain_images = vulkanContext.swapChain.swapchainImages;
-
+			clear_value.color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
+			
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
 			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
@@ -685,7 +685,7 @@ class GraphicsVulkan {
 				}
 				
 				
-				
+				/+
 				vkCmdCopyImage(
 					commandBuffersForCopy[i], // commandBuffer
 					framebufferImageResource.resource, // srcImage
@@ -694,7 +694,7 @@ class GraphicsVulkan {
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
 					1, // regionCount
 					imageCopyRegions.ptr// pRegions
-				);
+				);+/
 				
 				vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrier_from_clear_to_present);
 				
@@ -716,7 +716,7 @@ class GraphicsVulkan {
 				
 				
 				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
-
+				
 				VkRenderPassBeginInfo render_pass_begin_info = {
 					VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,     // VkStructureType                sType
 					null,                                      // const void                    *pNext
@@ -736,6 +736,7 @@ class GraphicsVulkan {
 					cast(immutable(VkClearValue)*)&clear_value                                  // const VkClearValue            *pClearValues
 				};
 				
+
 				vkCmdBeginRenderPass(commandBufferForRendering, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 				
 				vkCmdBindPipeline(commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
@@ -798,6 +799,7 @@ class GraphicsVulkan {
 				
 				
 				
+				
 				{ // do rendering work and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					VkSemaphore[1] waitSemaphores = [vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
@@ -811,6 +813,9 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(vulkanContext.swapChain.context.additionalFence);
 				}
 				
+				for(;;) {
+					
+				}
 				
 				
 				{
@@ -819,7 +824,7 @@ class GraphicsVulkan {
 					initSubmitInfo(&submitInfo);
 					with (submitInfo) {
 						waitSemaphoreCount = 1;
-						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&chainSemaphore2;
+						pWaitSemaphores = cast(const(immutable(VkSemaphore)*))&vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore;//chainSemaphore2;
 						pWaitDstStageMask = cast(immutable(VkPipelineStageFlags)*)&waitDstStageMask;
 						commandBufferCount = 1;
 						pCommandBuffers = cast(immutable(VkCommandBuffer_T*)*)&commandBuffersForCopy[imageIndex];
