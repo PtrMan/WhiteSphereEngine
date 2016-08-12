@@ -82,7 +82,7 @@ class VulkanDeviceFacade {
 			size = arguments.size;
 			usage = arguments.usage;
 			sharingMode = arguments.sharingMode;
-			queueFamilyIndexCount = arguments.queueFamilyIndices.length;
+			queueFamilyIndexCount = cast(uint32_t)arguments.queueFamilyIndices.length;
 			pQueueFamilyIndices = cast(immutable(uint)*)arguments.queueFamilyIndices.ptr;
 		}
 		
@@ -202,6 +202,194 @@ class VulkanDeviceFacade {
 		static assert( TypesafeVkCommandBuffer.sizeof == VkCommandBuffer.sizeof ); // sizes have to be identical for array cheatery
 		vkFreeCommandBuffers(device, cast(VkCommandPool)commandPool, commandBuffers.length, cast(VkCommandBuffer*)commandBuffers.ptr);
 	}
+	
+	
+	public static struct CreateImageViewArguments {
+		VkImageViewCreateFlags     flags = 0; // default
+		TypesafeVkImage            image;
+		VkImageViewType            viewType;
+		VkFormat                   format;
+		VkComponentMapping         components; // default
+		VkImageSubresourceRange    subresourceRange; // default
+		
+		public static CreateImageViewArguments make() {
+			CreateImageViewArguments result = CreateImageViewArguments.init;
+			with( result.components ) {
+				r = g = b = a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			}
+			
+			with( result.subresourceRange ) {
+				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				baseMipLevel = 0;
+				levelCount = 1;
+				baseArrayLayer = 0;
+				layerCount = 1;
+			}
+			
+			return result;
+		}
+	}
+	
+	public final TypesafeVkImageView createImageView(CreateImageViewArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+		VkImageViewCreateInfo imageViewCreateInfo = VkImageViewCreateInfo.init;
+		with(imageViewCreateInfo) {
+			sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			flags = arguments.flags;
+			image = cast(VkImage)arguments.image;
+			viewType = arguments.viewType;
+			format = arguments.format;
+			components = arguments.components;
+			subresourceRange = arguments.subresourceRange;
+		}
+		
+		VkImageView rawImageView;
+		VkResult vulkanResult = vkCreateImageView(device, &imageViewCreateInfo, allocator, &rawImageView);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create image view [vkCreateImageView]!");
+		}
+		return cast(TypesafeVkImageView)rawImageView;
+	}
+	
+	public final void destroyImageView(TypesafeVkImageView imageView, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroyImageView(device, cast(VkImageView)imageView, allocator);
+	}
+	
+	public static struct CreateFramebufferArguments {
+		VkFramebufferCreateFlags flags = 0; // default
+		TypesafeVkRenderPass renderPass;
+		TypesafeVkImageView[] attachments;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t layers = 1; // default
+	}
+	
+	public final TypesafeVkFramebuffer createFramebuffer(CreateFramebufferArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+		VkImageView[] translatedAttachments;
+		translatedAttachments.length = arguments.attachments.length;
+		foreach( i; 0..arguments.attachments.length ) {
+			translatedAttachments[i] = cast(VkImageView)arguments.attachments[i];
+		}
+		
+		VkFramebufferCreateInfo framebufferCreateInfo = VkFramebufferCreateInfo.init;
+		with(framebufferCreateInfo) {
+			sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			flags = arguments.flags;
+			renderPass = cast(VkRenderPass)arguments.renderPass;
+			attachmentCount = cast(uint32_t)translatedAttachments.length;
+			pAttachments = cast(immutable(ulong)*)translatedAttachments.ptr;
+			width = arguments.width;
+			height = arguments.height;
+			layers = arguments.layers;
+		}
+		
+		VkFramebuffer rawFramebuffer;
+		VkResult vulkanResult = vkCreateFramebuffer(device, &framebufferCreateInfo, allocator, &rawFramebuffer);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create a framebuffer [vkCreateFramebuffer]!");
+		}
+		return cast(TypesafeVkFramebuffer)rawFramebuffer;
+	}
+	
+	public final void destroyFramebuffer(TypesafeVkFramebuffer framebuffer, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroyFramebuffer(device, cast(VkFramebuffer)framebuffer, allocator);
+	}
+	
+	
+	public static struct CreateRenderPassArguments {
+		VkRenderPassCreateFlags flags = 0;
+		VkAttachmentDescription[] attachmentDescriptions;
+		VkSubpassDescription[] subpassDescriptions;
+		VkSubpassDependency[] subpassDependencies;
+	}
+	
+	public final TypesafeVkRenderPass createRenderPass(CreateRenderPassArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+		VkRenderPassCreateInfo renderPassCreateInfo = VkRenderPassCreateInfo.init;
+		with(renderPassCreateInfo) {
+			sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			flags = arguments.flags;
+			attachmentCount = cast(uint32_t)arguments.attachmentDescriptions.length;
+			pAttachments = cast(immutable(VkAttachmentDescription)*)arguments.attachmentDescriptions.ptr;
+			subpassCount = cast(uint32_t)arguments.subpassDescriptions.length;
+			pSubpasses = cast(immutable(VkSubpassDescription)*)arguments.subpassDescriptions.ptr;
+			dependencyCount = cast(uint32_t)arguments.subpassDependencies.length;
+			pDependencies = cast(immutable(VkSubpassDependency)*)arguments.subpassDependencies.ptr;
+		}
+		
+		VkRenderPass rawRenderpass;
+		VkResult vulkanResult = vkCreateRenderPass(device, &renderPassCreateInfo, allocator, &rawRenderpass);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create render pass [vkCreateRenderPass]!");
+		}
+		return cast(TypesafeVkRenderPass)rawRenderpass;
+	}
+	
+	public final void destroyRenderPass(TypesafeVkRenderPass renderPass, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroyRenderPass(device, cast(VkRenderPass)renderPass, allocator);
+	}
+	
+	public static struct CreateGraphicsPipelineArguments {
+		VkPipelineCreateFlags flags = 0;
+		VkPipelineShaderStageCreateInfo[] stages;
+		VkPipelineVertexInputStateCreateInfo vertexInputState;
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
+		VkPipelineTessellationStateCreateInfo* tessellationState; // pointer because its optional
+		VkPipelineViewportStateCreateInfo viewportState;
+		VkPipelineRasterizationStateCreateInfo rasterizationState;
+		VkPipelineMultisampleStateCreateInfo multisampleState;
+		VkPipelineDepthStencilStateCreateInfo* depthStencilState; // pointer because its optional
+		VkPipelineColorBlendStateCreateInfo colorBlendState;
+		VkPipelineDynamicStateCreateInfo* dynamicState; // pointer because its optional
+		
+		TypesafeVkPipelineLayout layout;
+		TypesafeVkRenderPass renderPass;
+		
+		uint32_t subpass = 0; // default
+		TypesafeVkPipeline basePipeline = cast(TypesafeVkPipeline)0;
+		uint32_t basePipelineIndex = -1; // default
+	}
+	
+	public final TypesafeVkPipeline createGraphicsPipeline(CreateGraphicsPipelineArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+		VkGraphicsPipelineCreateInfo pipelineCreateInfo = VkGraphicsPipelineCreateInfo.init;
+		with(pipelineCreateInfo) {
+			sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+			flags = arguments.flags;
+			stageCount = cast(uint32_t)arguments.stages.length;
+			pStages = cast(immutable(VkPipelineShaderStageCreateInfo)*)arguments.stages.ptr;
+			pVertexInputState = cast(immutable(VkPipelineVertexInputStateCreateInfo)*)&arguments.vertexInputState;
+			pInputAssemblyState = cast(immutable(VkPipelineInputAssemblyStateCreateInfo)*)&arguments.inputAssemblyState;
+			pTessellationState = cast(immutable(VkPipelineTessellationStateCreateInfo)*)arguments.tessellationState;
+			pViewportState = cast(immutable(VkPipelineViewportStateCreateInfo)*)&arguments.viewportState;
+			pRasterizationState = cast(immutable(VkPipelineRasterizationStateCreateInfo)*)&arguments.rasterizationState;
+			pMultisampleState= cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&arguments.multisampleState;
+			pDepthStencilState = cast(immutable(VkPipelineDepthStencilStateCreateInfo)*)arguments.depthStencilState;
+			pColorBlendState = cast(immutable(VkPipelineColorBlendStateCreateInfo)*)&arguments.colorBlendState;
+			pDynamicState = cast(immutable(VkPipelineDynamicStateCreateInfo)*)arguments.dynamicState;
+			
+			layout = cast(VkPipelineLayout)arguments.layout;
+			renderPass = cast(VkRenderPass)arguments.renderPass;
+			subpass = arguments.subpass;
+			basePipelineHandle = cast(VkPipeline)arguments.basePipeline;
+			basePipelineIndex = arguments.basePipelineIndex;
+		}
+		
+		VkPipeline rawGraphicsPipeline;
+		VkResult vulkanResult = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, allocator, &rawGraphicsPipeline);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create graphics pipeline [vkCreateGraphicsPipelines]");
+		}
+		return cast(TypesafeVkPipeline)rawGraphicsPipeline;
+	}
+	
+	
+	public final void destroyPipeline(TypesafeVkPipeline pipeline, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroyPipeline(device, cast(VkPipeline)pipeline, allocator);
+	}
+	
+	public final void destroyPipelineLayout(TypesafeVkPipelineLayout pipelineLayout, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroyPipelineLayout(device, cast(VkPipelineLayout)pipelineLayout, allocator);
+	}
+	
+	
 	
 	public final @property device() {
 		return protectedDevice;

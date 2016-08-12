@@ -91,7 +91,7 @@ class GraphicsVulkan {
 		void createRenderpass() {
 			VkResult vulkanResult;
 			
-			VkAttachmentDescription attachment_descriptions[] = [
+			VkAttachmentDescription attachmentDescriptions[] = [
 				{
 					0,                                   // VkAttachmentDescriptionFlags   flags
 					// TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
@@ -112,51 +112,39 @@ class GraphicsVulkan {
 
 			// subpass description
 
-			VkAttachmentReference color_attachment_references[] = [
+			VkAttachmentReference colorAttachmentReferences[] = [
 				{
 					0,                                          // uint32_t                       attachment
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL    // VkImageLayout                  layout
 				}
 			];
 			 
-			VkSubpassDescription subpass_descriptions[] = [
+			VkSubpassDescription subpassDescriptions[] = [
 				{
 					0,                                          // VkSubpassDescriptionFlags      flags
 					VK_PIPELINE_BIND_POINT_GRAPHICS,            // VkPipelineBindPoint            pipelineBindPoint
 					0,                                          // uint32_t                       inputAttachmentCount
 					null,                                    // const VkAttachmentReference   *pInputAttachments
 					1,                                          // uint32_t                       colorAttachmentCount
-					cast(immutable(VkAttachmentReference)*)color_attachment_references.ptr,                // const VkAttachmentReference   *pColorAttachments
+					cast(immutable(VkAttachmentReference)*)colorAttachmentReferences.ptr,                // const VkAttachmentReference   *pColorAttachments
 					null,                                    // const VkAttachmentReference   *pResolveAttachments
 					null,                                    // const VkAttachmentReference   *pDepthStencilAttachment
 					0,                                          // uint32_t                       preserveAttachmentCount
 					null                                     // const uint32_t*                pPreserveAttachments
 				}
 			];
-
-
-			VkRenderPassCreateInfo render_pass_create_info = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,    // VkStructureType                sType
-				null,                                      // const void                    *pNext
-				0,                                            // VkRenderPassCreateFlags        flags
-				1,                                            // uint32_t                       attachmentCount
-				cast(immutable(VkAttachmentDescription)*)attachment_descriptions.ptr,                      // const VkAttachmentDescription *pAttachments
-				1,                                            // uint32_t                       subpassCount
-				cast(immutable(VkSubpassDescription)*)subpass_descriptions.ptr,                         // const VkSubpassDescription    *pSubpasses
-				0,                                            // uint32_t                       dependencyCount
-				null                                       // const VkSubpassDependency     *pDependencies
-			};
+			
 			
 			const(VkAllocationCallbacks*) allocator = null;
 			
-			VkRenderPass renderpass;
-			vulkanResult = vkCreateRenderPass(vulkanContext.chosenDevice.logicalDevice, &render_pass_create_info, allocator, &renderpass);
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't create render pass [vkCreateRenderPass]!");
-			}
+			VulkanDeviceFacade.CreateRenderPassArguments createRenderPassArguments = VulkanDeviceFacade.CreateRenderPassArguments.init;
+			createRenderPassArguments.flags = 0;
+			createRenderPassArguments.attachmentDescriptions = attachmentDescriptions;
+			createRenderPassArguments.subpassDescriptions = subpassDescriptions;
+			createRenderPassArguments.subpassDependencies = [];
+			TypesafeVkRenderPass renderPass = vkDevFacade.createRenderPass(createRenderPassArguments, allocator);
 			
-			
-			VulkanResourceDagResource!VkRenderPass renderPassDagResource = new VulkanResourceDagResource!VkRenderPass(vulkanContext.chosenDevice.logicalDevice, renderpass, allocator, &disposeRenderPass);
+			VulkanResourceDagResource!TypesafeVkRenderPass renderPassDagResource = new VulkanResourceDagResource!TypesafeVkRenderPass(vkDevFacade, renderPass, allocator, &disposeRenderPass);
 			renderPassResourceNode = resourceDag.createNode(renderPassDagResource);
 			
 			// we hold this because else the resourceDag would dispose them
@@ -284,38 +272,20 @@ class GraphicsVulkan {
 			// create image views
 			
 			foreach( i; 0..vulkanContext.swapChain.swapchainImages.length ) {
-				VkImageViewCreateInfo image_view_create_info;
-				with( image_view_create_info ) {
-					sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-					pNext = null;
-					flags = 0;
-					image = cast(VkImage)framebufferImageResource.resource.value;
-					viewType = VK_IMAGE_VIEW_TYPE_2D;
-					format = framebufferImageFormat;
-					with( components ) {
-						r = g = b = a = VK_COMPONENT_SWIZZLE_IDENTITY;
-					}
-					
-					with( subresourceRange ) {
-						aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-						baseMipLevel = 0;
-						levelCount = 1;
-						baseArrayLayer = 0;
-						layerCount = 1;
-					}
-				};
-				
 				ResourceDag.ResourceNode imageViewResourceNode;
 				{ // brace to scope the allocator
 					const(VkAllocationCallbacks*) allocator = null;
 					
-					VkImageView createdImageView;
-					vulkanResult = vkCreateImageView(vulkanContext.chosenDevice.logicalDevice, &image_view_create_info, allocator, &createdImageView);
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Couldn't create image view for framebuffer [vkCreateImageView]!");
+					VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments = VulkanDeviceFacade.CreateImageViewArguments.make();
+					with(createImageViewArguments) {
+						flags = 0;
+						image = framebufferImageResource.resource.value;
+						viewType = VK_IMAGE_VIEW_TYPE_2D;
+						format = framebufferImageFormat;
 					}
+					TypesafeVkImageView createdImageView = vkDevFacade.createImageView(createImageViewArguments, allocator);
 						
-					VulkanResourceDagResource!VkImageView imageViewDagResource = new VulkanResourceDagResource!VkImageView(vulkanContext.chosenDevice.logicalDevice, createdImageView, allocator, &disposeImageView);
+					VulkanResourceDagResource!TypesafeVkImageView imageViewDagResource = new VulkanResourceDagResource!TypesafeVkImageView(vkDevFacade, createdImageView, allocator, &disposeImageView);
 					imageViewResourceNode = resourceDag.createNode(imageViewDagResource);
 					
 					// we hold this because else the resourceDag would dispose them
@@ -323,39 +293,33 @@ class GraphicsVulkan {
 					
 					framebufferImageViewsResourceNodes ~= imageViewResourceNode;
 				}
-
-
-
-				VkImageView imageViewForFramebuffer = (cast(VulkanResourceDagResource!VkImageView)imageViewResourceNode.resource).resource;
-				// specifiy framebuffer parameters
-				VkFramebufferCreateInfo framebuffer_create_info = {
-					VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,  // VkStructureType                sType
-					null,                                    // const void                    *pNext
-					0,                                          // VkFramebufferCreateFlags       flags
-					(cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource,                          // VkRenderPass                   renderPass
-					1,                                          // uint32_t                       attachmentCount
-					cast(immutable(ulong)*)&imageViewForFramebuffer,    // const VkImageView             *pAttachments
-					300,                                        // uint32_t                       width
-					300,                                        // uint32_t                       height
-					1                                           // uint32_t                       layers
-				};
+				
+				
+				
+				TypesafeVkImageView imageViewForFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkImageView)imageViewResourceNode.resource).resource;
+				
+				VulkanDeviceFacade.CreateFramebufferArguments createFramebufferArguments = VulkanDeviceFacade.CreateFramebufferArguments.init;
+				with(createFramebufferArguments) {
+					flags = 0;
+					renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
+					attachments = [imageViewForFramebuffer];
+					width = 300;
+					height = 300;
+				}
 				
 				{ // brace to scope the allocator
 					const(VkAllocationCallbacks*) allocator = null;
-
-					VkFramebuffer createdFramebuffer;
-					vulkanResult = vkCreateFramebuffer(vulkanContext.chosenDevice.logicalDevice, &framebuffer_create_info, allocator, &createdFramebuffer);
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Couldn't create a framebuffer [vkCreateFramebuffer]!");
-					}
+					TypesafeVkFramebuffer createdFramebuffer = vkDevFacade.createFramebuffer(createFramebufferArguments, allocator);
 					
-					VulkanResourceDagResource!VkFramebuffer framebufferDagResource = new VulkanResourceDagResource!VkFramebuffer(vulkanContext.chosenDevice.logicalDevice, createdFramebuffer, allocator, &disposeFramebuffer);
+					VulkanResourceDagResource!TypesafeVkFramebuffer framebufferDagResource = new VulkanResourceDagResource!TypesafeVkFramebuffer(vkDevFacade, createdFramebuffer, allocator, &disposeFramebuffer);
 					ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource);
 					imageViewResourceNode.addChild(framebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
 					framebufferResourceNode.addChild(renderPassResourceNode); // link it because it depends on the renderpass
-	
+					
 					framebufferFramebufferResourceNodes ~= framebufferResourceNode;
 				}
+				
+			
 			}
 		}
 		
@@ -494,7 +458,6 @@ class GraphicsVulkan {
 				1.0f                                                          // float                                          lineWidth
 			};
 			
-			// setting multisample state description
 			VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.init;
 			with(multisampleStateCreateInfo) {
 				sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -532,42 +495,39 @@ class GraphicsVulkan {
 
 
 			// create graphics pipeline
-			VkPipelineLayout pipelineLayout = createPipelineLayout();
-			scope(exit) vkDestroyPipelineLayout(vulkanContext.chosenDevice.logicalDevice, pipelineLayout, null);
-			
-			VkRenderPass renderPass = (cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource;
-			
-			VkGraphicsPipelineCreateInfo pipeline_create_info = {
-				VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,              // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineCreateFlags                          flags
-				cast(uint32_t)shader_stage_create_infos.length,      // uint32_t                                       stageCount
-				cast(immutable(VkPipelineShaderStageCreateInfo)*)&shader_stage_create_infos[0],                                // const VkPipelineShaderStageCreateInfo         *pStages
-				cast(immutable(VkPipelineVertexInputStateCreateInfo)*)&vertex_input_state_create_info,                              // const VkPipelineVertexInputStateCreateInfo    *pVertexInputState;
-				cast(immutable(VkPipelineInputAssemblyStateCreateInfo)*)&input_assembly_state_create_info,                            // const VkPipelineInputAssemblyStateCreateInfo  *pInputAssemblyState
-				null,                                                      // const VkPipelineTessellationStateCreateInfo   *pTessellationState
-				cast(immutable(VkPipelineViewportStateCreateInfo)*)&viewport_state_create_info,                                  // const VkPipelineViewportStateCreateInfo       *pViewportState
-				cast(immutable(VkPipelineRasterizationStateCreateInfo)*)&rasterization_state_create_info,                             // const VkPipelineRasterizationStateCreateInfo  *pRasterizationState
-				cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&multisampleStateCreateInfo,                               // const VkPipelineMultisampleStateCreateInfo    *pMultisampleState
-				null,                                                      // const VkPipelineDepthStencilStateCreateInfo   *pDepthStencilState
-				cast(immutable(VkPipelineColorBlendStateCreateInfo)*)&color_blend_state_create_info,                               // const VkPipelineColorBlendStateCreateInfo     *pColorBlendState
-				null,                                                      // const VkPipelineDynamicStateCreateInfo        *pDynamicState
-				pipelineLayout,                                        // VkPipelineLayout                               layout
-				renderPass,                                            // VkRenderPass                                   renderPass
-				0,                                                            // uint32_t                                       subpass
-				0,                                               // VkPipeline                                     basePipelineHandle
-				-1                                                            // int32_t                                        basePipelineIndex
-			};
-			
-			VkPipeline createdGraphicsPipeline;
-			vulkanResult = vkCreateGraphicsPipelines(vulkanContext.chosenDevice.logicalDevice, VK_NULL_HANDLE, 1, &pipeline_create_info, null, &createdGraphicsPipeline );
-			if( !vulkanSuccess(vulkanResult) ) {
-				throw new EngineException(true, true, "Couldn't create graphics pipeline [vkCreateGraphicsPipelines]");
+			TypesafeVkPipelineLayout pipelineLayout = createPipelineLayout();
+			scope(exit) {
+				vkDevFacade.destroyPipelineLayout(pipelineLayout);
 			}
 			
-			const(VkAllocationCallbacks*) allocator = null;
+			TypesafeVkRenderPass renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
 			
-			VulkanResourceDagResource!VkPipeline pipelineDagResource = new VulkanResourceDagResource!VkPipeline(vulkanContext.chosenDevice.logicalDevice, createdGraphicsPipeline, allocator, &disposePipeline);
+			
+			VulkanDeviceFacade.CreateGraphicsPipelineArguments createGraphicsPipelineArguments = VulkanDeviceFacade.CreateGraphicsPipelineArguments.init;
+			with(createGraphicsPipelineArguments) {
+				flags = 0;
+				stages = shader_stage_create_infos;
+				vertexInputState = vertex_input_state_create_info;
+				inputAssemblyState = input_assembly_state_create_info;
+				tessellationState = null;
+				viewportState = viewport_state_create_info;
+				rasterizationState = rasterization_state_create_info;
+				multisampleState = multisampleStateCreateInfo;
+				depthStencilState = null;
+				colorBlendState = color_blend_state_create_info;
+				dynamicState = null;
+				
+				layout = pipelineLayout;
+				
+				// all others are default
+			}
+			createGraphicsPipelineArguments.renderPass = renderPass;
+			
+			
+			const(VkAllocationCallbacks*) allocator = null;
+			TypesafeVkPipeline createdGraphicsPipeline = vkDevFacade.createGraphicsPipeline(createGraphicsPipelineArguments, allocator);
+			
+			VulkanResourceDagResource!TypesafeVkPipeline pipelineDagResource = new VulkanResourceDagResource!TypesafeVkPipeline(vkDevFacade, createdGraphicsPipeline, allocator, &disposePipeline);
 			pipelineResourceNode = resourceDag.createNode(pipelineDagResource);
 			
 			// we hold this because else the resourceDag would dispose them
@@ -602,8 +562,8 @@ class GraphicsVulkan {
 			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
 			VkQueue presentQueue = vulkanContext.queueManager.getQueueByName("present");;
 			
-			VkRenderPass renderPass = (cast(VulkanResourceDagResource!VkRenderPass)renderPassResourceNode.resource).resource;
-			VkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!VkPipeline)pipelineResourceNode.resource).resource;
+			TypesafeVkRenderPass renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
+			TypesafeVkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineResourceNode.resource).resource;
 
 			foreach( i; 0..commandBuffersForCopy.length ) {
 				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBuffersForCopy[i], &graphicsCommandBufferBeginInfo);
@@ -709,13 +669,13 @@ class GraphicsVulkan {
 				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
 				
 				
-				VkFramebuffer framebuffer = (cast(VulkanResourceDagResource!VkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
+				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
 				VkRenderPassBeginInfo render_pass_begin_info = {
 					VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,     // VkStructureType                sType
 					null,                                      // const void                    *pNext
-					renderPass,                            // VkRenderPass                   renderPass
-					framebuffer,          // VkFramebuffer                  framebuffer
+					cast(VkRenderPass)renderPass,                            // VkRenderPass                   renderPass
+					cast(VkFramebuffer)framebuffer,          // VkFramebuffer                  framebuffer
 					{                                             // VkRect2D                       renderArea
 						{                                           // VkOffset2D                     offset
 							0,                                          // int32_t                        x
@@ -733,7 +693,7 @@ class GraphicsVulkan {
 
 				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 				
-				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
 				
 				vkCmdDraw(cast(VkCommandBuffer)commandBufferForRendering, 3, 1, 0, 0);
 				
