@@ -5,18 +5,18 @@ module graphics.vulkan.abstraction.VulkanDevicelessFacade;
 import Exceptions;
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
-
+import graphics.vulkan.VulkanTypesAndEnums;
 
 // Facade for vulkan functionality qhich odesnt need the device
 class VulkanDevicelessFacade {
 	
 	public static void queueSubmit(
-		VkQueue queue,
-		VkSemaphore[] waitSemaphores,
-		VkSemaphore[] signalSemaphores,
-		VkCommandBuffer[] commandBuffers,
+		TypesafeVkQueue queue,
+		TypesafeVkSemaphore[] waitSemaphores,
+		TypesafeVkSemaphore[] signalSemaphores,
+		TypesafeVkCommandBuffer[] commandBuffers,
 		VkPipelineStageFlags[] waitDstStageMasks,
-		VkFence signalFence = VK_NULL_HANDLE
+		TypesafeVkFence signalFence = cast(TypesafeVkFence)VK_NULL_HANDLE
 	) {
 		assert(waitDstStageMasks.length == waitSemaphores.length);
 		
@@ -32,7 +32,7 @@ class VulkanDevicelessFacade {
 			pSignalSemaphores = cast(const(immutable(VkSemaphore)*))signalSemaphores.ptr;
 		}
 		
-		VkResult vulkanResult = vkQueueSubmit(queue, 1, &submitInfo, signalFence);
+		VkResult vulkanResult = vkQueueSubmit(cast(VkQueue)queue, 1, &submitInfo, cast(VkFence)signalFence);
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Queue submit failed! [vkQueueSubmit]");
 		}
