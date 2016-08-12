@@ -94,27 +94,26 @@ class GraphicsVulkan {
 		void createRenderpass() {
 			VkResult vulkanResult;
 			
-			VkAttachmentDescription attachmentDescriptions[] = [
-				{
-					0,                                   // VkAttachmentDescriptionFlags   flags
-					// TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
-					VK_FORMAT_A2B10G10R10_UINT_PACK32,               // VkFormat                       format
-					VK_SAMPLE_COUNT_1_BIT,               // VkSampleCountFlagBits          samples
-					VK_ATTACHMENT_LOAD_OP_CLEAR,         // VkAttachmentLoadOp             loadOp
-					VK_ATTACHMENT_STORE_OP_STORE,        // VkAttachmentStoreOp            storeOp
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE,     // VkAttachmentLoadOp             stencilLoadOp
-					VK_ATTACHMENT_STORE_OP_DONT_CARE,    // VkAttachmentStoreOp            stencilStoreOp
+			VkAttachmentDescription[] attachmentDescriptions;
+			{
+				VkAttachmentDescription attachmentDescriptionToAdd;
+				with(attachmentDescriptionToAdd) {
+					flags = 0;
+					format = VK_FORMAT_A2B10G10R10_UINT_PACK32; // TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
+					samples = VK_SAMPLE_COUNT_1_BIT;
+					loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+					storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+					stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+					stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+					initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // we overwrite it so it shouldn't matter
+					finalLayout = VK_IMAGE_LAYOUT_GENERAL; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
 					
-					VK_IMAGE_LAYOUT_UNDEFINED, // we overwrite it so it shouldn't matter      //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,     // VkImageLayout                  initialLayout;
-					
-					// TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
-					VK_IMAGE_LAYOUT_GENERAL//VK_IMAGE_LAYOUT_PRESENT_SRC_KHR      // VkImageLayout                  finalLayout
 				}
-			];
-
-
+				attachmentDescriptions ~= attachmentDescriptionToAdd;
+			}
+			
 			// subpass description
-
+			
 			VkAttachmentReference colorAttachmentReferences[] = [
 				{
 					0,                                          // uint32_t                       attachment
@@ -444,15 +443,17 @@ class GraphicsVulkan {
 				}
 			};
 			
+			VkViewport[1] viewports = [viewport];
+			VkRect2D[1] scissors = [scissor];
 			
-			VkPipelineViewportStateCreateInfo viewport_state_create_info = {
-				VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,        // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineViewportStateCreateFlags             flags
-				1,                                                            // uint32_t                                       viewportCount
-				cast(immutable(VkViewport)*)&viewport,                                                    // const VkViewport                              *pViewports
-				1,                                                            // uint32_t                                       scissorCount
-				cast(immutable(VkRect2D)*)&scissor                                                      // const VkRect2D                                *pScissors
+			VkPipelineViewportStateCreateInfo viewportStateCreateInfo = VkPipelineViewportStateCreateInfo.init;
+			with(viewportStateCreateInfo) {
+				sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+				flags = 0;
+				viewportCount = cast(uint32_t)viewports.length,
+				pViewports = cast(immutable(VkViewport)*)viewports.ptr,
+				scissorCount = cast(uint32_t)scissors.length;
+				pScissors = cast(immutable(VkRect2D)*)scissors.ptr;
 			};
 			
 			
@@ -525,7 +526,7 @@ class GraphicsVulkan {
 				vertexInputState = vertexInputStateCreateInfo;
 				inputAssemblyState = input_assembly_state_create_info;
 				tessellationState = null;
-				viewportState = viewport_state_create_info;
+				viewportState = viewportStateCreateInfo;
 				rasterizationState = rasterization_state_create_info;
 				multisampleState = multisampleStateCreateInfo;
 				depthStencilState = null;
