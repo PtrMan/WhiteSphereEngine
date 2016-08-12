@@ -36,6 +36,14 @@ class VulkanDeviceFacade {
 		}
 	}
 	
+	public final void bind(TypesafeVkBuffer buffer, TypesafeVkDeviceMemory memory, VkDeviceSize memoryOffset) {
+		VkResult result = vkBindBufferMemory(device, cast(VkBuffer)buffer, cast(VkDeviceMemory)memory, memoryOffset);
+		if( !result.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't bind memory! [vkBindBufferMemory]");
+		}
+	}
+
+	
 	public final TypesafeVkSemaphore createSemaphore(const VkAllocationCallbacks* allocator = null) {
 		VkSemaphore rawSemaphore;
 		const VkSemaphoreCreateInfo semaphoreCreateInfo = {

@@ -946,8 +946,10 @@ class GraphicsVulkan {
 			triangle[1] = v2;
 			triangle[2] = v3;
 		}
-		assert(false, "TODO< bind >");
 		
+		vkDevFacade.bind(vboPositionBufferResource.resource.value, vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboPositionBufferResource.derivedInformation.value.offset);
+		
+		assert(false, "TODO<after bind >");
 		
 		
 		
