@@ -464,7 +464,7 @@ class GraphicsVulkan {
 				VK_FALSE,                                                     // VkBool32                                       depthClampEnable
 				VK_FALSE,                                                     // VkBool32                                       rasterizerDiscardEnable
 				VK_POLYGON_MODE_FILL,                                         // VkPolygonMode                                  polygonMode
-				VK_CULL_MODE_BACK_BIT,                                        // VkCullModeFlags                                cullMode
+				VK_CULL_MODE_NONE,//VK_CULL_MODE_BACK_BIT,                                        // VkCullModeFlags                                cullMode
 				VK_FRONT_FACE_COUNTER_CLOCKWISE,                              // VkFrontFace                                    frontFace
 				VK_FALSE,                                                     // VkBool32                                       depthBiasEnable
 				0.0f,                                                         // float                                          depthBiasConstantFactor
@@ -542,7 +542,6 @@ class GraphicsVulkan {
 			const(VkAllocationCallbacks*) allocator = null;
 			TypesafeVkPipeline createdGraphicsPipeline = vkDevFacade.createGraphicsPipeline(createGraphicsPipelineArguments, allocator);
 			
-			assert(false);
 			
 			VulkanResourceDagResource!TypesafeVkPipeline pipelineDagResource = new VulkanResourceDagResource!TypesafeVkPipeline(vkDevFacade, createdGraphicsPipeline, allocator, &disposePipeline);
 			pipelineResourceNode = resourceDag.createNode(pipelineDagResource);
