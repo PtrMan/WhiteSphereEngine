@@ -52,3 +52,11 @@ https://forums.spacebattles.com/threads/essay-on-realistic-space-combat-i-wrote.
 https://groups.yahoo.com/neo/groups/sfconsim-l/conversations/messages/99704
 	long range combat
 
+
+
+astronomy
+----
+
+* calculate deformation of planetary objects based on rotation speed (fast rotating objects get squished)
+	https://en.wikipedia.org/wiki/Equatorial_bulge
+	

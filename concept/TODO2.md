@@ -1,4 +1,18 @@
 
+procedural generation
+	* (TU) mathematica and code for mesh parameterisation (calculate UV coordinates for mesh)
+
+physics
+	* (TU) code to find closest object in a acceperated datastructure
+
+	ray
+		* (TU) code to trace through hashgrid, for raylike fast colli
+
+==================
+very old:
+
+
+
 * recode OpenCl wrapper from C++ to D
    * add the aqusation and release to the D code
 
