@@ -28,9 +28,12 @@ class GraphicsVulkan {
 		static struct DerivedInformation {
 			uint32_t typeIndex; // type index of the resource as reported by vkGet*MemoryRequirements
 		
-			VulkanMemoryAllocator.OffsetType offset; // allocated offset in the heap
+			VulkanMemoryAllocator.OffsetType offset; // allocated offset in the heap			
+			VkDeviceSize allocatedSize; // the real allocated size for this resource
+			
 			VulkanMemoryAllocator.HintAllocatedSizeType hintAllocatedSize; // real size allocated by the allocator, for an hint of the allocator
 			                                                               // the nullable indicates to the allocator which tpye of alloction it was actually
+			VulkanMemoryAllocator allocatorForResource; // which allocator was used to allocate the resource
 		}
 		
 		VariableValidator!Datatype resource;
@@ -922,6 +925,32 @@ class GraphicsVulkan {
 		resourceQueryAllocate(vboPositionBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
 		
 		
+		struct Vertex{
+			float x,y,z,w; // has to be 4 values to make the alignment simple
+		}
+		
+		{ // scope to automatically unmap
+			void *hostPtr = vkDevFacade.map(
+				vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory,
+				vboPositionBufferResource.derivedInformation.value.offset,
+				vboPositionBufferResource.derivedInformation.value.allocatedSize,
+				0 /* flags */
+			);
+			scope(exit) vkDevFacade.unmap(vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory);
+			
+			Vertex *triangle = cast(Vertex*)hostPtr;
+			Vertex v1 = { -1.0f, -1.0f, 0, 1.0f };
+			Vertex v2 = {  1.0f, -1.0f, 0, 1.0f };
+			Vertex v3 = {  0.0f,  1.0f, 0, 1.0f };
+			triangle[0] = v1;
+			triangle[1] = v2;
+			triangle[2] = v3;
+		}
+		assert(false, "TODO< bind >");
+		
+		
+		
+		
 
 
 		// TODO< call next function for initialisation >
@@ -986,17 +1015,13 @@ class GraphicsVulkan {
 		
 		// allocate
 		VulkanMemoryAllocator.AllocatorConfiguration allocatorConfiguration = getDefaultAllocatorConfigurationByTypeIndexAndUsage(resourceWithMemDeco.derivedInformation.value.typeIndex, usage);
-		VulkanMemoryAllocator allocatorForResource = vulkanContext.retriveOrCreateMemoryAllocatorByTypeIndex(resourceWithMemDeco.derivedInformation.value.typeIndex, allocatorConfiguration);
+		VulkanMemoryAllocator allocatorForResource = resourceWithMemDeco.derivedInformation.value.allocatorForResource = vulkanContext.retriveOrCreateMemoryAllocatorByTypeIndex(resourceWithMemDeco.derivedInformation.value.typeIndex, allocatorConfiguration);
 		resourceWithMemDeco.derivedInformation.value.offset = allocatorForResource.allocate(memRequirements.size, memRequirements.alignment, /* out */resourceWithMemDeco.derivedInformation.value.hintAllocatedSize);
+		resourceWithMemDeco.derivedInformation.value.allocatedSize = memRequirements.size;
 		
 		return allocatorForResource;
 	}
 	
-	/**
-	 * * query the size and required memory attributes of the vulkan handle
-	 * * find a suitable allocator or create a new one for the memory
-	 * * allocate the memory from the allocator
-	 */
 	protected final void resourceQueryAllocate(VulkanResourceType)(VulkanResourceWithMemoryDecoration!VulkanResourceType resourceWithMemDeco, VkFlags requiredMemoryProperties, string usage) {
 		resourceQueryAllocateInternal(resourceWithMemDeco, requiredMemoryProperties, usage);
 	}

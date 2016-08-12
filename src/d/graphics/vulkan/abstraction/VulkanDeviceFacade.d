@@ -29,8 +29,8 @@ class VulkanDeviceFacade {
 	}
 
 	
-	public final void bind(TypesafeVkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) {
-		VkResult result = vkBindImageMemory(device, cast(VkImage)image, memory, memoryOffset);
+	public final void bind(TypesafeVkImage image, TypesafeVkDeviceMemory memory, VkDeviceSize memoryOffset) {
+		VkResult result = vkBindImageMemory(device, cast(VkImage)image, cast(VkDeviceMemory)memory, memoryOffset);
 		if( !result.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't bind memory! [vkBindImageMemory]");
 		}
@@ -389,7 +389,19 @@ class VulkanDeviceFacade {
 		vkDestroyPipelineLayout(device, cast(VkPipelineLayout)pipelineLayout, allocator);
 	}
 	
+	public final void* map(TypesafeVkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags) {
+		void *mapResult;
+		VkResult vulkanResult = vkMapMemory(device, cast(VkDeviceMemory)memory, offset, size, flags, &mapResult);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't map memory! [vkMapMemory]");
+		}
+		
+		return mapResult;
+	}
 	
+	public final void unmap(TypesafeVkDeviceMemory memory) {
+		vkUnmapMemory(device, cast(VkDeviceMemory)memory);
+	}
 	
 	public final @property device() {
 		return protectedDevice;

@@ -7,6 +7,7 @@ import Exceptions;
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
 import graphics.vulkan.VulkanContext;
+import graphics.vulkan.VulkanTypesAndEnums;
 import common.IDisposable;
 import helpers.VariableValidator;
 import memory.lowLevel.QuickFitAllocator;
@@ -101,7 +102,7 @@ class VulkanMemoryAllocator : IDisposable {
 			// is not fatal because the application could free unused memory
 			throw new EngineException(false, true, "Couldn't allocate initial memory! [vkAllocateMemory]");
 		}
-		this.protectedDeviceMemory = localDeviceMemory;
+		this.protectedDeviceMemory = cast(TypesafeVkDeviceMemory)localDeviceMemory;
 	}
 	
 	protected final void vulkanFreeMemory() {
@@ -110,19 +111,19 @@ class VulkanMemoryAllocator : IDisposable {
 			return;
 		}
 		
-		vkFreeMemory(vulkanContext.chosenDevice.logicalDevice, protectedDeviceMemory.value, null);
+		vkFreeMemory(vulkanContext.chosenDevice.logicalDevice, cast(VkDeviceMemory)protectedDeviceMemory.value, null);
 		
 		protectedDeviceMemory.invalidate();
 	}
 	
-	public final @property VkDeviceMemory deviceMemory() {
+	public final @property TypesafeVkDeviceMemory deviceMemory() {
 		return protectedDeviceMemory.value;
 	}
 	
 	
 	protected VulkanContext vulkanContext;
 	protected VulkanMemoryAllocator.AllocatorConfiguration allocatorConfiguration;
-	protected VariableValidator!VkDeviceMemory protectedDeviceMemory;
+	protected VariableValidator!TypesafeVkDeviceMemory protectedDeviceMemory;
 	
 	
 	protected FirstFitAllocatorType firstFitAllocator; // parent/child allocator, not directly touched
