@@ -353,7 +353,7 @@ class GraphicsVulkan {
 			// prepare description of stages
 			
 			VkShaderModule vertexShaderModule, fragmentShaderModule;
-			IDisposable vertexShaderMemory = loadShader("TestHardcoded.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
+			IDisposable vertexShaderMemory = loadShader("SimpleNontransforming_2.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
 			scope(exit) vertexShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, vertexShaderModule, null);
 			IDisposable fragmentShaderMemory = loadShader("Simple1.frag.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
@@ -387,19 +387,31 @@ class GraphicsVulkan {
 
 
 			// prepare description of vertex input
+			VkVertexInputBindingDescription vertexBindingDescription = VkVertexInputBindingDescription.init;
+			vertexBindingDescription.binding = 0;
+			vertexBindingDescription.stride = 4*4;//sizeof(vertex);
+			vertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-			VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
-				VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,    // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineVertexInputStateCreateFlags          flags;
-				0,                                                            // uint32_t                                       vertexBindingDescriptionCount
-				null,                                                      // const VkVertexInputBindingDescription         *pVertexBindingDescriptions
-				0,                                                            // uint32_t                                       vertexAttributeDescriptionCount
-				null                                                       // const VkVertexInputAttributeDescription       *pVertexAttributeDescriptions
-			};
-
-
-
+			VkVertexInputAttributeDescription vertexAttributeDescription = VkVertexInputAttributeDescription.init;
+			vertexAttributeDescription.location = 0;
+			vertexAttributeDescription.binding = 0;
+			vertexAttributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			vertexAttributeDescription.offset = 0;
+			
+			VkVertexInputBindingDescription[] vertexInputBindingDescriptions = [vertexBindingDescription];
+			VkVertexInputAttributeDescription[] vertexInputAttributeDescriptions = [vertexAttributeDescription];
+			
+			assert(vertexInputBindingDescriptions.length == vertexInputAttributeDescriptions.length);
+			VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.init;
+			with(vertexInputStateCreateInfo) {
+				sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+				flags = 0;
+				vertexBindingDescriptionCount = cast(uint32_t)vertexInputBindingDescriptions.length;
+				pVertexBindingDescriptions = cast(immutable(VkVertexInputBindingDescription)*)vertexInputBindingDescriptions.ptr;                                                            // uint32_t                                       vertexBindingDescriptionCount
+				vertexAttributeDescriptionCount = cast(uint32_t)vertexInputAttributeDescriptions.length;
+				pVertexAttributeDescriptions = cast(immutable(VkVertexInputAttributeDescription)*)vertexInputAttributeDescriptions.ptr;
+			}
+			
 			// prepare description of input assembly
 			VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
 				VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,  // VkStructureType                                sType
@@ -485,7 +497,7 @@ class GraphicsVulkan {
 			};
 			
 			
-			VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
+			VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = {
 				VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,     // VkStructureType                                sType
 				null,                                                      // const void                                    *pNext
 				0,                                                            // VkPipelineColorBlendStateCreateFlags           flags
@@ -510,14 +522,14 @@ class GraphicsVulkan {
 			with(createGraphicsPipelineArguments) {
 				flags = 0;
 				stages = shader_stage_create_infos;
-				vertexInputState = vertex_input_state_create_info;
+				vertexInputState = vertexInputStateCreateInfo;
 				inputAssemblyState = input_assembly_state_create_info;
 				tessellationState = null;
 				viewportState = viewport_state_create_info;
 				rasterizationState = rasterization_state_create_info;
 				multisampleState = multisampleStateCreateInfo;
 				depthStencilState = null;
-				colorBlendState = color_blend_state_create_info;
+				colorBlendState = colorBlendStateCreateInfo;
 				dynamicState = null;
 				
 				layout = pipelineLayout;
@@ -529,6 +541,8 @@ class GraphicsVulkan {
 			
 			const(VkAllocationCallbacks*) allocator = null;
 			TypesafeVkPipeline createdGraphicsPipeline = vkDevFacade.createGraphicsPipeline(createGraphicsPipelineArguments, allocator);
+			
+			assert(false);
 			
 			VulkanResourceDagResource!TypesafeVkPipeline pipelineDagResource = new VulkanResourceDagResource!TypesafeVkPipeline(vkDevFacade, createdGraphicsPipeline, allocator, &disposePipeline);
 			pipelineResourceNode = resourceDag.createNode(pipelineDagResource);
@@ -697,6 +711,11 @@ class GraphicsVulkan {
 				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 				
 				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+				
+				VkBuffer[1] vertexBuffersToBind = [cast(VkBuffer)vboPositionBufferResource.resource.value];
+				VkDeviceSize[1] offsets = [0];
+				assert(vertexBuffersToBind.length == offsets.length);
+				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr );
 				
 				vkCmdDraw(cast(VkCommandBuffer)commandBufferForRendering, 3, 1, 0, 0);
 				
@@ -868,7 +887,9 @@ class GraphicsVulkan {
 
 		createFramebuffer();
 		scope(exit) releaseFramebufferResources();
-
+		
+		
+		
 		//////////////////
 		// create graphics pipeline
 		//////////////////
@@ -897,19 +918,15 @@ class GraphicsVulkan {
 			
 			vkDevFacade.freeCommandBuffer(commandBufferForRendering, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
-
 		
 		//////////////////
-		// record command buffers
-		//////////////////
+		// allocate and bind resources
 		
-		recordingCommandBuffers();
+		// binding must happen before the filling of the command buffers
 		
-		
-		
-		//////////////////
+		/////
 		// create buffer for vertex information and fill it 
-		//////////////////
+		
 		VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
 		createBufferArguments.size = /*vertex.sizeof*/16   * 3;
 		createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -949,7 +966,16 @@ class GraphicsVulkan {
 		
 		vkDevFacade.bind(vboPositionBufferResource.resource.value, vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboPositionBufferResource.derivedInformation.value.offset);
 		
-		assert(false, "TODO<after bind >");
+		
+		
+		
+		//////////////////
+		// record command buffers
+		
+		recordingCommandBuffers();
+		
+		
+		
 		
 		
 		
