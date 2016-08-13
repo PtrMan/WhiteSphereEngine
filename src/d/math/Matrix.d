@@ -3,24 +3,27 @@ module math.Matrix;
 import math.NumericSpatialVectors;
 
 // TODO< for more than two dimensions! >
-template Matrix(Type, uint width, uint height) {
+template Matrix(DataType, uint width, uint height) if (width > 1 && height > 1) {
 	class Matrix {
 		public this() {
-			data = new SpatialVector!(width*height, Type, false)();
+			data = new SpatialVector!(width*height, DataType, false)();
 		}
 		
-		public this(Type[width*height] content ...) {
-			this.data = new SpatialVector!(width*height, Type, false)(content);
+		public this(DataType[width*height] content ...) {
+			this.data = new SpatialVector!(width*height, DataType, false)(content);
 		}
-
-		public final Type opIndexAssign(Type value, size_t row, size_t column) {
+		
+		public final DataType opIndexAssign(DataType value, size_t row, size_t column) {
 			return data.data[row*width + column] = value;
 		}
-
-		public final Type opIndex(size_t row, size_t column) {
+		
+		public final DataType opIndex(size_t row, size_t column) {
 			return data.data[row*width + column];
 		}
-
-		private SpatialVector!(width*height, Type, false) data;
+		
+		private SpatialVector!(width*height, DataType, false) data;
+		
+		public enum RAWDATALENGTH = width*height;
+		public alias Type = DataType;
 	}
 }
