@@ -21,6 +21,11 @@ template Matrix(DataType, uint width, uint height) if (width > 1 && height > 1) 
 			return data.data[row*width + column];
 		}
 		
+		final public @property Type* ptr() {
+			return data.ptr;
+		}
+
+		
 		private SpatialVector!(width*height, DataType, false) data;
 		
 		public enum RAWDATALENGTH = width*height;

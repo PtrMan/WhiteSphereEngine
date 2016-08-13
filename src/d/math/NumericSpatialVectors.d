@@ -143,11 +143,9 @@ template SpatialVector(uint Size, Type, bool Scalable = true) {
             return new SpatialVector!(Size, Type, Scalable)(data[0..Size]);
         }
 
-
-        /*
-        */
-
-
+		final public @property Type* ptr() {
+			return data.ptr;
+		}
     }
 }
 
