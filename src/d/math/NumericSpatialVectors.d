@@ -12,6 +12,118 @@ template NumericVector(uint Size, Type) {
     }
 }
 
+private mixin template SpatialVectorMixin(bool isClass) {
+    final public SpatialVector!(Size, Type, Scalable) opBinary(string op)(Type rhs) {
+        SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
+
+        static if (op == "*") {
+            static if (!Scalable) {
+                static assert(0, "SpatialVector is not scalable!");
+            }
+
+            result.data[0] = this.data[0] * rhs;
+            result.data[1] = this.data[1] * rhs;
+
+            static if (Size >= 3) {
+               result.data[2] = this.data[2] * rhs;
+            }
+
+            // TODO< size bigger than 3 >
+            
+            return result;
+        }
+        else {
+            static assert(0, "Operator "~op~" not implemented");
+        }
+    }
+    
+    final public SpatialVector!(Size, Type, Scalable) opOpAssign(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
+        static if (op == "+") {
+            this.data[0] += rhs.data[0];
+            this.data[1] += rhs.data[1];
+
+            static if (Size >= 3) {
+               this.data[2] += rhs.data[2];
+            }
+
+            // TODO< size bigger than 3 >
+        }
+        else static if (op == "-") {
+            this.data[0] -= rhs.data[0];
+            this.data[1] -= rhs.data[1];
+
+            static if (Size >= 3) {
+               this.data[2] -= rhs.data[2];
+            }
+
+            // TODO< size bigger than 3 >
+            
+        }
+        else {
+            static assert(0, "Operator "~op~" not implemented");
+        }
+
+        return this;
+    }
+
+    final public SpatialVector!(Size, Type, Scalable) opBinary(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
+        SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
+
+        static if (op == "+") {
+            result.data[0] = this.data[0] + rhs.data[0];
+            result.data[1] = this.data[1] + rhs.data[1];
+
+            static if (Size >= 3) {
+               result.data[2] = this.data[2] + rhs.data[2];
+            }
+
+            // TODO< size bigger than 3 >
+
+            return result;
+        }
+        else static if (op == "-") {
+            result.data[0] = this.data[0] - rhs.data[0];
+            result.data[1] = this.data[1] - rhs.data[1];
+
+            static if (Size >= 3) {
+               result.data[2] = this.data[2] - rhs.data[2];
+            }
+
+            // TODO< size bigger than 3 >
+            return result;
+        }
+        else {
+            static assert(0, "Operator "~op~" not implemented");
+        }
+    }
+
+
+    final @property Type x() {
+        return this.data[0];
+    }
+
+    final @property Type x(Type value) {
+        return this.data[0] = value;
+    }
+
+    final @property Type y() {
+        return this.data[1];
+    }
+
+    final @property Type y(Type value) {
+        return this.data[1] = value;
+    }
+
+    static if (Size >= 3) {
+        final @property Type z() {
+            return this.data[2];
+        }
+
+        final @property Type z(Type value) {
+            return this.data[2] = value;
+        }
+    }
+}
 
 // next generation from ProjectSci
 /** \brief Template for a Position/Vector
@@ -28,116 +140,8 @@ template SpatialVector(uint Size, Type, bool Scalable = true) {
             }
         }
 
-        final public SpatialVector!(Size, Type, Scalable) opBinary(string op)(Type rhs) {
-            SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
+        mixin SpatialVectorMixin!false;
 
-            static if (op == "*") {
-                static if (!Scalable) {
-                    static assert(0, "SpatialVector is not scalable!");
-                }
-
-                result.data[0] = this.data[0] * rhs;
-                result.data[1] = this.data[1] * rhs;
-
-                static if (Size >= 3) {
-                   result.data[2] = this.data[2] * rhs;
-                }
-
-                // TODO< size bigger than 3 >
-                
-                return result;
-            }
-            else {
-                static assert(0, "Operator "~op~" not implemented");
-            }
-        }
-        
-        final public SpatialVector!(Size, Type, Scalable) opOpAssign(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
-            static if (op == "+") {
-                this.data[0] += rhs.data[0];
-                this.data[1] += rhs.data[1];
-
-                static if (Size >= 3) {
-                   this.data[2] += rhs.data[2];
-                }
-
-                // TODO< size bigger than 3 >
-            }
-            else static if (op == "-") {
-                this.data[0] -= rhs.data[0];
-                this.data[1] -= rhs.data[1];
-
-                static if (Size >= 3) {
-                   this.data[2] -= rhs.data[2];
-                }
-
-                // TODO< size bigger than 3 >
-                
-            }
-            else {
-                static assert(0, "Operator "~op~" not implemented");
-            }
-
-            return this;
-        }
-
-        final public SpatialVector!(Size, Type, Scalable) opBinary(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
-            SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
-
-            static if (op == "+") {
-                result.data[0] = this.data[0] + rhs.data[0];
-                result.data[1] = this.data[1] + rhs.data[1];
-
-                static if (Size >= 3) {
-                   result.data[2] = this.data[2] + rhs.data[2];
-                }
-
-                // TODO< size bigger than 3 >
-
-                return result;
-            }
-            else static if (op == "-") {
-                result.data[0] = this.data[0] - rhs.data[0];
-                result.data[1] = this.data[1] - rhs.data[1];
-
-                static if (Size >= 3) {
-                   result.data[2] = this.data[2] - rhs.data[2];
-                }
-
-                // TODO< size bigger than 3 >
-                return result;
-            }
-            else {
-                static assert(0, "Operator "~op~" not implemented");
-            }
-        }
-
-
-        final @property Type x() {
-            return this.data[0];
-        }
-
-        final @property Type x(Type value) {
-            return this.data[0] = value;
-        }
-
-        final @property Type y() {
-            return this.data[1];
-        }
-
-        final @property Type y(Type value) {
-            return this.data[1] = value;
-        }
-
-        static if (Size >= 3) {
-            final @property Type z() {
-                return this.data[2];
-            }
-
-            final @property Type z(Type value) {
-                return this.data[2] = value;
-            }
-        }
 
         public final SpatialVector!(Size, Type, Scalable) clone() {
             return new SpatialVector!(Size, Type, Scalable)(data[0..Size]);
@@ -148,6 +152,26 @@ template SpatialVector(uint Size, Type, bool Scalable = true) {
 		}
     }
 }
+
+/* uncommented because it instantiates SpatialVectorMixin with the wrong (result) types!
+template SpatialVectorStruct(uint Size, Type, bool Scalable = true) {
+    struct SpatialVectorStruct {
+        mixin SpatialVectorMixin!true;
+
+        public final SpatialVector!(Size, Type, Scalable) clone() {
+            SpatialVector!(Size, Type, Scalable) result;
+
+            foreach( i; 0..Size ) {
+                result.data[i] = data[i];
+            }
+        }
+
+        final public @property Type* ptr() {
+            return data.ptr;
+        }
+    }
+}*/
+
 
 SpatialVector!(Size, Type) componentDivision(uint Size, Type)(SpatialVector!(Size, Type) vector, SpatialVector!(Size, Type) divisorVector) {
 	return new SpatialVector!(Size, Type)(vector.x / divisorVector.x, vector.y / divisorVector.y, vector.z / divisorVector.z);
