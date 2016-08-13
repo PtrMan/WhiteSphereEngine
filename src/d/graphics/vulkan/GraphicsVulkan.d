@@ -329,18 +329,21 @@ class GraphicsVulkan {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
-				VkPipelineLayoutCreateInfo layout_create_info = {
-					VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,  // VkStructureType                sType
-					null,                                        // const void                    *pNext
-					0,                                              // VkPipelineLayoutCreateFlags    flags
-					0,                                              // uint32_t                       setLayoutCount
-					null,                                        // const VkDescriptorSetLayout   *pSetLayouts
-					0,                                              // uint32_t                       pushConstantRangeCount
-					null                                         // const VkPushConstantRange     *pPushConstantRanges
+				VkDescriptorSetLayout[] setLayouts;
+				VkPushConstantRange[] pushConstantRanges;
+				
+				VkPipelineLayoutCreateInfo layoutCreateInfo = VkPipelineLayoutCreateInfo.init;
+				with(layoutCreateInfo) {
+					sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+					flags = 0;
+					setLayoutCount = cast(uint32_t)setLayouts.length;
+					pSetLayouts = cast(immutable(ulong)*)setLayouts.ptr;
+					pushConstantRangeCount = cast(uint32_t)pushConstantRanges.length;
+					pPushConstantRanges = cast(immutable(VkPushConstantRange)*)pushConstantRanges.ptr;
 				};
-	
+				
 				VkPipelineLayout pipelineLayout;
-				vulkanResult = vkCreatePipelineLayout(vulkanContext.chosenDevice.logicalDevice, &layout_create_info, null, &pipelineLayout);
+				vulkanResult = vkCreatePipelineLayout(vulkanContext.chosenDevice.logicalDevice, &layoutCreateInfo, null, &pipelineLayout);
 				if( !vulkanSuccess(vulkanResult) ) {
 					throw new EngineException(true, true, "Couldn't create pipeline layout! [vkCreatePipelineLayout]");
 				}
