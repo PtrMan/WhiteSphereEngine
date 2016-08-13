@@ -329,8 +329,21 @@ class GraphicsVulkan {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
+				import math.Matrix;
+				alias Matrix!(float, 4, 4) Matrix44Type;
+				// calculate the size in bytes of a 4x4 matrix
+				size_t SIZEOFMATRIXDATA = Matrix44Type.Type.sizeof * Matrix44Type.RAWDATALENGTH;
+				
+				
 				VkDescriptorSetLayout[] setLayouts;
 				VkPushConstantRange[] pushConstantRanges;
+				
+				VkPushConstantRange pushConstantInfo = VkPushConstantRange.init;
+				pushConstantInfo.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+				pushConstantInfo.offset = 0;
+				pushConstantInfo.size = SIZEOFMATRIXDATA;
+				
+				
 				
 				VkPipelineLayoutCreateInfo layoutCreateInfo = VkPipelineLayoutCreateInfo.init;
 				with(layoutCreateInfo) {
