@@ -145,6 +145,32 @@ template SpatialVectorStruct(uint Size, Type, bool Scalable = true) {
     }
 }*/
 
+unittest {
+    alias SpatialVector!(5, float) VectorType;
+    { // addition
+        VectorType vecA, vecB, vecResult;
+        vecA = new VectorType();
+        vecB = new VectorType();
+        vecA.data[0] = 1.0f;
+        vecB.data[0] = 2.0f;
+        vecA.data[4] = 4.0f;
+        vecB.data[4] = 8.0f;
+        vecResult = vecA + vecB;
+        assert(vecResult.data[0] == 3.0f);
+        assert(vecResult.data[4] == 12.0f);
+    }
+
+    { // mul
+        VectorType vecB, vecResult;
+        vecB = new VectorType();
+        vecB.data[0] = 2.0f;
+        vecB.data[4] = 8.0f;
+        vecResult = vecB*4.0f;
+        assert(vecResult.data[0] == 8.0f);
+        assert(vecResult.data[4] == 32.0f);
+    }
+}
+
 
 SpatialVector!(Size, Type) componentDivision(uint Size, Type)(SpatialVector!(Size, Type) vector, SpatialVector!(Size, Type) divisorVector) {
 	return new SpatialVector!(Size, Type)(vector.x / divisorVector.x, vector.y / divisorVector.y, vector.z / divisorVector.z);
