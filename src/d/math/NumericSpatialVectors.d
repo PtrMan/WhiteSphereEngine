@@ -21,14 +21,9 @@ private mixin template SpatialVectorMixin(bool isClass) {
                 static assert(0, "SpatialVector is not scalable!");
             }
 
-            result.data[0] = this.data[0] * rhs;
-            result.data[1] = this.data[1] * rhs;
-
-            static if (Size >= 3) {
-               result.data[2] = this.data[2] * rhs;
+            foreach( i; 0..Size ) {
+                result.data[i] = this.data[i] * rhs;
             }
-
-            // TODO< size bigger than 3 >
             
             return result;
         }
@@ -39,25 +34,14 @@ private mixin template SpatialVectorMixin(bool isClass) {
     
     final public SpatialVector!(Size, Type, Scalable) opOpAssign(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
         static if (op == "+") {
-            this.data[0] += rhs.data[0];
-            this.data[1] += rhs.data[1];
-
-            static if (Size >= 3) {
-               this.data[2] += rhs.data[2];
+            foreach( i; 0..Size ) {
+                this.data[i] += rhs.data[i];
             }
-
-            // TODO< size bigger than 3 >
         }
         else static if (op == "-") {
-            this.data[0] -= rhs.data[0];
-            this.data[1] -= rhs.data[1];
-
-            static if (Size >= 3) {
-               this.data[2] -= rhs.data[2];
+            foreach( i; 0..Size ) {
+                this.data[i] -= rhs.data[i];
             }
-
-            // TODO< size bigger than 3 >
-            
         }
         else {
             static assert(0, "Operator "~op~" not implemented");
@@ -70,26 +54,15 @@ private mixin template SpatialVectorMixin(bool isClass) {
         SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
 
         static if (op == "+") {
-            result.data[0] = this.data[0] + rhs.data[0];
-            result.data[1] = this.data[1] + rhs.data[1];
-
-            static if (Size >= 3) {
-               result.data[2] = this.data[2] + rhs.data[2];
+            foreach( i; 0..Size ) {
+                result.data[i] = this.data[i] + rhs.data[i];
             }
-
-            // TODO< size bigger than 3 >
-
             return result;
         }
         else static if (op == "-") {
-            result.data[0] = this.data[0] - rhs.data[0];
-            result.data[1] = this.data[1] - rhs.data[1];
-
-            static if (Size >= 3) {
-               result.data[2] = this.data[2] - rhs.data[2];
+            foreach( i; 0..Size ) {
+                result.data[i] = this.data[i] - rhs.data[i];
             }
-
-            // TODO< size bigger than 3 >
             return result;
         }
         else {
