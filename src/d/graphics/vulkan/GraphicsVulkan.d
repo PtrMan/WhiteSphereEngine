@@ -17,11 +17,21 @@ import helpers.VariableValidator;
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
+import math.Matrix44;
+import math.Matrix;
+
+alias Matrix!(float, 4, 4) Matrix44Type;
+
+
 // some parts are from
 // https://av.dfki.de/~jhenriques/development.html#tutorial_011
 // (really copyleft as stated on the site)
 
 class GraphicsVulkan {
+	// calculate the size in bytes of a 4x4 matrix
+	protected enum size_t SIZEOFMATRIXDATA = Matrix44Type.Type.sizeof * Matrix44Type.RAWDATALENGTH;
+	
+	
 	// TODO< refactor to outside into the right class >
 	// vulkan resource (for example VkImage) with the offset of the bind, size, alignment, memory hint
 	static class VulkanResourceWithMemoryDecoration(Datatype) {
@@ -57,11 +67,18 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
+		Matrix44Type mvpMatrix = new Matrix44Type();
+		// fill mvp with identity
+		
+		mvpMatrix = createIdentity!float();
 		
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
 		ResourceDag.ResourceNode renderPassResourceNode;
+		
 		ResourceDag.ResourceNode pipelineResourceNode;
+		ResourceDag.ResourceNode pipelineLayoutResourceNode;
+		
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage framebufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
 		
 		TypesafeVkCommandBuffer[] commandBuffersForCopy; // no need to manage this with the resource dag, because we need it just once
@@ -329,10 +346,6 @@ class GraphicsVulkan {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
-				import math.Matrix;
-				alias Matrix!(float, 4, 4) Matrix44Type;
-				// calculate the size in bytes of a 4x4 matrix
-				size_t SIZEOFMATRIXDATA = Matrix44Type.Type.sizeof * Matrix44Type.RAWDATALENGTH;
 				
 				
 				VkDescriptorSetLayout[] setLayouts;
@@ -343,7 +356,7 @@ class GraphicsVulkan {
 				pushConstantInfo.offset = 0;
 				pushConstantInfo.size = SIZEOFMATRIXDATA;
 				
-				
+				pushConstantRanges ~= pushConstantInfo; // add push constant
 				
 				VkPipelineLayoutCreateInfo layoutCreateInfo = VkPipelineLayoutCreateInfo.init;
 				with(layoutCreateInfo) {
@@ -368,7 +381,7 @@ class GraphicsVulkan {
 			// prepare description of stages
 			
 			VkShaderModule vertexShaderModule, fragmentShaderModule;
-			IDisposable vertexShaderMemory = loadShader("SimpleNontransforming_2.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
+			IDisposable vertexShaderMemory = loadShader("SimpleTransforming_3.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
 			scope(exit) vertexShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, vertexShaderModule, null);
 			IDisposable fragmentShaderMemory = loadShader("Simple1.frag.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
@@ -528,9 +541,17 @@ class GraphicsVulkan {
 
 			// create graphics pipeline
 			TypesafeVkPipelineLayout pipelineLayout = createPipelineLayout();
-			scope(exit) {
-				vkDevFacade.destroyPipelineLayout(pipelineLayout);
+			
+			{ // setup resource node for pipelineLayout
+				const(VkAllocationCallbacks*) allocator = null;
+				
+				VulkanResourceDagResource!TypesafeVkPipelineLayout pipelineLayoutDagResource = new VulkanResourceDagResource!TypesafeVkPipelineLayout(vkDevFacade, pipelineLayout, allocator, &disposePipelineLayout);
+				pipelineLayoutResourceNode = resourceDag.createNode(pipelineLayoutDagResource);
+				
+				// we hold this because else the resourceDag would dispose them
+				pipelineLayoutResourceNode.incrementExternalReferenceCounter();
 			}
+			
 			
 			TypesafeVkRenderPass renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
 			
@@ -697,6 +718,9 @@ class GraphicsVulkan {
 			}
 			
 			
+			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
+
+			
 			// for actual rendering
 			{
 				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
@@ -732,6 +756,8 @@ class GraphicsVulkan {
 				VkDeviceSize[1] offsets = [0];
 				assert(vertexBuffersToBind.length == offsets.length);
 				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr );
+				
+				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
 				
 				vkCmdDraw(cast(VkCommandBuffer)commandBufferForRendering, 3, 1, 0, 0);
 				
@@ -853,6 +879,7 @@ class GraphicsVulkan {
 		}
 		
 		void releasePipelineResources() {
+			pipelineLayoutResourceNode.decrementExternalReferenceCounter();
 			pipelineResourceNode.decrementExternalReferenceCounter();
 		}
 		

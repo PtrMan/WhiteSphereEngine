@@ -52,6 +52,10 @@ void disposeRenderPass(VulkanDeviceFacade vkDevFacade, TypesafeVkRenderPass rend
 	vkDevFacade.destroyRenderPass(renderPass, allocator);
 }
 
+void disposePipelineLayout(VulkanDeviceFacade vkDevFacade, TypesafeVkPipelineLayout pipelineLayout, const(VkAllocationCallbacks*) allocator) {
+	vkDevFacade.destroyPipelineLayout(pipelineLayout, allocator);
+}
+
 /*
 void disposeShaderModule(VulkanDeviceFacade vkDevFacade, TypesafeVkShaderModule shaderModule, const(VkAllocationCallbacks*) allocator) {
 	vkDevFacade.destroyShaderModule(shaderModule, allocator);
