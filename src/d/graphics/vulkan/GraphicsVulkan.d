@@ -104,7 +104,8 @@ class GraphicsVulkan {
 		vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
 		
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboPositionBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
-		
+		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
+
 		
 		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
 		// at first commit time
@@ -953,24 +954,29 @@ class GraphicsVulkan {
 			positions[4] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
 			positions[5] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
 			
-			
+			uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
 			
 			
 			// translate to MeshComponent
 			MeshComponent componentPosition = MeshComponent.makeFloat4(positions);
+			MeshComponent componentIndex = MeshComponent.makeUint32(indexBuffer);
 			
-			testMesh = new Mesh([componentPosition], 0);
+			testMesh = new Mesh([componentPosition], componentIndex, 0);
 		}
-
+		
+		
+		////////
+		// create buffers and fill them
 		
 		/////
-		// create buffer for vertex information and fill it 
-		
-		VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
-		createBufferArguments.size = /*vertex.sizeof*/16   * testMesh.numberOfVertices;
-		createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		vboPositionBufferResource.resource = vkDevFacade.createBuffer(createBufferArguments);
+		// for vertex information 
+		{
+			VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
+			createBufferArguments.size = /*vertex.sizeof*/16   * testMesh.numberOfVertices;
+			createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+			createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			vboPositionBufferResource.resource = vkDevFacade.createBuffer(createBufferArguments);
+		}
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
 		    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
@@ -981,10 +987,7 @@ class GraphicsVulkan {
 		resourceQueryAllocate(vboPositionBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
 		
 		
-		
-		
-		
-		
+		// map and copy vertex
 		{ // scope to automatically unmap
 			void *hostPtr = vkDevFacade.map(
 				vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory,
@@ -996,11 +999,60 @@ class GraphicsVulkan {
 			
 			float[4]* float4HostPtr = cast(float[4]*)hostPtr;
 			foreach( vertexI; 0..testMesh.numberOfVertices ) {
-				float4HostPtr[vertexI] = testMesh.getFloat4AccessorForComponentIndex(0)[vertexI];
+				float4HostPtr[vertexI] = testMesh.getFloat4AccessorByComponentIndex(0)[vertexI];
 			}
 		}
 		
 		vkDevFacade.bind(vboPositionBufferResource.resource.value, vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboPositionBufferResource.derivedInformation.value.offset);
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/////
+		// for index information
+		{
+			VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
+			createBufferArguments.size = uint32_t.sizeof * testMesh.indexBufferMeshComponent.length;
+			createBufferArguments.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+			createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			vboIndexBufferResource.resource = vkDevFacade.createBuffer(createBufferArguments);
+		}
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+		    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			
+			vkDevFacade.destroyBuffer(vboIndexBufferResource.resource.value);
+		}
+		
+		resourceQueryAllocate(vboIndexBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
+		
+		
+		// map and copy index buffer
+		{ // scope to automatically unmap
+			void *hostPtr = vkDevFacade.map(
+				vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory,
+				vboIndexBufferResource.derivedInformation.value.offset,
+				vboIndexBufferResource.derivedInformation.value.allocatedSize,
+				0 /* flags */
+			);
+			scope(exit) vkDevFacade.unmap(vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory);
+			
+			uint32_t* uint32HostPtr = cast(uint32_t*)hostPtr;
+			foreach( indexBufferI; 0..testMesh.indexBufferMeshComponent.length ) {
+				uint32HostPtr[indexBufferI] = testMesh.indexBufferMeshComponent.getUint32Accessor()[indexBufferI];
+			}
+		}
+		
+		vkDevFacade.bind(vboIndexBufferResource.resource.value, vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboIndexBufferResource.derivedInformation.value.offset);
+		
+		
+		
 		
 		
 		
