@@ -3,13 +3,17 @@ module graphics.Mesh;
 import graphics.MeshComponent;
 
 class Mesh {
-	public final this(MeshComponent[] meshComponents, size_t positionComponentIndex) {
+	public final this(MeshComponent[] meshComponents, MeshComponent indexMeshComponent, size_t positionComponentIndex) {
 		assert(positionComponentIndex < meshComponents.length);
 		checkMeshComponentsHaveEqualSize(meshComponents);
 		
+		this.protectedIndexMeshComponent = indexMeshComponent;
 		this.protectedMeshComponents = meshComponents;
 		this.positionComponentIndex = positionComponentIndex;
+		
+		assert(indexMeshComponent.type == MeshComponent.EnumType.UINT32);
 		cacheMeshComponentAccessors();
+		checkIndexComponentIndicesInRange(indexMeshComponent, numberOfVertices);
 	}
 	
 	protected static checkMeshComponentsHaveEqualSize(MeshComponent[] meshComponents) {
@@ -22,6 +26,17 @@ class Mesh {
 			assert(iterationComponent.length == lengthOfFirstComponent);
 		}
 	}
+	
+	protected static checkIndexComponentIndicesInRange(MeshComponent indexMeshComponent, size_t numberOfVertices) {
+		MeshComponent.Uint32Accessor accessor = indexMeshComponent.getUint32Accessor();
+		foreach( i; 0..indexMeshComponent.length ) {
+			// TODO< should throw exception on missmatch >
+			assert(accessor[i] < numberOfVertices);
+		}
+	}
+
+	
+	
 	
 	final protected void cacheMeshComponentAccessors() {
 		cachedFloat4Accessors.length = numberOfComponents;
@@ -36,6 +51,10 @@ class Mesh {
 				case DOUBLE4:
 				cachedDouble4Accessors[i] = iterationComponent.getDouble4Accessor();
 				break;
+				
+				case UINT32:
+				assert(false, "Not jet supported cache of accessors for UINT32 component");
+				break;
 			}
 		}
 	}
@@ -44,22 +63,26 @@ class Mesh {
 		return protectedMeshComponents.length;
 	}
 	
-	final public MeshComponent.Float4Accessor getFloat4AccessorForComponentIndex(size_t index) {
+	final public MeshComponent.Uint32Accessor getUint32AccessorForIndexBuffer() {
+		return protectedIndexMeshComponent.getUint32Accessor();
+	}
+	
+	final public MeshComponent.Float4Accessor getFloat4AccessorByComponentIndex(size_t index) {
 		assert(cachedFloat4Accessors[index] !is null);
 		return cachedFloat4Accessors[index];
 	}
 	
-	final public MeshComponent.Double4Accessor getDouble4AccessorForComponentIndex(size_t index) {
+	final public MeshComponent.Double4Accessor getDouble4AccessorByComponentIndex(size_t index) {
 		assert(cachedDouble4Accessors[index] !is null);
 		return cachedDouble4Accessors[index];
 	}
 	
 	final public @property MeshComponent.Double4Accessor double4PositionAccessor() {
-		return getDouble4AccessorForComponentIndex(positionComponentIndex);
+		return getDouble4AccessorByComponentIndex(positionComponentIndex);
 	}
 	
 	final public @property MeshComponent.Float4Accessor float4PositionAccessor() {
-		return getFloat4AccessorForComponentIndex(positionComponentIndex);
+		return getFloat4AccessorByComponentIndex(positionComponentIndex);
 	}
 	
 	final public @property size_t numberOfVertices() {
@@ -73,12 +96,16 @@ class Mesh {
 		assert(false);
 	}
 	
+	final public @property MeshComponent indexBufferMeshComponent() {
+		return protectedIndexMeshComponent;
+	}
+	
 	
 	// members are not changable from the outside after setting them
+	protected MeshComponent protectedIndexMeshComponent;
 	protected MeshComponent[] protectedMeshComponents;
 	protected MeshComponent.Float4Accessor[] cachedFloat4Accessors; // elements are null for non-float4
 	protected MeshComponent.Double4Accessor[] cachedDouble4Accessors; // elements are null for non-float4
-	
 	
 	protected size_t positionComponentIndex;
 }

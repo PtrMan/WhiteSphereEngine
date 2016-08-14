@@ -1,5 +1,7 @@
 module graphics.MeshComponent;
 
+import core.stdc.stdint;
+
 import math.NumericSpatialVectors;
 import core.memory : GC;
 
