@@ -697,9 +697,13 @@ class GraphicsVulkan {
 
 			
 			// for actual rendering
-			{
+			{ // to scope command buffer filling
 				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
-				
+				scope(success) {
+					if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering) != VK_SUCCESS ) {
+						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+					}
+				} 
 				
 				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
@@ -734,14 +738,17 @@ class GraphicsVulkan {
 				
 				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
 				
-				uint32_t vertexCount = testMesh.numberOfVertices;
-				vkCmdDraw(cast(VkCommandBuffer)commandBufferForRendering, vertexCount, 1, 0, 0);
+				if( testMesh.indexBufferMeshComponent.type == MeshComponent.EnumType.UINT32 ) {
+					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBufferForRendering, cast(VkBuffer)vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
+				}
+				else {
+					throw new EngineException(true, true, "Vulkan Renderer - index buffer not implemented for non-uint32bit !");
+				}
+				
+				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBufferForRendering, testMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
+				
 				
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
-				
-				if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering) != VK_SUCCESS ) {
-					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
-				}
 			}
 
 		}
@@ -945,14 +952,15 @@ class GraphicsVulkan {
 		
 		{ // build mesh
 			SpatialVector!(4, float)[] positions;
-			positions.length = 6;
+			positions.length = 4;
 			positions[0] = new SpatialVector!(4, float)(-1.0f, -1.0f, 0, 1.0f);
 			positions[1] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
 			positions[2] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
+			positions[3] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
 			
-			positions[3] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
-			positions[4] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
-			positions[5] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
+			//positions[3] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
+			//positions[4] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
+			//positions[5] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
 			
 			uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
 			
