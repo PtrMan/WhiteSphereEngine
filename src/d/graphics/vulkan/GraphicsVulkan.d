@@ -19,6 +19,7 @@ import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
 import math.Matrix44;
 import math.Matrix;
+import math.NumericSpatialVectors;
 
 alias Matrix!(float, 4, 4) Matrix44Type;
 
@@ -388,32 +389,13 @@ class GraphicsVulkan {
 			scope(exit) fragmentShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, fragmentShaderModule, null);
 			
-			VkPipelineShaderStageCreateInfo[] shader_stage_create_infos = [
-				// Vertex shader
-				{
-					VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,        // VkStructureType                                sType
-					null,                                                    // const void                                    *pNext
-					0,                                                          // VkPipelineShaderStageCreateFlags               flags
-					VK_SHADER_STAGE_VERTEX_BIT,                                 // VkShaderStageFlagBits                          stage
-					vertexShaderModule,                                 // VkShaderModule                                 module
-					"main",                                                     // const char                                    *pName
-					null                                                     // const VkSpecializationInfo                    *pSpecializationInfo
-				},
-				
-				// Fragment shader
-				{
-					VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,        // VkStructureType                                sType
-					null,                                                    // const void                                    *pNext
-					0,                                                          // VkPipelineShaderStageCreateFlags               flags
-					VK_SHADER_STAGE_FRAGMENT_BIT,                               // VkShaderStageFlagBits                          stage
-					fragmentShaderModule,                               // VkShaderModule                                 module
-					"main",                                                     // const char                                    *pName
-					null                                                     // const VkSpecializationInfo                    *pSpecializationInfo
-				}
+			VkPipelineShaderStageCreateInfo[] shaderStageCreateInfo = [
+				DevicelessFacade.makeVkPipelineShaderStageCreateInfo(vertexShaderModule, VK_SHADER_STAGE_VERTEX_BIT, "main"),
+				DevicelessFacade.makeVkPipelineShaderStageCreateInfo(fragmentShaderModule, VK_SHADER_STAGE_FRAGMENT_BIT, "main")
 			];
-
-
-
+			
+			
+			
 			// prepare description of vertex input
 			VkVertexInputBindingDescription vertexBindingDescription = VkVertexInputBindingDescription.init;
 			vertexBindingDescription.binding = 0;
@@ -441,36 +423,20 @@ class GraphicsVulkan {
 			}
 			
 			// prepare description of input assembly
-			VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
-				VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,  // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineInputAssemblyStateCreateFlags        flags
-				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,                          // VkPrimitiveTopology                            topology
-				VK_FALSE                                                      // VkBool32                                       primitiveRestartEnable
-			};
-
-
-
-			// prepare viewport description
-			VkViewport viewport = {
-				0.0f,                                                         // float                                          x
-				0.0f,                                                         // float                                          y
-				300.0f,                                                       // float                                          width
-				300.0f,                                                       // float                                          height
-				0.0f,                                                         // float                                          minDepth
-				1.0f                                                          // float                                          maxDepth
-			};
-
-			VkRect2D scissor = {
-				{                                                             // VkOffset2D                                     offset
-					0,                                                            // int32_t                                        x
-					0                                                             // int32_t                                        y
-				},
-				{                                                             // VkExtent2D                                     extent
-					300,                                                          // int32_t                                        width
-					300                                                           // int32_t                                        height
-				}
-			};
+			VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.init;
+			inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+			inputAssemblyStateCreateInfo.flags = 0;
+			inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
+			
+			
+			
+			
+			VkViewport viewport = DevicelessFacade.makeVkViewport(new SpatialVector!(2, float)(cast(float)300, cast(float)300));
+			
+			VkRect2D scissor;
+			scissor.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+			scissor.extent = DevicelessFacade.makeVkExtent2D(300, 300);
 			
 			VkViewport[1] viewports = [viewport];
 			VkRect2D[1] scissors = [scissor];
@@ -559,9 +525,9 @@ class GraphicsVulkan {
 			VulkanDeviceFacade.CreateGraphicsPipelineArguments createGraphicsPipelineArguments = VulkanDeviceFacade.CreateGraphicsPipelineArguments.init;
 			with(createGraphicsPipelineArguments) {
 				flags = 0;
-				stages = shader_stage_create_infos;
+				stages = shaderStageCreateInfo;
 				vertexInputState = vertexInputStateCreateInfo;
-				inputAssemblyState = input_assembly_state_create_info;
+				inputAssemblyState = inputAssemblyStateCreateInfo;
 				tessellationState = null;
 				viewportState = viewportStateCreateInfo;
 				rasterizationState = rasterization_state_create_info;
@@ -985,7 +951,7 @@ class GraphicsVulkan {
 		resourceQueryAllocate(vboPositionBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
 		
 		
-		struct Vertex{
+		static struct Vertex{
 			float x,y,z,w; // has to be 4 values to make the alignment simple
 		}
 		
