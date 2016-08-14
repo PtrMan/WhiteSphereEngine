@@ -8,14 +8,48 @@ class MeshComponent {
 	enum EnumType {
 		FLOAT4,
 		DOUBLE4,
+		UINT32,
 	}
 	
 	protected struct Value {
 		union {
 			float[4] floatValue;
 			double[4] doubleValue;
+			uint32_t uint32Value;
 		}
 	}
+	
+	
+	public static MeshComponent makeUint32(uint32_t[] arr) {
+		MeshComponent result = new MeshComponent(EnumType.UINT32);
+		
+		// we don't want to scan this memory because there are no ptr's
+		result.array = cast(Value*)GC.malloc(Value.sizeof * arr.length, GC.BlkAttr.NO_SCAN);
+		result.protectedLength = arr.length;
+		
+		foreach( i; 0..arr.length ) {
+			result.array[i].uint32Value = arr[i];
+		}
+		
+		return result;
+	}
+	
+	// arr is usually GC allocated memory with nonscanning flag
+	public static MeshComponent makeUint32(uint32_t* arr, size_t length) {
+		MeshComponent result = new MeshComponent(EnumType.UINT32);
+		
+		// we don't want to scan this memory because there are no ptr's
+		result.array = cast(Value*)GC.malloc(Value.sizeof * length, GC.BlkAttr.NO_SCAN);
+		result.protectedLength = length;
+		
+		foreach( i; 0..length ) {
+			result.array[i].uint32Value = arr[i];
+		}
+		
+		return result;
+	}
+
+	
 	
 	// arr is usually GC allocated memory with nonscanning flag
 	public static MeshComponent makeFloat4(float[4]* arr, size_t length) {
@@ -82,6 +116,8 @@ class MeshComponent {
 	}
 	
 	
+	
+	
 	// disable ctor
 	protected final this(EnumType type) {
 		this.protectedType = type;
@@ -108,6 +144,17 @@ class MeshComponent {
 		}
 	}
 	
+	// not static
+	public class Uint32Accessor {
+		public final uint32_t opIndex(size_t index) {
+			assert(index < length);
+			// no need to check type because this accessor can only get retrived by getFloatAccessor
+			
+			return array[index].uint32Value;
+		}
+	}
+
+	
 	
 	public final Float4Accessor getFloat4Accessor() {
 		assert(type == EnumType.FLOAT4);
@@ -118,6 +165,12 @@ class MeshComponent {
 		assert(type == EnumType.DOUBLE4);
 		return new Double4Accessor;
 	}
+	
+	public final Uint32Accessor getUint32Accessor() {
+		assert(type == EnumType.UINT32);
+		return new Uint32Accessor;
+	}
+
 	
 	public final @property EnumType type() {
 		return protectedType;
