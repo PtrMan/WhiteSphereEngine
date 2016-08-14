@@ -707,27 +707,19 @@ class GraphicsVulkan {
 				
 				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
-				VkRenderPassBeginInfo render_pass_begin_info = {
-					VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,     // VkStructureType                sType
-					null,                                      // const void                    *pNext
-					cast(VkRenderPass)renderPass,                            // VkRenderPass                   renderPass
-					cast(VkFramebuffer)framebuffer,          // VkFramebuffer                  framebuffer
-					{                                             // VkRect2D                       renderArea
-						{                                           // VkOffset2D                     offset
-							0,                                          // int32_t                        x
-							0                                           // int32_t                        y
-						},
-						{                                           // VkExtent2D                     extent
-							300,                                        // int32_t                        width
-							300,                                        // int32_t                        height
-						}
-					},
-					1,                                            // uint32_t                       clearValueCount
-					cast(immutable(VkClearValue)*)&clear_value                                  // const VkClearValue            *pClearValues
-				};
+				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
+				with(renderPassBeginInfo) {
+					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+					clearValueCount = cast(uint32_t)1;
+					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
+				}
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPass;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
 				
-
-				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+				
+				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				
 				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
 				
@@ -957,10 +949,6 @@ class GraphicsVulkan {
 			positions[1] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
 			positions[2] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
 			positions[3] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
-			
-			//positions[3] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
-			//positions[4] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
-			//positions[5] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
 			
 			uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
 			
