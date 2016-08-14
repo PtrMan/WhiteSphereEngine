@@ -5,10 +5,22 @@ import graphics.MeshComponent;
 class Mesh {
 	public final this(MeshComponent[] meshComponents, size_t positionComponentIndex) {
 		assert(positionComponentIndex < meshComponents.length);
+		checkMeshComponentsHaveEqualSize(meshComponents);
 		
 		this.protectedMeshComponents = meshComponents;
 		this.positionComponentIndex = positionComponentIndex;
 		cacheMeshComponentAccessors();
+	}
+	
+	protected static checkMeshComponentsHaveEqualSize(MeshComponent[] meshComponents) {
+		assert(meshComponents.length > 0);
+		
+		size_t lengthOfFirstComponent = meshComponents[0].length;
+		
+		foreach( iterationComponent; meshComponents ) {
+			// TODO< should be an exception >
+			assert(iterationComponent.length == lengthOfFirstComponent);
+		}
 	}
 	
 	final protected void cacheMeshComponentAccessors() {
@@ -48,6 +60,17 @@ class Mesh {
 	
 	final public @property MeshComponent.Float4Accessor float4PositionAccessor() {
 		return getFloat4AccessorForComponentIndex(positionComponentIndex);
+	}
+	
+	final public @property size_t numberOfVertices() {
+		if( cachedFloat4Accessors[positionComponentIndex] !is null ) {
+			return protectedMeshComponents[positionComponentIndex].length;
+		}
+		else if( cachedDouble4Accessors[positionComponentIndex] !is null ) {
+			return protectedMeshComponents[positionComponentIndex].length;
+		}
+		
+		assert(false);
 	}
 	
 	

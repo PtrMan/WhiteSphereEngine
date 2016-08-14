@@ -1,5 +1,6 @@
 module graphics.MeshComponent;
 
+import math.NumericSpatialVectors;
 import core.memory : GC;
 
 // A isomporphism (in enlish it is equal to) for a buffer for a attribute of an vertex of an mesh
@@ -22,6 +23,7 @@ class MeshComponent {
 		
 		// we don't want to scan this memory because there are no ptr's
 		result.array = cast(Value*)GC.malloc(Value.sizeof * length, GC.BlkAttr.NO_SCAN);
+		result.protectedLength = length;
 		
 		foreach( i; 0..length ) {
 			result.array[i].floatValue = arr[i];
@@ -30,12 +32,31 @@ class MeshComponent {
 		return result;
 	}
 	
+	public static MeshComponent makeFloat4(SpatialVector!(4, float)[] arr) {
+		MeshComponent result = new MeshComponent(EnumType.FLOAT4);
+		
+		// we don't want to scan this memory because there are no ptr's
+		result.array = cast(Value*)GC.malloc(Value.sizeof * arr.length, GC.BlkAttr.NO_SCAN);
+		result.protectedLength = arr.length;
+		
+		foreach( i; 0..arr.length ) {
+			foreach( j; 0..4 ) {
+				result.array[i].floatValue[j] = arr[i].data[j];
+			}
+		}
+		
+		return result;
+	}
+	
+	
+	
 	// arr is usually GC allocated memory with nonscanning flag
 	public static MeshComponent makeDouble4(double[4]* arr, size_t length) {
 		MeshComponent result = new MeshComponent(EnumType.DOUBLE4);
 		
 		// we don't want to scan this memory because there are no ptr's
 		result.array = cast(Value*)GC.malloc(Value.sizeof * length, GC.BlkAttr.NO_SCAN);
+		result.protectedLength = length;
 		
 		foreach( i; 0..length ) {
 			result.array[i].doubleValue = arr[i];
@@ -43,7 +64,23 @@ class MeshComponent {
 		
 		return result;
 	}
-
+	
+	public static MeshComponent makeDouble4(SpatialVector!(4, double)[] arr) {
+		MeshComponent result = new MeshComponent(EnumType.DOUBLE4);
+		
+		// we don't want to scan this memory because there are no ptr's
+		result.array = cast(Value*)GC.malloc(Value.sizeof * arr.length, GC.BlkAttr.NO_SCAN);
+		result.protectedLength = arr.length;
+		
+		foreach( i; 0..arr.length ) {
+			foreach( j; 0..4 ) {
+				result.array[i].doubleValue[j] = arr[i].data[j];
+			}
+		}
+		
+		return result;
+	}
+	
 	
 	// disable ctor
 	protected final this(EnumType type) {
@@ -86,7 +123,11 @@ class MeshComponent {
 		return protectedType;
 	}
 	
-	package size_t length; // used for range checks
+	public final @property size_t length() {
+		return protectedLength;
+	}
+	
+	package size_t protectedLength; // used for range checks
 	package Value* array; // usually allocated in nonscanned GC memory
 	protected EnumType protectedType;
 }

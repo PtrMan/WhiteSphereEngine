@@ -17,6 +17,10 @@ import helpers.VariableValidator;
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
+// API independent graphics classes
+import graphics.Mesh;
+import graphics.MeshComponent;
+
 import math.Matrix44;
 import math.Matrix;
 import math.NumericSpatialVectors;
@@ -90,6 +94,10 @@ class GraphicsVulkan {
 		
 		// semaphores for chaining
 		TypesafeVkSemaphore chainSemaphore2;
+		
+		// just for testing in here
+		Mesh testMesh;
+		
 		
 		
 		// TODO< initialize this somewhere outside and only once >
@@ -399,7 +407,7 @@ class GraphicsVulkan {
 			// prepare description of vertex input
 			VkVertexInputBindingDescription vertexBindingDescription = VkVertexInputBindingDescription.init;
 			vertexBindingDescription.binding = 0;
-			vertexBindingDescription.stride = 4*4;//sizeof(vertex);
+			vertexBindingDescription.stride = (float[4]).sizeof;
 			vertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription vertexAttributeDescription = VkVertexInputAttributeDescription.init;
@@ -721,11 +729,12 @@ class GraphicsVulkan {
 				VkBuffer[1] vertexBuffersToBind = [cast(VkBuffer)vboPositionBufferResource.resource.value];
 				VkDeviceSize[1] offsets = [0];
 				assert(vertexBuffersToBind.length == offsets.length);
-				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr );
+				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr);
 				
 				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
 				
-				vkCmdDraw(cast(VkCommandBuffer)commandBufferForRendering, 3, 1, 0, 0);
+				uint32_t vertexCount = testMesh.numberOfVertices;
+				vkCmdDraw(cast(VkCommandBuffer)commandBufferForRendering, vertexCount, 1, 0, 0);
 				
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
 				
@@ -933,11 +942,25 @@ class GraphicsVulkan {
 		
 		// binding must happen before the filling of the command buffers
 		
+		{ // build mesh
+			SpatialVector!(4, float)[] positions;
+			positions.length = 3;
+			positions[0] = new SpatialVector!(4, float)(-1.0f, -1.0f, 0, 1.0f);
+			positions[1] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
+			positions[2] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
+			
+			// translate to MeshComponent
+			MeshComponent componentPosition = MeshComponent.makeFloat4(positions);
+			
+			testMesh = new Mesh([componentPosition], 0);
+		}
+
+		
 		/////
 		// create buffer for vertex information and fill it 
 		
 		VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
-		createBufferArguments.size = /*vertex.sizeof*/16   * 3;
+		createBufferArguments.size = /*vertex.sizeof*/16   * testMesh.numberOfVertices;
 		createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		vboPositionBufferResource.resource = vkDevFacade.createBuffer(createBufferArguments);
@@ -951,9 +974,9 @@ class GraphicsVulkan {
 		resourceQueryAllocate(vboPositionBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
 		
 		
-		static struct Vertex{
-			float x,y,z,w; // has to be 4 values to make the alignment simple
-		}
+		
+		
+		
 		
 		{ // scope to automatically unmap
 			void *hostPtr = vkDevFacade.map(
@@ -964,13 +987,10 @@ class GraphicsVulkan {
 			);
 			scope(exit) vkDevFacade.unmap(vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory);
 			
-			Vertex *triangle = cast(Vertex*)hostPtr;
-			Vertex v1 = { -1.0f, -1.0f, 0, 1.0f };
-			Vertex v2 = {  1.0f, -1.0f, 0, 1.0f };
-			Vertex v3 = {  0.0f,  1.0f, 0, 1.0f };
-			triangle[0] = v1;
-			triangle[1] = v2;
-			triangle[2] = v3;
+			float[4]* float4HostPtr = cast(float[4]*)hostPtr;
+			foreach( vertexI; 0..testMesh.numberOfVertices ) {
+				float4HostPtr[vertexI] = testMesh.getFloat4AccessorForComponentIndex(0)[vertexI];
+			}
 		}
 		
 		vkDevFacade.bind(vboPositionBufferResource.resource.value, vboPositionBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboPositionBufferResource.derivedInformation.value.offset);
