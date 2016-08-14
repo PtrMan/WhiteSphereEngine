@@ -944,10 +944,17 @@ class GraphicsVulkan {
 		
 		{ // build mesh
 			SpatialVector!(4, float)[] positions;
-			positions.length = 3;
+			positions.length = 6;
 			positions[0] = new SpatialVector!(4, float)(-1.0f, -1.0f, 0, 1.0f);
 			positions[1] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
 			positions[2] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
+			
+			positions[3] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
+			positions[4] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
+			positions[5] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
+			
+			
+			
 			
 			// translate to MeshComponent
 			MeshComponent componentPosition = MeshComponent.makeFloat4(positions);
