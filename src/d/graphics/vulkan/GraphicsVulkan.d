@@ -489,8 +489,16 @@ class GraphicsVulkan {
 				alphaToCoverageEnable = alphaToOneEnable = VK_FALSE;
 			}
 			
-			// setting blending state description
-			string str = "{";
+			
+			
+			string str;
+			str ~= "{";
+			
+			str ~= "'logicOpEnable':'VK_FALSE',";
+			str ~= "'logicOp':'VK_LOGIC_OP_COPY',";
+			str ~= "'blendConstants':[0.0, 0.0, 0.0, 0.0],";
+			
+			str ~= "'attachments':[ {";
 			str ~= "'blendEnable':'VK_FALSE',";
 			str ~= "'srcColorBlendFactor':'VK_BLEND_FACTOR_ONE',";
 			str ~= "'dstColorBlendFactor':'VK_BLEND_FACTOR_ZERO',";
@@ -498,27 +506,17 @@ class GraphicsVulkan {
 			str ~= "'srcAlphaBlendFactor':'VK_BLEND_FACTOR_ONE',";
 			str ~= "'dstAlphaBlendFactor':'VK_BLEND_FACTOR_ZERO',";
 			str ~= "'alphaBlendOp':'VK_BLEND_OP_ADD',";
-			str ~= "'colorWriteMask':'VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT'}";
+			str ~= "'colorWriteMask':'VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT'}]";
+			
+			str ~= "}";
 			import std.string : replace; // just for testing
 			str = str.replace("'", "\"");
 			
-			import std.json : JsonValue = JSONValue, parseJson = parseJSON, JsonException = JSONException, ConvException;
+			
 			
 			JsonValue rootJson = parseJson(str);
 			
-			VkPipelineColorBlendAttachmentState colorBlendAttachmentState = convertForPipelineColorBlendAttachmentState(rootJson);
-			
-			
-			VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = {
-				VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,     // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineColorBlendStateCreateFlags           flags
-				VK_FALSE,                                                     // VkBool32                                       logicOpEnable
-				VK_LOGIC_OP_COPY,                                             // VkLogicOp                                      logicOp
-				1,                                                            // uint32_t                                       attachmentCount
-				cast(immutable(VkPipelineColorBlendAttachmentState)*)&colorBlendAttachmentState,                                // const VkPipelineColorBlendAttachmentState     *pAttachments
-				[ 0.0f, 0.0f, 0.0f, 0.0f ]                                    // float                                          blendConstants[4]
-			};
+			VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = convertForPipelineColorBlendStateCreateInfo(rootJson);
 
 
 			// create graphics pipeline

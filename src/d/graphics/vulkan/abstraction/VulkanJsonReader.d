@@ -1,5 +1,6 @@
 module graphics.vulkan.abstraction.VulkanJsonReader;
 
+import core.stdc.stdint;
 import std.string : strip, split;
 import std.conv : to;
 import std.json : JsonValue = JSONValue, parseJson = parseJSON, JsonException = JSONException, ConvException;
@@ -37,6 +38,55 @@ VkPipelineColorBlendAttachmentState convertForPipelineColorBlendAttachmentState(
 	return result;
 }
 
+// does create the inner array and fill it automatically
+VkPipelineColorBlendStateCreateInfo convertForPipelineColorBlendStateCreateInfo(JsonValue jsonValue) {
+	try {
+		VkPipelineColorBlendAttachmentState[] attachments;
+		import std.stdio;
+		writeln("step [0]");
+		
+		
+		JsonValue[] arr = jsonValue["attachments"].array;
+		writeln("step [01]");
+		
+		foreach( iterationJsonAttachment; arr ) {
+			writeln("step [02]");
+		
+			attachments ~= convertForPipelineColorBlendAttachmentState(iterationJsonAttachment);
+			writeln("step [03]");
+		
+		}
+		
+		writeln("step [A]");
+		
+		VkPipelineColorBlendStateCreateInfo result = VkPipelineColorBlendStateCreateInfo.init;
+		with( result ) {
+			sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+			flags = 0; // hardcoded because reserved for future use
+			logicOpEnable = jsonValue["logicOpEnable"].str.toBool;
+			writeln("step [B]");
+		
+			logicOp = cast(VkLogicOp)jsonValue["logicOp"].str.to!(erupted.types.VkLogicOp);
+			writeln("step [C]");
+		
+			attachmentCount = cast(uint32_t)attachments.length;
+			pAttachments = cast(immutable(VkPipelineColorBlendAttachmentState)*)attachments.ptr;
+			blendConstants = convertStaticFloatArray!4(jsonValue["blendConstants"]);
+			writeln("step [D]");
+		
+		}
+		return result;
+	}
+	catch( JsonException exception ) {
+		throw new EngineException(false, true, "Json conversion for VkPipelineColorBlendStateCreateInfo failed with '" ~ exception.msg ~ "'!");
+	}
+	catch( ConvException exception ) {
+		throw new EngineException(false, true, "Json conversion for VkPipelineColorBlendStateCreateInfo failed with '" ~ exception.msg ~ "'!");
+	}
+	
+	
+}
+
 private uint or(string input, uint function(string) convertToEnum) {
 	uint result = 0;
 	
@@ -56,4 +106,19 @@ private VkBool32 toBool(string str) {
 	else {
 		throw new EngineException(false, true, "");
 	}
+}
+
+private float[ArraySize] convertStaticFloatArray(size_t ArraySize)(JsonValue jsonValue) {
+	float[ArraySize] result;
+	
+	JsonValue[] arr = jsonValue.array;
+	if( arr.length != ArraySize ) {
+		throw new EngineException(false, true, "convertStaticFloatArray() got wrong json array size!");
+	}
+	
+	foreach( i; 0..ArraySize ) {
+		result[i] = arr[i].floating;
+	}
+	
+	return result;
 }
