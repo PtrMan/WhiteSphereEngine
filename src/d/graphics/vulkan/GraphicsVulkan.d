@@ -13,6 +13,7 @@ import vulkan.VulkanHelpers;
 import vulkan.VulkanTools;
 import common.IDisposable;
 import helpers.VariableValidator;
+import graphics.vulkan.abstraction.VulkanJsonReader;
 
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
@@ -489,17 +490,23 @@ class GraphicsVulkan {
 			}
 			
 			// setting blending state description
-			VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
-				VK_FALSE,                                                     // VkBool32                                       blendEnable
-				VK_BLEND_FACTOR_ONE,                                          // VkBlendFactor                                  srcColorBlendFactor
-				VK_BLEND_FACTOR_ZERO,                                         // VkBlendFactor                                  dstColorBlendFactor
-				VK_BLEND_OP_ADD,                                              // VkBlendOp                                      colorBlendOp
-				VK_BLEND_FACTOR_ONE,                                          // VkBlendFactor                                  srcAlphaBlendFactor
-				VK_BLEND_FACTOR_ZERO,                                         // VkBlendFactor                                  dstAlphaBlendFactor
-				VK_BLEND_OP_ADD,                                              // VkBlendOp                                      alphaBlendOp
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |         // VkColorComponentFlags                          colorWriteMask
-				VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-			};
+			string str = "{";
+			str ~= "'blendEnable':'VK_FALSE',";
+			str ~= "'srcColorBlendFactor':'VK_BLEND_FACTOR_ONE',";
+			str ~= "'dstColorBlendFactor':'VK_BLEND_FACTOR_ZERO',";
+			str ~= "'colorBlendOp':'VK_BLEND_OP_ADD',";
+			str ~= "'srcAlphaBlendFactor':'VK_BLEND_FACTOR_ONE',";
+			str ~= "'dstAlphaBlendFactor':'VK_BLEND_FACTOR_ZERO',";
+			str ~= "'alphaBlendOp':'VK_BLEND_OP_ADD',";
+			str ~= "'colorWriteMask':'VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT'}";
+			import std.string : replace; // just for testing
+			str = str.replace("'", "\"");
+			
+			import std.json : JsonValue = JSONValue, parseJson = parseJSON, JsonException = JSONException, ConvException;
+			
+			JsonValue rootJson = parseJson(str);
+			
+			VkPipelineColorBlendAttachmentState colorBlendAttachmentState = convertForPipelineColorBlendAttachmentState(rootJson);
 			
 			
 			VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = {
@@ -509,7 +516,7 @@ class GraphicsVulkan {
 				VK_FALSE,                                                     // VkBool32                                       logicOpEnable
 				VK_LOGIC_OP_COPY,                                             // VkLogicOp                                      logicOp
 				1,                                                            // uint32_t                                       attachmentCount
-				cast(immutable(VkPipelineColorBlendAttachmentState)*)&color_blend_attachment_state,                                // const VkPipelineColorBlendAttachmentState     *pAttachments
+				cast(immutable(VkPipelineColorBlendAttachmentState)*)&colorBlendAttachmentState,                                // const VkPipelineColorBlendAttachmentState     *pAttachments
 				[ 0.0f, 0.0f, 0.0f, 0.0f ]                                    // float                                          blendConstants[4]
 			};
 
