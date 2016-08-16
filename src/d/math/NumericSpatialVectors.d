@@ -1,7 +1,5 @@
 module math.NumericSpatialVectors;
 
-import std.stdio;
-
 template NumericVector(uint Size, Type) {
     class NumericVector {
         //protected const Type NULL = cast(Type)0;
@@ -13,8 +11,11 @@ template NumericVector(uint Size, Type) {
 }
 
 private mixin template SpatialVectorMixin(bool isClass) {
-    final public SpatialVector!(Size, Type, Scalable) opBinary(string op)(Type rhs) {
-        SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
+    final public ThisType opBinary(string op)(Type rhs) {
+    	ThisType result;
+    	static if( isClass ) {
+    		result = new ThisType();
+    	}
 
         static if (op == "*") {
             static if (!Scalable) {
@@ -32,7 +33,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
         }
     }
     
-    final public SpatialVector!(Size, Type, Scalable) opOpAssign(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
+    final public ThisType opOpAssign(string op)(ThisType rhs) {
         static if (op == "+") {
             foreach( i; 0..Size ) {
                 this.data[i] += rhs.data[i];
@@ -50,8 +51,11 @@ private mixin template SpatialVectorMixin(bool isClass) {
         return this;
     }
 
-    final public SpatialVector!(Size, Type, Scalable) opBinary(string op)(SpatialVector!(Size, Type, Scalable) rhs) {
-        SpatialVector!(Size, Type, Scalable) result = new SpatialVector!(Size, Type, Scalable)();
+    final public ThisType opBinary(string op)(ThisType rhs) {
+        ThisType result;
+        static if( isClass ) {
+    		result = new ThisType();
+    	}
 
         static if (op == "+") {
             foreach( i; 0..Size ) {
@@ -96,6 +100,16 @@ private mixin template SpatialVectorMixin(bool isClass) {
             return this.data[2] = value;
         }
     }
+    
+    static if (Size >= 4) {
+        final @property Type w() {
+            return this.data[3];
+        }
+
+        final @property Type w(Type value) {
+            return this.data[3] = value;
+        }
+    }
 }
 
 // next generation from ProjectSci
@@ -104,16 +118,20 @@ private mixin template SpatialVectorMixin(bool isClass) {
  */
 template SpatialVector(uint Size, Type, bool Scalable = true) {
     class SpatialVector : NumericVector!(Size, Type) {
+    	alias SpatialVector!(Size, Type, Scalable) ThisType;
+    	
+    	mixin SpatialVectorMixin!true;
+    	
         final public this() {
         }
 
         final public this(Type[Size] parameter ...) {
-            foreach( uint i; 0..Size ) {
+            foreach( size_t i; 0..Size ) {
                 data[i] = parameter[i];
             }
         }
 
-        mixin SpatialVectorMixin!false;
+        
 
 
         public final SpatialVector!(Size, Type, Scalable) clone() {
@@ -126,24 +144,33 @@ template SpatialVector(uint Size, Type, bool Scalable = true) {
     }
 }
 
-/* uncommented because it instantiates SpatialVectorMixin with the wrong (result) types!
 template SpatialVectorStruct(uint Size, Type, bool Scalable = true) {
     struct SpatialVectorStruct {
-        mixin SpatialVectorMixin!true;
+    	// TODO< make Vector as mixin and mixin
+    	protected const uint ALIGNMENTSIZE = ((Size/4) + ((Size % 4) != 0 ? 1 : 0)) * 4;
+        public align(16) Type data[ALIGNMENTSIZE];
+    	
+    	
+    	private NumericVector!(Size, Type) vector;
+    	
+    	alias SpatialVectorStruct!(Size, Type, Scalable) ThisType;
+    	
+        mixin SpatialVectorMixin!false;
 
-        public final SpatialVector!(Size, Type, Scalable) clone() {
-            SpatialVector!(Size, Type, Scalable) result;
+        public final ThisType clone() {
+            ThisType result;
 
             foreach( i; 0..Size ) {
                 result.data[i] = data[i];
             }
+            return result;
         }
 
         final public @property Type* ptr() {
             return data.ptr;
         }
     }
-}*/
+}
 
 unittest {
     alias SpatialVector!(5, float) VectorType;
@@ -166,6 +193,30 @@ unittest {
         vecB.data[0] = 2.0f;
         vecB.data[4] = 8.0f;
         vecResult = vecB*4.0f;
+        assert(vecResult.data[0] == 8.0f);
+        assert(vecResult.data[4] == 32.0f);
+    }
+}
+
+
+unittest {
+    alias SpatialVectorStruct!(5, float) VectorType;
+    { // addition
+        VectorType vecA, vecB;
+        vecA.data[0] = 1.0f;
+        vecB.data[0] = 2.0f;
+        vecA.data[4] = 4.0f;
+        vecB.data[4] = 8.0f;
+        VectorType vecResult = vecA + vecB;
+        assert(vecResult.data[0] == 3.0f);
+        assert(vecResult.data[4] == 12.0f);
+    }
+
+    { // mul
+        VectorType vecB;
+        vecB.data[0] = 2.0f;
+        vecB.data[4] = 8.0f;
+        VectorType vecResult = vecB*4.0f;
         assert(vecResult.data[0] == 8.0f);
         assert(vecResult.data[4] == 32.0f);
     }
