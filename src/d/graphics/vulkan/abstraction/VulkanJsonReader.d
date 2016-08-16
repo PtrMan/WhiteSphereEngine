@@ -42,38 +42,23 @@ VkPipelineColorBlendAttachmentState convertForPipelineColorBlendAttachmentState(
 VkPipelineColorBlendStateCreateInfo convertForPipelineColorBlendStateCreateInfo(JsonValue jsonValue) {
 	try {
 		VkPipelineColorBlendAttachmentState[] attachments;
-		import std.stdio;
-		writeln("step [0]");
-		
 		
 		JsonValue[] arr = jsonValue["attachments"].array;
-		writeln("step [01]");
+		
 		
 		foreach( iterationJsonAttachment; arr ) {
-			writeln("step [02]");
-		
 			attachments ~= convertForPipelineColorBlendAttachmentState(iterationJsonAttachment);
-			writeln("step [03]");
-		
 		}
-		
-		writeln("step [A]");
 		
 		VkPipelineColorBlendStateCreateInfo result = VkPipelineColorBlendStateCreateInfo.init;
 		with( result ) {
 			sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 			flags = 0; // hardcoded because reserved for future use
 			logicOpEnable = jsonValue["logicOpEnable"].str.toBool;
-			writeln("step [B]");
-		
 			logicOp = cast(VkLogicOp)jsonValue["logicOp"].str.to!(erupted.types.VkLogicOp);
-			writeln("step [C]");
-		
 			attachmentCount = cast(uint32_t)attachments.length;
 			pAttachments = cast(immutable(VkPipelineColorBlendAttachmentState)*)attachments.ptr;
 			blendConstants = convertStaticFloatArray!4(jsonValue["blendConstants"]);
-			writeln("step [D]");
-		
 		}
 		return result;
 	}
