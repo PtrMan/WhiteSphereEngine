@@ -1,9 +1,9 @@
 module graphics.Mesh;
 
-import graphics.MeshComponent;
+import graphics.AbstractMeshComponent;
 
 class Mesh {
-	public final this(MeshComponent[] meshComponents, MeshComponent indexMeshComponent, size_t positionComponentIndex) {
+	public final this(AbstractMeshComponent[] meshComponents, AbstractMeshComponent indexMeshComponent, size_t positionComponentIndex) {
 		assert(positionComponentIndex < meshComponents.length);
 		checkMeshComponentsHaveEqualSize(meshComponents);
 		
@@ -11,12 +11,12 @@ class Mesh {
 		this.protectedMeshComponents = meshComponents;
 		this.positionComponentIndex = positionComponentIndex;
 		
-		assert(indexMeshComponent.type == MeshComponent.EnumType.UINT32);
+		assert(indexMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32);
 		cacheMeshComponentAccessors();
 		checkIndexComponentIndicesInRange(indexMeshComponent, numberOfVertices);
 	}
 	
-	protected static checkMeshComponentsHaveEqualSize(MeshComponent[] meshComponents) {
+	protected static checkMeshComponentsHaveEqualSize(AbstractMeshComponent[] meshComponents) {
 		assert(meshComponents.length > 0);
 		
 		size_t lengthOfFirstComponent = meshComponents[0].length;
@@ -27,8 +27,8 @@ class Mesh {
 		}
 	}
 	
-	protected static checkIndexComponentIndicesInRange(MeshComponent indexMeshComponent, size_t numberOfVertices) {
-		MeshComponent.Uint32Accessor accessor = indexMeshComponent.getUint32Accessor();
+	protected static checkIndexComponentIndicesInRange(AbstractMeshComponent indexMeshComponent, size_t numberOfVertices) {
+		AbstractMeshComponent.Uint32Accessor accessor = indexMeshComponent.getUint32Accessor();
 		foreach( i; 0..indexMeshComponent.length ) {
 			// TODO< should throw exception on missmatch >
 			assert(accessor[i] < numberOfVertices);
@@ -43,7 +43,7 @@ class Mesh {
 		cachedDouble4Accessors.length = numberOfComponents;
 		
 		foreach( i, iterationComponent; protectedMeshComponents ) {
-			final switch( iterationComponent.type ) with(MeshComponent.EnumType) {
+			final switch( iterationComponent.dataType ) with(AbstractMeshComponent.EnumDataType) {
 				case FLOAT4:
 				cachedFloat4Accessors[i] = iterationComponent.getFloat4Accessor();
 				break;
@@ -63,25 +63,25 @@ class Mesh {
 		return protectedMeshComponents.length;
 	}
 	
-	final public MeshComponent.Uint32Accessor getUint32AccessorForIndexBuffer() {
+	final public AbstractMeshComponent.Uint32Accessor getUint32AccessorForIndexBuffer() {
 		return protectedIndexMeshComponent.getUint32Accessor();
 	}
 	
-	final public MeshComponent.Float4Accessor getFloat4AccessorByComponentIndex(size_t index) {
+	final public AbstractMeshComponent.Float4Accessor getFloat4AccessorByComponentIndex(size_t index) {
 		assert(cachedFloat4Accessors[index] !is null);
 		return cachedFloat4Accessors[index];
 	}
 	
-	final public MeshComponent.Double4Accessor getDouble4AccessorByComponentIndex(size_t index) {
+	final public AbstractMeshComponent.Double4Accessor getDouble4AccessorByComponentIndex(size_t index) {
 		assert(cachedDouble4Accessors[index] !is null);
 		return cachedDouble4Accessors[index];
 	}
 	
-	final public @property MeshComponent.Double4Accessor double4PositionAccessor() {
+	final public @property AbstractMeshComponent.Double4Accessor double4PositionAccessor() {
 		return getDouble4AccessorByComponentIndex(positionComponentIndex);
 	}
 	
-	final public @property MeshComponent.Float4Accessor float4PositionAccessor() {
+	final public @property AbstractMeshComponent.Float4Accessor float4PositionAccessor() {
 		return getFloat4AccessorByComponentIndex(positionComponentIndex);
 	}
 	
@@ -96,16 +96,16 @@ class Mesh {
 		assert(false);
 	}
 	
-	final public @property MeshComponent indexBufferMeshComponent() {
+	final public @property AbstractMeshComponent indexBufferMeshComponent() {
 		return protectedIndexMeshComponent;
 	}
 	
 	
 	// members are not changable from the outside after setting them
-	protected MeshComponent protectedIndexMeshComponent;
-	protected MeshComponent[] protectedMeshComponents;
-	protected MeshComponent.Float4Accessor[] cachedFloat4Accessors; // elements are null for non-float4
-	protected MeshComponent.Double4Accessor[] cachedDouble4Accessors; // elements are null for non-float4
+	protected AbstractMeshComponent protectedIndexMeshComponent;
+	protected AbstractMeshComponent[] protectedMeshComponents;
+	protected AbstractMeshComponent.Float4Accessor[] cachedFloat4Accessors; // elements are null for non-float4
+	protected AbstractMeshComponent.Double4Accessor[] cachedDouble4Accessors; // elements are null for non-float4
 	
 	protected size_t positionComponentIndex;
 }

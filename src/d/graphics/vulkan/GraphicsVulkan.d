@@ -20,7 +20,9 @@ import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
 // API independent graphics classes
 import graphics.Mesh;
-import graphics.MeshComponent;
+import graphics.AbstractMeshComponent;
+import graphics.ImmutableMeshComponent;
+import graphics.MeshComponentConverter;
 
 import math.Matrix44;
 import math.Matrix;
@@ -735,7 +737,7 @@ class GraphicsVulkan {
 				
 				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
 				
-				if( testMesh.indexBufferMeshComponent.type == MeshComponent.EnumType.UINT32 ) {
+				if( testMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
 					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBufferForRendering, cast(VkBuffer)vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
 				}
 				else {
@@ -950,17 +952,21 @@ class GraphicsVulkan {
 		{ // build mesh
 			SpatialVector!(4, float)[] positions;
 			positions.length = 4;
-			positions[0] = new SpatialVector!(4, float)(-1.0f, -1.0f, 0, 1.0f);
-			positions[1] = new SpatialVector!(4, float)(1.0f, -1.0f, 0, 1.0f);
-			positions[2] = new SpatialVector!(4, float)(0.0f,  1.0f, 0, 1.0f);
+			// on screen:                                 y       x
+			positions[0] = new SpatialVector!(4, float)(-1.0f, 0.0f, 0, 1.0f);
+			positions[1] = new SpatialVector!(4, float)(1.0f,  1.0f, 0, 1.0f);
+			positions[2] = new SpatialVector!(4, float)(1.0f,  0.0f, 0, 1.0f);
 			positions[3] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
 			
-			uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
+			
+			//uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
+			uint32_t[] indexBuffer = [0, 1, 2, 3, 1, 2];
 			
 			
 			// translate to MeshComponent
-			MeshComponent componentPosition = MeshComponent.makeFloat4(positions);
-			MeshComponent componentIndex = MeshComponent.makeUint32(indexBuffer);
+			
+			AbstractMeshComponent componentPosition = toImmutableMeshComponent(positions);
+			AbstractMeshComponent componentIndex = ImmutableMeshComponent.makeUint32(indexBuffer);
 			
 			testMesh = new Mesh([componentPosition], componentIndex, 0);
 		}

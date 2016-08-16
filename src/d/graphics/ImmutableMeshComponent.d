@@ -1,19 +1,29 @@
-module graphics.MeshComponent;
+module graphics.ImmutableMeshComponent;
 
 import core.stdc.stdint;
 
+import graphics.AbstractMeshComponent;
 import math.NumericSpatialVectors;
-import core.memory : GC;
+
+
 
 // A isomporphism (in enlish it is equal to) for a buffer for a attribute of an vertex of an mesh
-class MeshComponent {
-	enum EnumType {
-		FLOAT4,
-		DOUBLE4,
-		UINT32,
-	}
-	
-	protected struct Value {
+// is immutable, which allows the engine to potentially do some optimisations
+class ImmutableMeshComponent : AbstractMeshComponent {
+	public struct Value {
+		public final this(float[4] floatValue) {
+			this.floatValue = floatValue;
+		}
+		
+		public final this(uint32_t uint32Value) {
+			this.uint32Value = uint32Value;
+		}
+		
+		public final this(double[4] doubleValue) {
+			this.doubleValue = doubleValue;
+		}
+		
+		
 		union {
 			float[4] floatValue;
 			double[4] doubleValue;
@@ -21,21 +31,34 @@ class MeshComponent {
 		}
 	}
 	
-	
-	public static MeshComponent makeUint32(uint32_t[] arr) {
-		MeshComponent result = new MeshComponent(EnumType.UINT32);
-		
-		// we don't want to scan this memory because there are no ptr's
-		result.array = cast(Value*)GC.malloc(Value.sizeof * arr.length, GC.BlkAttr.NO_SCAN);
-		result.protectedLength = arr.length;
-		
-		foreach( i; 0..arr.length ) {
-			result.array[i].uint32Value = arr[i];
-		}
-		
-		return result;
+	protected final this(AbstractMeshComponent.EnumDataType dataType, immutable(Value[]) array) {
+		super(dataType, AbstractMeshComponent.EnumType.IMMUTABLE);
+		this.array = array;
 	}
 	
+	
+	public static ImmutableMeshComponent makeUint32(uint32_t[] arr) {
+		Value[] tempArray;
+		tempArray.length = arr.length;
+		foreach( i; 0..arr.length ) {
+			tempArray[i] = Value(arr[i]);
+		}
+		// note that we copy the whole array here, might be a bit heavy on the GC and CPU, we'll see
+		return new ImmutableMeshComponent(AbstractMeshComponent.EnumDataType.UINT32, cast(immutable(Value[]))tempArray.dup);
+	}
+	
+	public static ImmutableMeshComponent makeFloat4(float[4][] arr) {
+		Value[] tempArray;
+		tempArray.length = arr.length;
+		foreach( i; 0..arr.length ) {
+			tempArray[i] = Value(arr[i]);
+		}
+		// note that we copy the whole array here, might be a bit heavy on the GC and CPU, we'll see
+		return new ImmutableMeshComponent(AbstractMeshComponent.EnumDataType.FLOAT4, cast(immutable(Value[]))tempArray.dup);
+	}
+
+	
+	/+
 	// arr is usually GC allocated memory with nonscanning flag
 	public static MeshComponent makeUint32(uint32_t* arr, size_t length) {
 		MeshComponent result = new MeshComponent(EnumType.UINT32);
@@ -50,9 +73,10 @@ class MeshComponent {
 		
 		return result;
 	}
+	+/
+	
+		/+
 
-	
-	
 	// arr is usually GC allocated memory with nonscanning flag
 	public static MeshComponent makeFloat4(float[4]* arr, size_t length) {
 		MeshComponent result = new MeshComponent(EnumType.FLOAT4);
@@ -120,15 +144,14 @@ class MeshComponent {
 	
 	
 	
-	// disable ctor
-	protected final this(EnumType type) {
-		this.protectedType = type;
-	}
+	+/
 	
 	
 	// not static
-	public class Float4Accessor {
-		public final float[4] opIndex(size_t index) {
+	public class Float4Accessor : AbstractMeshComponent.Float4Accessor {
+		public final this() {}
+		
+		public override float[4] opIndex(size_t index) {
 			assert(index < length);
 			// no need to check type because this accessor can only get retrived by getFloatAccessor
 			
@@ -137,8 +160,10 @@ class MeshComponent {
 	}
 	
 	// not static
-	public class Double4Accessor {
-		public final double[4] opIndex(size_t index) {
+	public class Double4Accessor : AbstractMeshComponent.Double4Accessor {
+		public final this() {}
+		
+		public override double[4] opIndex(size_t index) {
 			assert(index < length);
 			// no need to check type because this accessor can only get retrived by getFloatAccessor
 			
@@ -147,8 +172,10 @@ class MeshComponent {
 	}
 	
 	// not static
-	public class Uint32Accessor {
-		public final uint32_t opIndex(size_t index) {
+	public class Uint32Accessor : AbstractMeshComponent.Uint32Accessor {
+		public final this() {}
+		
+		public override uint32_t opIndex(size_t index) {
 			assert(index < length);
 			// no need to check type because this accessor can only get retrived by getFloatAccessor
 			
@@ -157,34 +184,27 @@ class MeshComponent {
 	}
 
 	
-	
-	public final Float4Accessor getFloat4Accessor() {
-		assert(type == EnumType.FLOAT4);
+	public override AbstractMeshComponent.Float4Accessor getFloat4Accessor() {
+		assert(dataType == EnumDataType.FLOAT4);
 		return new Float4Accessor;
 	}
 	
-	public final Double4Accessor getDouble4Accessor() {
-		assert(type == EnumType.DOUBLE4);
+	public override AbstractMeshComponent.Double4Accessor getDouble4Accessor() {
+		assert(dataType == EnumDataType.DOUBLE4);
 		return new Double4Accessor;
 	}
 	
-	public final Uint32Accessor getUint32Accessor() {
-		assert(type == EnumType.UINT32);
+	public override AbstractMeshComponent.Uint32Accessor getUint32Accessor() {
+		assert(dataType == EnumDataType.UINT32);
 		return new Uint32Accessor;
 	}
-
 	
-	public final @property EnumType type() {
-		return protectedType;
+	
+	public override @property size_t length() {
+		return array.length;
 	}
 	
-	public final @property size_t length() {
-		return protectedLength;
-	}
-	
-	package size_t protectedLength; // used for range checks
-	package Value* array; // usually allocated in nonscanned GC memory
-	protected EnumType protectedType;
+	public immutable(Value[]) array;
 }
 
 /* uncommented because we dont need this class
