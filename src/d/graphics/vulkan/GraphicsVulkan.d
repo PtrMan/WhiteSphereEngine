@@ -129,11 +129,6 @@ class GraphicsVulkan {
 			
 			str ~= "{";
 			
-			str ~= "'colorAttachmentReferences':[";
-			
-			str ~= "{'attachment':'0','layout':'VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL'}";
-			
-			str ~= "],";
 			
 			str ~= "'attachmentDescriptions':[{";
 			str ~= "'flags':'0',";
@@ -164,6 +159,7 @@ class GraphicsVulkan {
 				}
 			}
 			
+			/*
 			VkAttachmentReference[] colorAttachmentReferences;
 			{
 				JsonValue[] jsonArray = jsonValue["colorAttachmentReferences"].array;
@@ -172,8 +168,9 @@ class GraphicsVulkan {
 					colorAttachmentReferences ~= convertForAttachmentReference(iterationJson);
 				}
 			}
+			*/
 
-			/* TODo< translate to json
+			/* 
 			VkAttachmentReference colorAttachmentReferences[] = [
 				{
 					0,                                          // uint32_t                       attachment
@@ -181,7 +178,25 @@ class GraphicsVulkan {
 				}
 			];
 			*/
-			 
+			
+			
+			string jsonSubpassDescription;
+			jsonSubpassDescription = "{"
+			~ "'flags':'0',"
+			~ "'pipelineBindPoint':'VK_PIPELINE_BIND_POINT_GRAPHICS',"
+			~ "'colorAttachments':["
+			~ "    {'attachment':'0','layout':'VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL'}"
+			~ "]}"
+			;
+			import std.string : replace; // just for testing
+			jsonSubpassDescription = jsonSubpassDescription.replace("'", "\"");
+			
+			
+			
+			JsonValue jsonValueSubpassDescription = parseJson(jsonSubpassDescription);
+			
+			VkSubpassDescription[] subpassDescriptions = [convertForSubpassDescription(jsonValueSubpassDescription)];
+			 /*
 			VkSubpassDescription subpassDescriptions[] = [
 				{
 					0,                                          // VkSubpassDescriptionFlags      flags
@@ -196,6 +211,7 @@ class GraphicsVulkan {
 					null                                     // const uint32_t*                pPreserveAttachments
 				}
 			];
+			*/
 			
 			
 			const(VkAllocationCallbacks*) allocator = null;

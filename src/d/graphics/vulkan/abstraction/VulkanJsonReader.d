@@ -101,8 +101,46 @@ VkAttachmentReference convertForAttachmentReference(JsonValue jsonValue) {
 	)(jsonValue);
 }
 
+// mixture which uses the template and some custom logic
+VkSubpassDescription convertForSubpassDescription(JsonValue jsonValue) {
+	VkSubpassDescription result = jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkSubpassDescription,
+		[
+		"flags":"VkSubpassDescriptionFlags",
+		"pipelineBindPoint":"VkPipelineBindPoint",
+		]
+	)(jsonValue);
+	
+	JsonValue[] jsonArray;
+	
+	VkAttachmentReference[] InputAttachments; // TODO< fill >
+	
+	VkAttachmentReference[] colorAttachments;
+	{
+		jsonArray = jsonValue["colorAttachments"].array;
+		
+		foreach( iterationJson; jsonArray ) {
+			colorAttachments ~= convertForAttachmentReference(iterationJson);
+		}
+	}
 
-Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup)(JsonValue jsonValue) {
+	
+	with(result) {
+		inputAttachmentCount = cast(uint32_t)InputAttachments.length;
+		pInputAttachments = cast(immutable(VkAttachmentReference)*)InputAttachments.ptr;
+		colorAttachmentCount = cast(uint32_t)colorAttachments.length;
+		pColorAttachments = cast(immutable(VkAttachmentReference)*)colorAttachments.ptr;
+		pResolveAttachments = null; // TODO< read from json >
+		pDepthStencilAttachment = null; // TODO< read from json >
+		preserveAttachmentCount = 0; // TODO< read from json >
+		pPreserveAttachments = null; // TODO< read from json >
+	}
+	return result;
+}
+
+
+
+
+private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup)(JsonValue jsonValue) {
 	import std.format : format;
 	
 	string currentField;
@@ -110,25 +148,33 @@ Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] ty
 		Type resultStructure;
 		with(resultStructure) {
 			foreach( iterationMemberName; __traits(allMembers, Type) ) {
-				currentField = iterationMemberName;
+				import std.ascii : isUpper;
+				enum isPointer = iterationMemberName[0] == 'p' && iterationMemberName[1].isUpper; // pointers are indicated by a p followed by an uppercase letter
+				enum isCount = iterationMemberName.length > 5 && iterationMemberName[$-5..$] == "Count";
+				enum ignore = isCount || isPointer; // ignore count fields and pointer fields
 				
-				// TODO< special case for bool>
+				static if( !ignore ) {// we ignore certain fields
+					currentField = iterationMemberName;
+					
+					// TODO< special case for bool>
+					
+					enum typeOfIterationName = typeLookup[iterationMemberName];
+					enum isNativeType = typeOfIterationName == "uint32";
+					enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
+					static if( isEnum ) {
+						mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%2$s));\n".format(iterationMemberName, typeLookup[iterationMemberName]));
+					}
+					else {
+						enum convertToType = isNativeType ? typeOfIterationName : "erupted.types." ~ typeOfIterationName;
+						
+						mixin("resultStructure.%1$s = cast(%2$s)jsonValue[\"%1$s\"].str.to!(%3$s);\n".format(iterationMemberName, typeLookup[iterationMemberName], convertToType));
+						
+						// for debugging
+						//import std.stdio;
+						//writeln(typeof(__traits(getMember, resultStructure, iterationMemberName)).stringof, " ", typeLookup[iterationMemberName]);
+					}
+				}
 				
-				enum typeOfIterationName = typeLookup[iterationMemberName];
-				enum isNativeType = typeOfIterationName == "uint32";
-				enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
-				static if( isEnum ) {
-					mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%2$s));\n".format(iterationMemberName, typeLookup[iterationMemberName]));
-				}
-				else {
-					enum convertToType = isNativeType ? typeOfIterationName : "erupted.types." ~ typeOfIterationName;
-					
-					mixin("resultStructure.%1$s = cast(%2$s)jsonValue[\"%1$s\"].str.to!(%3$s);\n".format(iterationMemberName, typeLookup[iterationMemberName], convertToType));
-					
-					// for debugging
-					//import std.stdio;
-					//writeln(typeof(__traits(getMember, resultStructure, iterationMemberName)).stringof, " ", typeLookup[iterationMemberName]);
-				}
 			}
 		}
 		return resultStructure;
