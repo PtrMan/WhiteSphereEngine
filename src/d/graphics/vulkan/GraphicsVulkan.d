@@ -159,26 +159,6 @@ class GraphicsVulkan {
 				}
 			}
 			
-			/*
-			VkAttachmentReference[] colorAttachmentReferences;
-			{
-				JsonValue[] jsonArray = jsonValue["colorAttachmentReferences"].array;
-				
-				foreach( iterationJson; jsonArray ) {
-					colorAttachmentReferences ~= convertForAttachmentReference(iterationJson);
-				}
-			}
-			*/
-
-			/* 
-			VkAttachmentReference colorAttachmentReferences[] = [
-				{
-					0,                                          // uint32_t                       attachment
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL    // VkImageLayout                  layout
-				}
-			];
-			*/
-			
 			
 			string jsonSubpassDescription;
 			jsonSubpassDescription = "{"
@@ -196,22 +176,6 @@ class GraphicsVulkan {
 			JsonValue jsonValueSubpassDescription = parseJson(jsonSubpassDescription);
 			
 			VkSubpassDescription[] subpassDescriptions = [convertForSubpassDescription(jsonValueSubpassDescription)];
-			 /*
-			VkSubpassDescription subpassDescriptions[] = [
-				{
-					0,                                          // VkSubpassDescriptionFlags      flags
-					VK_PIPELINE_BIND_POINT_GRAPHICS,            // VkPipelineBindPoint            pipelineBindPoint
-					0,                                          // uint32_t                       inputAttachmentCount
-					null,                                    // const VkAttachmentReference   *pInputAttachments
-					1,                                          // uint32_t                       colorAttachmentCount
-					cast(immutable(VkAttachmentReference)*)colorAttachmentReferences.ptr,                // const VkAttachmentReference   *pColorAttachments
-					null,                                    // const VkAttachmentReference   *pResolveAttachments
-					null,                                    // const VkAttachmentReference   *pDepthStencilAttachment
-					0,                                          // uint32_t                       preserveAttachmentCount
-					null                                     // const uint32_t*                pPreserveAttachments
-				}
-			];
-			*/
 			
 			
 			const(VkAllocationCallbacks*) allocator = null;
