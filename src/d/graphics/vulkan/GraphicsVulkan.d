@@ -126,8 +126,16 @@ class GraphicsVulkan {
 			
 			
 			string str;
+			
 			str ~= "{";
 			
+			str ~= "'colorAttachmentReferences':[";
+			
+			str ~= "{'attachment':'0','layout':'VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL'}";
+			
+			str ~= "],";
+			
+			str ~= "'attachmentDescriptions':[{";
 			str ~= "'flags':'0',";
 			str ~= "'format':'VK_FORMAT_A2B10G10R10_UINT_PACK32',"; // TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
 			str ~= "'samples':'VK_SAMPLE_COUNT_1_BIT',";
@@ -137,6 +145,8 @@ class GraphicsVulkan {
 			str ~= "'stencilStoreOp':'VK_ATTACHMENT_STORE_OP_DONT_CARE',";
 			str ~= "'initialLayout':'VK_IMAGE_LAYOUT_UNDEFINED',"; // we overwrite it so it shouldn't matter
 			str ~= "'finalLayout':'VK_IMAGE_LAYOUT_GENERAL'"; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
+			str ~= "}]";
+			
 			str ~= "}";
 			import std.string : replace; // just for testing
 			str = str.replace("'", "\"");
@@ -147,34 +157,30 @@ class GraphicsVulkan {
 			
 			VkAttachmentDescription[] attachmentDescriptions;
 			{
-				VkAttachmentDescription attachmentDescriptionToAdd;
-				attachmentDescriptionToAdd = convertForAtachmentDescription(jsonValue);
+				JsonValue[] jsonAttachmentDescriptions = jsonValue["attachmentDescriptions"].array;
 				
-				/* uncommented because replaced by json parsing code
-				with(attachmentDescriptionToAdd) {
-					flags = 0;
-					format = VK_FORMAT_A2B10G10R10_UINT_PACK32; // TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
-					samples = VK_SAMPLE_COUNT_1_BIT;
-					loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-					storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-					stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-					stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-					initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // we overwrite it so it shouldn't matter
-					finalLayout = VK_IMAGE_LAYOUT_GENERAL; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
-					
+				foreach( iterationJsonAttachmentDescription; jsonAttachmentDescriptions ) {
+					attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonAttachmentDescription);
 				}
-				*/
-				attachmentDescriptions ~= attachmentDescriptionToAdd;
 			}
 			
-			// subpass description
-			
+			VkAttachmentReference[] colorAttachmentReferences;
+			{
+				JsonValue[] jsonArray = jsonValue["colorAttachmentReferences"].array;
+				
+				foreach( iterationJson; jsonArray ) {
+					colorAttachmentReferences ~= convertForAttachmentReference(iterationJson);
+				}
+			}
+
+			/* TODo< translate to json
 			VkAttachmentReference colorAttachmentReferences[] = [
 				{
 					0,                                          // uint32_t                       attachment
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL    // VkImageLayout                  layout
 				}
 			];
+			*/
 			 
 			VkSubpassDescription subpassDescriptions[] = [
 				{

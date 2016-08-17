@@ -92,6 +92,16 @@ VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue) {
 	)(jsonValue);
 }
 
+VkAttachmentReference convertForAttachmentReference(JsonValue jsonValue) {
+	return jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkAttachmentReference, 
+		[
+		"attachment":"uint32_t",
+		"layout":"VkImageLayout"
+		]
+	)(jsonValue);
+}
+
+
 Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup)(JsonValue jsonValue) {
 	import std.format : format;
 	
@@ -105,12 +115,15 @@ Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] ty
 				// TODO< special case for bool>
 				
 				enum typeOfIterationName = typeLookup[iterationMemberName];
+				enum isNativeType = typeOfIterationName == "uint32";
 				enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
 				static if( isEnum ) {
 					mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%2$s));\n".format(iterationMemberName, typeLookup[iterationMemberName]));
 				}
 				else {
-					mixin("resultStructure.%1$s = cast(%2$s)jsonValue[\"%1$s\"].str.to!(erupted.types.%2$s);\n".format(iterationMemberName, typeLookup[iterationMemberName]));
+					enum convertToType = isNativeType ? typeOfIterationName : "erupted.types." ~ typeOfIterationName;
+					
+					mixin("resultStructure.%1$s = cast(%2$s)jsonValue[\"%1$s\"].str.to!(%3$s);\n".format(iterationMemberName, typeLookup[iterationMemberName], convertToType));
 					
 					// for debugging
 					//import std.stdio;
