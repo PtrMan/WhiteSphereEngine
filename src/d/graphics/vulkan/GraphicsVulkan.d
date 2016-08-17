@@ -124,9 +124,33 @@ class GraphicsVulkan {
 		void createRenderpass() {
 			VkResult vulkanResult;
 			
+			
+			string str;
+			str ~= "{";
+			
+			str ~= "'flags':'0',";
+			str ~= "'format':'VK_FORMAT_A2B10G10R10_UINT_PACK32',"; // TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
+			str ~= "'samples':'VK_SAMPLE_COUNT_1_BIT',";
+			str ~= "'loadOp':'VK_ATTACHMENT_LOAD_OP_CLEAR',";
+			str ~= "'storeOp':'VK_ATTACHMENT_STORE_OP_STORE',";
+			str ~= "'stencilLoadOp':'VK_ATTACHMENT_LOAD_OP_DONT_CARE',";
+			str ~= "'stencilStoreOp':'VK_ATTACHMENT_STORE_OP_DONT_CARE',";
+			str ~= "'initialLayout':'VK_IMAGE_LAYOUT_UNDEFINED',"; // we overwrite it so it shouldn't matter
+			str ~= "'finalLayout':'VK_IMAGE_LAYOUT_GENERAL'"; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
+			str ~= "}";
+			import std.string : replace; // just for testing
+			str = str.replace("'", "\"");
+			
+			
+			
+			JsonValue jsonValue = parseJson(str);
+			
 			VkAttachmentDescription[] attachmentDescriptions;
 			{
 				VkAttachmentDescription attachmentDescriptionToAdd;
+				attachmentDescriptionToAdd = convertForAtachmentDescription(jsonValue);
+				
+				/* uncommented because replaced by json parsing code
 				with(attachmentDescriptionToAdd) {
 					flags = 0;
 					format = VK_FORMAT_A2B10G10R10_UINT_PACK32; // TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
@@ -139,6 +163,7 @@ class GraphicsVulkan {
 					finalLayout = VK_IMAGE_LAYOUT_GENERAL; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
 					
 				}
+				*/
 				attachmentDescriptions ~= attachmentDescriptionToAdd;
 			}
 			

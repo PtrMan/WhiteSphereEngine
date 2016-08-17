@@ -10,11 +10,17 @@ import api.vulkan.Vulkan;
 
 import Exceptions;
 
-VkPipelineColorBlendAttachmentState convertForPipelineColorBlendAttachmentState(JsonValue jsonValue) {
-	static uint convertColorComponentFlagToNumber(string str) {
-		return cast(uint)str.to!(erupted.types.VkColorComponentFlagBits);
+// used with flag components
+private uint convertFlagToNumber(Type)(string str) {
+	if( str == "0" ) { // 0 is special
+		return 0;
 	}
-	
+	else {
+		return cast(uint)str.to!Type;
+	}
+}
+
+VkPipelineColorBlendAttachmentState convertForPipelineColorBlendAttachmentState(JsonValue jsonValue) {
 	VkPipelineColorBlendAttachmentState result;
 	try {
 		with( result ) {
@@ -25,7 +31,7 @@ VkPipelineColorBlendAttachmentState convertForPipelineColorBlendAttachmentState(
 			srcAlphaBlendFactor = cast(VkBlendFactor)jsonValue["srcAlphaBlendFactor"].str.to!(erupted.types.VkBlendFactor);
 			dstAlphaBlendFactor = cast(VkBlendFactor)jsonValue["dstAlphaBlendFactor"].str.to!(erupted.types.VkBlendFactor);
 			alphaBlendOp = cast(VkBlendOp)jsonValue["alphaBlendOp"].str.to!(erupted.types.VkBlendOp);
-			colorWriteMask = cast(VkColorComponentFlags)or(jsonValue["colorWriteMask"].str, &convertColorComponentFlagToNumber);
+			colorWriteMask = cast(VkColorComponentFlags)or(jsonValue["colorWriteMask"].str, &convertFlagToNumber!(erupted.types.VkColorComponentFlagBits));
 		}
 	}
 	catch( JsonException exception ) {
@@ -68,9 +74,69 @@ VkPipelineColorBlendStateCreateInfo convertForPipelineColorBlendStateCreateInfo(
 	catch( ConvException exception ) {
 		throw new EngineException(false, true, "Json conversion for VkPipelineColorBlendStateCreateInfo failed with '" ~ exception.msg ~ "'!");
 	}
-	
-	
 }
+
+VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue) {
+	return jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkAttachmentDescription, 
+		[
+			"flags":"VkAttachmentDescriptionFlags",
+			"format":"VkFormat",
+			"samples":"VkSampleCountFlagBits",
+			"loadOp":"VkAttachmentLoadOp",
+			"storeOp":"VkAttachmentStoreOp",
+			"stencilLoadOp":"VkAttachmentLoadOp",
+			"stencilStoreOp":"VkAttachmentStoreOp",
+			"initialLayout":"VkImageLayout",
+			"finalLayout":"VkImageLayout",
+		]
+	)(jsonValue);
+}
+
+Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup)(JsonValue jsonValue) {
+	import std.format : format;
+	
+	string currentField;
+	try {
+		Type resultStructure;
+		with(resultStructure) {
+			foreach( iterationMemberName; __traits(allMembers, Type) ) {
+				currentField = iterationMemberName;
+				
+				// TODO< special case for bool>
+				
+				enum typeOfIterationName = typeLookup[iterationMemberName];
+				enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
+				static if( isEnum ) {
+					mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%2$s));\n".format(iterationMemberName, typeLookup[iterationMemberName]));
+				}
+				else {
+					mixin("resultStructure.%1$s = cast(%2$s)jsonValue[\"%1$s\"].str.to!(erupted.types.%2$s);\n".format(iterationMemberName, typeLookup[iterationMemberName]));
+					
+					// for debugging
+					//import std.stdio;
+					//writeln(typeof(__traits(getMember, resultStructure, iterationMemberName)).stringof, " ", typeLookup[iterationMemberName]);
+				}
+			}
+		}
+		return resultStructure;
+	}
+	catch( JsonException exception ) {
+		throw new EngineException(false, true, "Json conversion of " ~ Type.stringof ~ " for the field '" ~ currentField ~ "' failed with '" ~ exception.msg ~ "'!");
+	}
+	catch( ConvException exception ) {
+		throw new EngineException(false, true, "Json conversion of " ~ Type.stringof ~ " for the field '" ~ currentField ~ "' failed with '" ~ exception.msg ~ "'!");
+	}
+
+}
+
+
+
+
+
+
+
+
+
 
 private uint or(string input, uint function(string) convertToEnum) {
 	uint result = 0;
