@@ -349,11 +349,170 @@ void enableOnlyFaces(MeshFaceDecorationType, VertexDecorationType, NumericType)(
 	}
 }
 
+
+
+// TODO TODO TODO< refactor the remapping as a component and do an unittest for it >
+/**
+ * the remapping algorithm works as follows:
+ * - maintain a list of indices, to indicate from which index we have to take the element if we rebuild the new list
+ * - build a lookuptable where the new index can be looked up by the old index
+ */
+/**
+ * MemoryType must provide the static methods:
+ * * allocate
+ *
+ * The returned objects returned by allocate must have the methods
+ * * free
+ * * removeAt
+ * the property
+ * * length
+ */
+auto remappingAlgorithm(MemoryType)(size_t numberOfElements, bool delegate(size_t index) checkIfToBeRemoved) {
+	auto remapIndexArray = MemoryType.allocate(numberOfElements);
+	scope(exit) remapIndexArray.free();
+	
+	// fill remap index map
+	foreach( i; 0..numberOfElements ) {
+		remapIndexArray[i] = i;
+	}
+	
+	// remove the indices where the test tells that the elment was removed
+	foreach( i; 0..numberOfElements ) {
+		if( checkIfToBeRemoved(i) ) {
+			remapIndexArray.removeAt(i);
+		}
+	}
+	
+	// build the actual remap map
+	auto remapMap = MemoryType.allocate(numberOfElements);
+	
+	foreach( i; 0..remapIndexArray.length ) {
+		remapMap[remapIndexArray[i]] = i;
+	}
+	
+	return remapMap;
+}
+
+unittest {
+	static class MemoryType {
+		public final this(size_t size) {
+			arr.length = size;
+		}
+		
+		public final void free() {
+			// nothing to do because its GC'ed
+		}
+		
+		public final @property size_t length() {
+			return arr.length;
+		}
+		
+		public final void removeAt(size_t index) {
+			import std.algorithm.mutation : remove;
+			remove(arr, index);
+			arr.length--;
+		}
+		
+		public final ref int opIndex(size_t index) @nogc {
+			return arr[index];
+		}
+		
+		
+		public int[] arr;
+	}
+	
+	static class Memory {
+		public static MemoryType allocate(size_t size) {
+			return new MemoryType(size);
+		}
+	}
+	
+	{ // test the case that nothing got removed
+		bool checkIfToBeRemoved(size_t index) {
+			return false;
+		}
+	
+		MemoryType remappedLookup = remappingAlgorithm!Memory(cast(size_t)3, &checkIfToBeRemoved);
+		// check that it shouldn't have changed anything
+		foreach( i; 0..3 ) {
+			assert( remappedLookup[i] == i );
+		}
+	}
+	
+	{ // check the case that one element in the middle got removed
+		bool checkIfToBeRemoved2(size_t index) {
+			return index == 1;
+		}
+	
+		MemoryType remappedLookup = remappingAlgorithm!Memory(3, &checkIfToBeRemoved2);
+		
+		// check the following
+		// the array before was [0 1 2]
+		// we removed the 2nd element so the result is
+		//                      [0 2]
+		// so the remapping array should be
+		//                      [0 ? 1]  (we find element 0 at 0, and element 2 at index 1
+		
+		// check that it shouldn't have changed anything
+		assert( remappedLookup[0] == 0 );
+		assert( remappedLookup[2] == 1 );
+	}
+}
+
+
 // creates a new mesh with only enabled faces and only used vertices
 // untested
 MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType)* 
 cleanup(MeshFaceDecorationType, VertexDecorationType, NumericType)
 ( ref MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) mesh ) {
+	// is used by the remapping algorithm as an array
+	static struct RemappingMemory {
+		public int* array;
+		public int numberOfElements;
+		
+		public final void free() {
+			assert( array !is null );
+			.free(array);
+			array = null;
+		}
+		
+		public final @property size_t length() {
+			return cast(size_t)numberOfElements;
+		}
+		
+		public final void removeAt(size_t index) {
+			assert( index < numberOfElements );
+			
+			// remove this index
+			foreach( j; index..numberOfElements-1 ) {
+				array[j] = array[j+1];
+			}
+			
+			// decrement size
+			assert(numberOfElements > 0);
+			numberOfElements--;
+		}
+		
+		public final ref int opIndex(size_t index) @nogc {
+			return array[index];
+		}
+
+	}
+	
+	// allocates memory for the use in the remapping algorithm
+	static struct RemappingMemoryAllocator {
+		public static RemappingMemory allocate(size_t numberOfElements) {
+			RemappingMemory resultMemory;
+			resultMemory.array = cast(int*)malloc(int.sizeof * numberOfElements);
+			if( resultMemory.array is null ) {
+				throw new Exception("Out of memory");
+			}
+			resultMemory.numberOfElements = numberOfElements;
+			
+			return resultMemory;
+		}
+	}
+	
 	alias MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) MeshType;
 	
 	MeshType* result = cast(MeshType*)malloc(MeshType.sizeof);
@@ -384,53 +543,17 @@ cleanup(MeshFaceDecorationType, VertexDecorationType, NumericType)
 		}
 		
 		
-		/**
-		 * remapping the vertices works by filling an array with the indices where the new values are
-		 * this then gets translated into another array, where a linear lookup as usual can take place
-		 *
-		 */
 		{ // remap vertex indices in result-mesh and copy vertices
-			int vertexIndexRemapSize = cast(int)mesh.vertices.length;
-			size_t* remapIndexArray = cast(size_t*)malloc(size_t.sizeof * vertexIndexRemapSize);
-			if( remapIndexArray is null ) {
-				throw new Exception("Out of memory");
-			}
-			scope(exit) free(remapIndexArray);
 			
-			// fill remap index map
-			foreach( i; 0..vertexIndexRemapSize ) {
-				remapIndexArray[i] = i;
+			// this funcion is called by the remapping algorithm and checks if an
+			// vertex has to be removed/remapped,
+			// this can only be the case if its not referenced
+			bool checkIfVertexHasToGetRemoved(size_t index) {
+				return !mesh.vertices[index].decoration.isReferenced;
 			}
 			
-			// remove the indices where the reference count is 0
-			foreach( i; 0..mesh.vertices.length ) {
-				if( !mesh.vertices[i].decoration.isReferenced ) {
-					// remove this index
-					foreach( j; i..vertexIndexRemapSize-1 ) {
-						remapIndexArray[j] = remapIndexArray[j+1];
-					}
-					
-					// decrement size
-					vertexIndexRemapSize--;
-					assert(vertexIndexRemapSize >= 0);
-				}
-			}
-			
-			
-			// build the actual remap map
-			int* remapMap;
-			{
-				remapMap = cast(int*)malloc(int.sizeof * mesh.vertices.length);
-				if( remapMap is null ) {
-					throw new Exception("Out of memory");
-				}
-				
-				foreach( i; 0..vertexIndexRemapSize ) {
-					remapMap[remapIndexArray[i]] = i;
-				}
-			}
-			scope(exit) free(remapMap);
-			
+			RemappingMemory remapMap = remappingAlgorithm!RemappingMemoryAllocator(mesh.vertices.length, &checkIfVertexHasToGetRemoved);
+			scope(exit) remapMap.free();
 			
 			
 			int remapVertexIndex(int vertexIndex) {
@@ -440,8 +563,6 @@ cleanup(MeshFaceDecorationType, VertexDecorationType, NumericType)
 			
 			// actual remapping
 			foreach( iterationFace; result.faces ) {
-				
-				
 				foreach( i; 0..iterationFace.verticesIndices.length ) {
 					int iterationVertexIndex = iterationFace.verticesIndices[i];
 					
@@ -456,8 +577,8 @@ cleanup(MeshFaceDecorationType, VertexDecorationType, NumericType)
 			}
 			
 			// copy (remapped) vertices
-			foreach( i; 0..vertexIndexRemapSize ) {
-				result.vertices ~= mesh.vertices[remapIndexArray[i]];
+			foreach( i; 0..remapMap.length ) {
+				result.vertices ~= mesh.vertices[remapMap[i]];
 			}
 		}
 	}
@@ -501,12 +622,11 @@ struct DefaultMeshFaceDecoration(NumericType) {
 }
 
 struct DefaultVertexDecoration {
-	// TODO< ref counter >
 	mixin Refcount; // for reference counting for checking if an vertex is in use
 }
 
 
-// just for testing
+// just for testing if it compiles
 void main() {
 	alias MeshStruct!(DefaultMeshFaceDecoration!float, DefaultVertexDecoration, float) MeshType;
 	
