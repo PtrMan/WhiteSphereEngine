@@ -351,7 +351,6 @@ void enableOnlyFaces(MeshFaceDecorationType, VertexDecorationType, NumericType)(
 
 
 
-// TODO TODO TODO< refactor the remapping as a component and do an unittest for it >
 /**
  * the remapping algorithm works as follows:
  * - maintain a list of indices, to indicate from which index we have to take the element if we rebuild the new list
@@ -596,7 +595,7 @@ void recalculateNormals(MeshFaceDecorationType, VertexDecorationType, NumericTyp
 	foreach( iterationFace; mesh.faces ) {
 		int vertexIndex0 = iterationFace.verticesIndices[0];
 		int vertexIndex1 = iterationFace.verticesIndices[1];
-		int vertexIndex2 = iterationFace.verticesIndices[$-1];
+		int vertexIndex2 = iterationFace.verticesIndices[$-1]; // TODO< this is wrong, we have to scan for the end of the array, by searching for the special value -2 and use the last value if it wasnt found or the value before the index where it was found >
 		assert(vertexIndex0 != -2 && vertexIndex1 != -2 && vertexIndex2 != -2, "Vertex indices have to be set!");
 		
 		VectorType vertexPosition0 = vertices[vertexIndex0].position;
