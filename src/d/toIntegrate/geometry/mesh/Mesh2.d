@@ -95,7 +95,7 @@ package mixin template MemoryArrayMixin() {
 	
 
 	private void* ptr;
-	private size_t allocatedElementsPrivate;
+	private size_t allocatedElementsPrivate = 0;
 }
 
 import core.stdc.stdlib : malloc, realloc, free;
@@ -105,6 +105,7 @@ struct HeapMemoryArray(Type) {
 	mixin MemoryArrayMixin;
 	
 	public final ~this() {
+		usedElements = 0;
 		free();
 	}
 	
