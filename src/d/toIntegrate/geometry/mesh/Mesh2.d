@@ -94,7 +94,7 @@ package mixin template MemoryArrayMixin() {
 	}
 	
 
-	private void *ptr;
+	private void* ptr;
 	private size_t allocatedElementsPrivate;
 }
 
@@ -108,31 +108,35 @@ struct HeapMemoryArray(Type) {
 		free();
 	}
 	
-	final Type* opIndex(size_t index) nothrow @nogc
+	final public Type* at(size_t index) nothrow @nogc
 	in {
 		assert(index < allocatedElements);
 		assert(ptr !is null);
 	}
 	body {
-		return cast(Type*)( cast(size_t)ptr + Index * sizeofElement );
+		return cast(Type*)( cast(size_t)ptr + index * sizeofElement );
+	}
+	
+	final ref Type opIndex(size_t index) nothrow @nogc {
+		return *at(index);
 	}
 	
 	final public HeapMemoryArray!Type opOpAssign(string op)(Type rhs) {
-        static if (op == "~") {
-        	bool calleeSuccess;
-            expandNeeded(usedElements+1, calleeSuccess);
-            if( !calleeSuccess ) {
+		static if (op == "~") {
+			bool calleeSuccess;
+			expandNeeded(usedElements+1, calleeSuccess);
+			if( !calleeSuccess ) {
 				throw new Exception("Expand failed!");
 			}
-            memcpy(this[usedElements], &rhs, Type.sizeof);
-            usedElements++;
-        }
-        else {
-            static assert(0, "Operator "~op~" not implemented");
-        }
-
-        return this;
-    }
+			memcpy(at(usedElements), &rhs, Type.sizeof);
+			usedElements++;
+		}
+		else {
+			static assert(0, "Operator "~op~" not implemented");
+		}
+		
+		return this;
+	}
 	
 	// copies the content of the source to this object
 	public final void copyFrom(HeapMemoryArray!Type* source) {
@@ -148,6 +152,18 @@ struct HeapMemoryArray(Type) {
 	
 	public final @property size_t length() {
 		return usedElements;
+	}
+	
+	public final int opApply(int delegate(ref Type) dg){
+		int result = 0;
+		foreach( i; 0..length ) {
+			result = dg(this[i]);
+			if(result) {
+				break;
+			}
+		}
+		
+		return result;
 	}
 	
 	
@@ -269,6 +285,7 @@ struct MeshFaceStruct(MeshFaceDecorationType) {
 	// -2 means that the index is not used
 	public int[4] verticesIndices;
 	
+	
 	public MeshFaceDecorationType decoration;
 }
 
@@ -293,10 +310,212 @@ struct MeshStruct(MeshFaceDecorationType, VertexDecorationType, NumericType) {
 		vertices ~= vertex;
 	}
 	
+	/* uncommented because todo
+	public final MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType)* cloneAsMemory() {
+		// TODO
+	}
+	*/
+	
 	// TODO< disable copy >
 }
 
+// untested
+void blastFaces(MeshFaceDecorationType, VertexDecorationType, NumericType)(
+	ref MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) mesh,
+	ref HeapMemoryArray!int faceIndices
+) {
+	foreach( faceIndex; faceIndices ) {
+		assert(faceIndex >= 0 && faceIndex < mesh.faces.length);
+		
+		assert(mesh.faces[cast(size_t)faceIndex].decoration.enabled, "Face for blasting must have been enabled first!");
+		mesh.faces[cast(size_t)faceIndex].decoration.enabled = false;
+	}
+}
+
+// disables all faces and enables only the to be enabled ones
+// untested
+void enableOnlyFaces(MeshFaceDecorationType, VertexDecorationType, NumericType)(
+	ref MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) mesh,
+	ref HeapMemoryArray!int faceIndices
+) {
+	foreach( iterationFace; mesh.faces ) {
+		iterationFace.decoration.enabled = false;
+	}
+	
+	foreach( faceIndex; faceIndices ) {
+		assert(faceIndex >= 0 && faceIndex < mesh.faces.length);
+		
+		mesh.faces[cast(size_t)faceIndex].decoration.enabled = true;
+	}
+}
+
+// creates a new mesh with only enabled faces and only used vertices
+// untested
+MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType)* 
+cleanup(MeshFaceDecorationType, VertexDecorationType, NumericType)
+( ref MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) mesh ) {
+	alias MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) MeshType;
+	
+	MeshType* result = cast(MeshType*)malloc(MeshType.sizeof);
+	*result = MeshType.init;
+
+	{ // clean up faces by only copying active faces
+		foreach( iterationFace; mesh.faces ) {
+			if( iterationFace.decoration.enabled ) {
+				result.faces ~= iterationFace;
+			}
+		}
+	}
+	
+	{ // clean up vertices
+		// reset ref counting of vertices in sourceMesh
+		foreach( iterationVertex; mesh.vertices ) {
+			iterationVertex.decoration.resetReferenceCounter();
+		}
+		
+		// count references of vertices
+		foreach( iterationFace; result.faces ) {
+			foreach( iterationVertexIndex; iterationFace.verticesIndices ) {
+				if( iterationVertexIndex == -1 || iterationVertexIndex == -2 ) { // check for special values
+					continue;
+				}
+				mesh.vertices[iterationVertexIndex].decoration.incrementReferenceCounter();
+			}
+		}
+		
+		
+		/**
+		 * remapping the vertices works by filling an array with the indices where the new values are
+		 * this then gets translated into another array, where a linear lookup as usual can take place
+		 *
+		 */
+		{ // remap vertex indices in result-mesh and copy vertices
+			int vertexIndexRemapSize = cast(int)mesh.vertices.length;
+			size_t* remapIndexArray = cast(size_t*)malloc(size_t.sizeof * vertexIndexRemapSize);
+			if( remapIndexArray is null ) {
+				throw new Exception("Out of memory");
+			}
+			scope(exit) free(remapIndexArray);
+			
+			// fill remap index map
+			foreach( i; 0..vertexIndexRemapSize ) {
+				remapIndexArray[i] = i;
+			}
+			
+			// remove the indices where the reference count is 0
+			foreach( i; 0..mesh.vertices.length ) {
+				if( !mesh.vertices[i].decoration.isReferenced ) {
+					// remove this index
+					foreach( j; i..vertexIndexRemapSize-1 ) {
+						remapIndexArray[j] = remapIndexArray[j+1];
+					}
+					
+					// decrement size
+					vertexIndexRemapSize--;
+					assert(vertexIndexRemapSize >= 0);
+				}
+			}
+			
+			
+			// build the actual remap map
+			int* remapMap;
+			{
+				remapMap = cast(int*)malloc(int.sizeof * mesh.vertices.length);
+				if( remapMap is null ) {
+					throw new Exception("Out of memory");
+				}
+				
+				foreach( i; 0..vertexIndexRemapSize ) {
+					remapMap[remapIndexArray[i]] = i;
+				}
+			}
+			scope(exit) free(remapMap);
+			
+			
+			
+			int remapVertexIndex(int vertexIndex) {
+				assert(vertexIndex >= 0 && vertexIndex < mesh.vertices.length);
+				return remapMap[vertexIndex];
+			}
+			
+			// actual remapping
+			foreach( iterationFace; result.faces ) {
+				
+				
+				foreach( i; 0..iterationFace.verticesIndices.length ) {
+					int iterationVertexIndex = iterationFace.verticesIndices[i];
+					
+					bool isSpecial = iterationVertexIndex == -1 || iterationVertexIndex == -2;
+					if( isSpecial ) {
+						// dont touch bcause its an special value
+						continue;
+					}
+					
+					iterationFace.verticesIndices[i] = remapVertexIndex(iterationFace.verticesIndices[i]);
+				}
+			}
+			
+			// copy (remapped) vertices
+			foreach( i; 0..vertexIndexRemapSize ) {
+				result.vertices ~= mesh.vertices[remapIndexArray[i]];
+			}
+		}
+	}
+	
+	return result;
+}
+
+
+
+void recalculateNormals(MeshFaceDecorationType, VertexDecorationType, NumericType)(
+	ref MeshStruct!(MeshFaceDecorationType, VertexDecorationType, NumericType) mesh
+) {
+	alias SpatialVectorStruct!(3, NumericType) VectorType;
+	
+	foreach( iterationFace; mesh.faces ) {
+		int vertexIndex0 = iterationFace.verticesIndices[0];
+		int vertexIndex1 = iterationFace.verticesIndices[1];
+		int vertexIndex2 = iterationFace.verticesIndices[$-1];
+		assert(vertexIndex0 != -2 && vertexIndex1 != -2 && vertexIndex2 != -2, "Vertex indices have to be set!");
+		
+		VectorType vertexPosition0 = vertices[vertexIndex0].position;
+		VectorType vertexPosition1 = vertices[vertexIndex1].position;
+		VectorType vertexPosition2 = vertices[vertexIndex2].position;
+		
+		VectorType a = vertexPosition1 - vertexPosition0;
+		VectorType b = vertexPosition2 - vertexPosition0;
+		
+		VectorType unnormalizedNormal = crossProduct(a, b);
+		iterationFace.decoration.normalizedNormal = unnormalizedNormal.normalized();
+	}
+}
+
+import RefCountingMixin;
+
+struct DefaultMeshFaceDecoration(NumericType) {
+	private alias SpatialVectorStruct!(3, NumericType) VectorType;
+	
+	public VectorType normalizedNormal;
+	
+	public bool enabled = true;
+}
+
+struct DefaultVertexDecoration {
+	// TODO< ref counter >
+	mixin Refcount; // for reference counting for checking if an vertex is in use
+}
+
+
 // just for testing
 void main() {
-	MeshStruct!(int, int, float) mesh;
+	alias MeshStruct!(DefaultMeshFaceDecoration!float, DefaultVertexDecoration, float) MeshType;
+	
+	MeshType mesh;
+	
+	HeapMemoryArray!int facesToBlast;
+	facesToBlast ~= 0;
+	
+	mesh.blastFaces(facesToBlast);
+	
+	MeshType* cleanedUp = mesh.cleanup();
 }
