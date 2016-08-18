@@ -140,7 +140,18 @@ class GraphicsVulkan {
 			str ~= "'stencilStoreOp':'VK_ATTACHMENT_STORE_OP_DONT_CARE',";
 			str ~= "'initialLayout':'VK_IMAGE_LAYOUT_UNDEFINED',"; // we overwrite it so it shouldn't matter
 			str ~= "'finalLayout':'VK_IMAGE_LAYOUT_GENERAL'"; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
-			str ~= "}]";
+			str ~= "}],";
+			
+			str ~= "'subpassDescriptions':[{"
+			~ "'flags':'0',"
+			~ "'pipelineBindPoint':'VK_PIPELINE_BIND_POINT_GRAPHICS',"
+			~ "'colorAttachments':["
+			~ "    {'attachment':'0','layout':'VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL'}"
+			~ "]}]"
+			;
+			
+			
+			
 			
 			str ~= "}";
 			import std.string : replace; // just for testing
@@ -151,31 +162,14 @@ class GraphicsVulkan {
 			JsonValue jsonValue = parseJson(str);
 			
 			VkAttachmentDescription[] attachmentDescriptions;
-			{
-				JsonValue[] jsonAttachmentDescriptions = jsonValue["attachmentDescriptions"].array;
-				
-				foreach( iterationJsonAttachmentDescription; jsonAttachmentDescriptions ) {
-					attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonAttachmentDescription);
-				}
+			foreach( iterationJsonValue; jsonValue["attachmentDescriptions"].array ) {
+				attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonValue);
 			}
 			
-			
-			string jsonSubpassDescription;
-			jsonSubpassDescription = "{"
-			~ "'flags':'0',"
-			~ "'pipelineBindPoint':'VK_PIPELINE_BIND_POINT_GRAPHICS',"
-			~ "'colorAttachments':["
-			~ "    {'attachment':'0','layout':'VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL'}"
-			~ "]}"
-			;
-			import std.string : replace; // just for testing
-			jsonSubpassDescription = jsonSubpassDescription.replace("'", "\"");
-			
-			
-			
-			JsonValue jsonValueSubpassDescription = parseJson(jsonSubpassDescription);
-			
-			VkSubpassDescription[] subpassDescriptions = [convertForSubpassDescription(jsonValueSubpassDescription)];
+			VkSubpassDescription[] subpassDescriptions;
+			foreach( iterationJsonValue; jsonValue["subpassDescriptions"].array ) {
+				subpassDescriptions ~= convertForSubpassDescription(iterationJsonValue);
+			}
 			
 			
 			const(VkAllocationCallbacks*) allocator = null;
