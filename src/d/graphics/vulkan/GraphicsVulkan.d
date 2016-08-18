@@ -402,27 +402,17 @@ class GraphicsVulkan {
 			}
 	
 			
-			// prepare description of stages
-			
-			
-			
-			VkShaderModule vertexShaderModule, fragmentShaderModule;
-			IDisposable vertexShaderMemory = loadShader("SimpleTransforming_3.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
-			scope(exit) vertexShaderMemory.dispose();
-			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, vertexShaderModule, null);
-			IDisposable fragmentShaderMemory = loadShader("Simple1.frag.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
-			scope(exit) fragmentShaderMemory.dispose();
-			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, fragmentShaderModule, null);
-			
-			VkPipelineShaderStageCreateInfo[] shaderStageCreateInfo = [
-				DevicelessFacade.makeVkPipelineShaderStageCreateInfo(vertexShaderModule, VK_SHADER_STAGE_VERTEX_BIT, "main"),
-				DevicelessFacade.makeVkPipelineShaderStageCreateInfo(fragmentShaderModule, VK_SHADER_STAGE_FRAGMENT_BIT, "main")
-			];
 			
 			
 			
 			string jsonString2 = ""
 			~ "{"
+			
+			~ "'stages':{"
+			~ "    'vertex':'SimpleTransforming_3.vert.spv',"
+			~ "    'fragment':'Simple1.frag.spv'"
+			~ "},"
+						
 			~ "'vertexInputState':{"
 			~ "'vertexInputBindingDescriptions':["
 			~ "  {"
@@ -462,6 +452,27 @@ class GraphicsVulkan {
 			jsonString2 = jsonString2.replace("'", "\"");
 			
 			JsonValue json2 = parseJson(jsonString2);
+			
+
+			
+			
+			
+			
+			
+			VkShaderModule vertexShaderModule, fragmentShaderModule;
+			IDisposable vertexShaderMemory = loadShader(json2["stages"]["vertex"].str, vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
+			scope(exit) vertexShaderMemory.dispose();
+			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, vertexShaderModule, null);
+			IDisposable fragmentShaderMemory = loadShader(json2["stages"]["fragment"].str, vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
+			scope(exit) fragmentShaderMemory.dispose();
+			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, fragmentShaderModule, null);
+			
+			VkPipelineShaderStageCreateInfo[] shaderStageCreateInfo = [
+				DevicelessFacade.makeVkPipelineShaderStageCreateInfo(vertexShaderModule, VK_SHADER_STAGE_VERTEX_BIT, "main"),
+				DevicelessFacade.makeVkPipelineShaderStageCreateInfo(fragmentShaderModule, VK_SHADER_STAGE_FRAGMENT_BIT, "main")
+			];
+			
+			
 			
 			
 			
@@ -533,7 +544,6 @@ class GraphicsVulkan {
 			
 			JsonValue rootJson = parseJson(str);
 			
-			VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = convertForPipelineColorBlendStateCreateInfo(rootJson);
 
 
 			// create graphics pipeline
@@ -564,7 +574,7 @@ class GraphicsVulkan {
 				rasterizationState = convertForPipelineRasterizationStateCreateInfo(json2["rasterizationState"]);
 				multisampleState = multisampleStateCreateInfo;
 				depthStencilState = null;
-				colorBlendState = colorBlendStateCreateInfo;
+				colorBlendState = convertForPipelineColorBlendStateCreateInfo(rootJson);
 				dynamicState = null;
 				
 				layout = pipelineLayout;
