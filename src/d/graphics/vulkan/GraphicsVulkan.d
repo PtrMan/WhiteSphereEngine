@@ -109,16 +109,6 @@ class GraphicsVulkan {
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboPositionBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
 
-		
-		// code taken from https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-3
-		// at first commit time
-		// license is intel license
-
-		
-
-
-
-
 
 
 		void createRenderpass(JsonValue jsonValue) {
@@ -589,17 +579,19 @@ class GraphicsVulkan {
 				
 				/* uncommented because its impossible to test with this hardware of the developer ;)
 				if( presentQueue != graphicsQueue ) {
-					VkImageMemoryBarrier barrier_from_present_to_draw = {
-						VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,     // VkStructureType                sType
-						null,                                    // const void                    *pNext
-						VK_ACCESS_MEMORY_READ_BIT,                  // VkAccessFlags                  srcAccessMask
-						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,       // VkAccessFlags                  dstAccessMask
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // VkImageLayout                  oldLayout
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,            // VkImageLayout                  newLayout
-						presentQueueFamilyIndex,              // uint32_t                       srcQueueFamilyIndex
-						graphicsQueueFamilyIndex,             // uint32_t                       dstQueueFamilyIndex
-						swap_chain_images[i],                       // VkImage                        image
-						image_subresource_range                     // VkImageSubresourceRange        subresourceRange
+					VkImageMemoryBarrier barrier_from_present_to_draw = VkImageMemoryBarrier.init
+					
+					with(barrier_from_present_to_draw) {
+						sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+						pNext = null;
+						srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+						dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+						oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+						newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+						srcQueueFamilyIndex = presentQueueFamilyIndex;
+						dstQueueFamilyIndex = graphicsQueueFamilyIndex;
+						image = swap_chain_images[i];
+						subresourceRange = image_subresource_range;
 					};
 					
 					vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
