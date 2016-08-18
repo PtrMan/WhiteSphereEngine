@@ -419,26 +419,50 @@ class GraphicsVulkan {
 			
 			
 			
-			// prepare description of vertex input
-			VkVertexInputBindingDescription vertexBindingDescription = VkVertexInputBindingDescription.init;
-			vertexBindingDescription.binding = 0;
-			vertexBindingDescription.stride = (float[4]).sizeof;
-			vertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			VkVertexInputAttributeDescription vertexAttributeDescription = VkVertexInputAttributeDescription.init;
-			vertexAttributeDescription.location = 0;
-			vertexAttributeDescription.binding = 0;
-			vertexAttributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-			vertexAttributeDescription.offset = 0;
+			// TODO< put this whle thing into a function with the variable reading of vertexInputBindingDescriptions and vertexInputAttributeDescriptions >
+			string jsonStringPipelineVertexInputStateCreateInfo = ""
+			~ "{"
+			~ "'vertexInputBindingDescriptions':["
+			~ "  {"
+			~ "    'binding':'0',"
+			~ "    'stride':'16',"
+			~ "    'inputRate':'VK_VERTEX_INPUT_RATE_VERTEX'"
+			~ "  }"
+			~ "],"
+			~ "'vertexInputAttributeDescriptions':["
+			~ "  {"
+			~ "    'location' : '0',"
+			~ "    'binding':'0',"
+			~ "    'format':'VK_FORMAT_R32G32B32A32_SFLOAT',"
+			~ "    'offset':'0'"
+			~ "  }"
+			~ "]"
+			~ "}";
 			
-			VkVertexInputBindingDescription[] vertexInputBindingDescriptions = [vertexBindingDescription];
-			VkVertexInputAttributeDescription[] vertexInputAttributeDescriptions = [vertexAttributeDescription];
+			import std.string : replace; // just for testing
+			jsonStringPipelineVertexInputStateCreateInfo = jsonStringPipelineVertexInputStateCreateInfo.replace("'", "\"");
+			
+			
+			JsonValue jsonPipelineVertexInputStateCreateInfo = parseJson(jsonStringPipelineVertexInputStateCreateInfo);
+			
+			VkVertexInputBindingDescription[] vertexInputBindingDescriptions = [];
+			foreach( iterationJsonValue; jsonPipelineVertexInputStateCreateInfo["vertexInputBindingDescriptions"].array ) {
+				vertexInputBindingDescriptions ~= convertForVertexInputBindingDescription(iterationJsonValue);
+			}
+			
+			VkVertexInputAttributeDescription[] vertexInputAttributeDescriptions = [];
+			foreach( iterationJsonValue; jsonPipelineVertexInputStateCreateInfo["vertexInputAttributeDescriptions"].array ) {
+				vertexInputAttributeDescriptions ~= convertForVertexInputAttributeDescription(iterationJsonValue);
+			}
+			
+			
+			
 			
 			assert(vertexInputBindingDescriptions.length == vertexInputAttributeDescriptions.length);
 			VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.init;
 			with(vertexInputStateCreateInfo) {
 				sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-				flags = 0;
+				flags = 0; // reserved for future use
 				vertexBindingDescriptionCount = cast(uint32_t)vertexInputBindingDescriptions.length;
 				pVertexBindingDescriptions = cast(immutable(VkVertexInputBindingDescription)*)vertexInputBindingDescriptions.ptr;                                                            // uint32_t                                       vertexBindingDescriptionCount
 				vertexAttributeDescriptionCount = cast(uint32_t)vertexInputAttributeDescriptions.length;

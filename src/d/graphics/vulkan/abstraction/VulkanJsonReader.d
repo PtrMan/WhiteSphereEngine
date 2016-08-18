@@ -137,6 +137,29 @@ VkSubpassDescription convertForSubpassDescription(JsonValue jsonValue) {
 	return result;
 }
 
+VkVertexInputBindingDescription convertForVertexInputBindingDescription(JsonValue jsonValue) {
+	return jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkVertexInputBindingDescription,
+		[
+		"binding":"uint32_t",
+		"stride":"uint32_t",
+		"inputRate" : "VkVertexInputRate"
+		]
+	)(jsonValue);
+}
+
+VkVertexInputAttributeDescription convertForVertexInputAttributeDescription(JsonValue jsonValue) {
+	return jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkVertexInputAttributeDescription,
+		[
+		"location":"uint32_t",
+		"binding":"uint32_t",
+		"format" : "VkFormat",
+		"offset":"uint32_t"
+		]
+	)(jsonValue);
+}
+
+
+
 
 
 
