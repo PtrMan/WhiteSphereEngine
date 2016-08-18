@@ -878,41 +878,11 @@ class GraphicsVulkan {
 		// create renderpass
 		//////////////////
 		
-		// TODO< read json from file >
 		{
-			string str;
+			string path = "resources/engine/graphics/configuration/preset/renderpassReset.json";
 			
-			str ~= "{";
-			
-			
-			str ~= "'attachmentDescriptions':[{";
-			str ~= "'flags':'0',";
-			str ~= "'format':'VK_FORMAT_A2B10G10R10_UINT_PACK32',"; // TODO< pass this as argument or something, we get this from the best format for the framebuffer, so we have to create the ramebuffer first and drag out the format >
-			str ~= "'samples':'VK_SAMPLE_COUNT_1_BIT',";
-			str ~= "'loadOp':'VK_ATTACHMENT_LOAD_OP_CLEAR',";
-			str ~= "'storeOp':'VK_ATTACHMENT_STORE_OP_STORE',";
-			str ~= "'stencilLoadOp':'VK_ATTACHMENT_LOAD_OP_DONT_CARE',";
-			str ~= "'stencilStoreOp':'VK_ATTACHMENT_STORE_OP_DONT_CARE',";
-			str ~= "'initialLayout':'VK_IMAGE_LAYOUT_UNDEFINED',"; // we overwrite it so it shouldn't matter
-			str ~= "'finalLayout':'VK_IMAGE_LAYOUT_GENERAL'"; // TODO< pass this as argument or something, we set this to the same layout as the framebuffer target is now
-			str ~= "}],";
-			
-			str ~= "'subpassDescriptions':[{"
-			~ "'flags':'0',"
-			~ "'pipelineBindPoint':'VK_PIPELINE_BIND_POINT_GRAPHICS',"
-			~ "'colorAttachments':["
-			~ "    {'attachment':'0','layout':'VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL'}"
-			~ "]}]"
-			;
-			
-			
-			
-			
-			str ~= "}";
-			import std.string : replace; // just for testing
-			str = str.replace("'", "\"");
-			
-			
+			import std.file : read;
+			string str = cast(string)read(path);
 			
 			JsonValue jsonValue = parseJson(str);
 			createRenderpass(jsonValue);
