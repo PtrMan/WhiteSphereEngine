@@ -184,10 +184,32 @@ VkPipelineVertexInputStateCreateInfo convertForPipelineVertexInputState(JsonValu
 }
 
 
+VkPipelineRasterizationStateCreateInfo convertForPipelineRasterizationStateCreateInfo(JsonValue jsonValue) {
+	VkPipelineRasterizationStateCreateInfo result = jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkPipelineRasterizationStateCreateInfo,
+		[
+		"depthClampEnable":"VkBool32",
+		"rasterizerDiscardEnable":"VkBool32",
+		"polygonMode":"VkPolygonMode",
+		"cullMode":"VkCullModeFlagBits",
+		"frontFace":"VkFrontFace",
+		"depthBiasEnable":"VkBool32",
+		"depthBiasConstantFactor":"float",
+		"depthBiasClamp":"float",
+		"depthBiasSlopeFactor":"float",
+		"lineWidth":"float"
+		],"flags"
+	)(jsonValue);
+	
+	with(result) {
+		sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		pNext = null;
+		flags = 0; // reserved for future use
+	}
+	return result;
+}
 
 
-
-private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup)(JsonValue jsonValue) {
+private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup, string ignore = "")(JsonValue jsonValue) {
 	import std.format : format;
 	
 	string currentField;
@@ -198,7 +220,8 @@ private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[st
 				import std.ascii : isUpper;
 				enum isPointer = iterationMemberName[0] == 'p' && iterationMemberName[1].isUpper; // pointers are indicated by a p followed by an uppercase letter
 				enum isCount = iterationMemberName.length > 5 && iterationMemberName[$-5..$] == "Count";
-				enum ignore = isCount || isPointer; // ignore count fields and pointer fields
+				enum otherIgnoreFields = iterationMemberName == "sType" || iterationMemberName == ignore;
+				enum ignore = isCount || isPointer || otherIgnoreFields; // ignore count fields and pointer fields
 				
 				static if( !ignore ) {// we ignore certain fields
 					currentField = iterationMemberName;
@@ -206,10 +229,16 @@ private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[st
 					// TODO< special case for bool>
 					
 					enum typeOfIterationName = typeLookup[iterationMemberName];
-					enum isNativeType = typeOfIterationName == "uint32";
-					enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
+					enum isNativeType = typeOfIterationName == "uint32_t" || typeOfIterationName == "float";
+					enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits") || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
+					enum isBool = typeOfIterationName == "VkBool32";
+					
+					
 					static if( isEnum ) {
 						mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%2$s));\n".format(iterationMemberName, typeLookup[iterationMemberName]));
+					}
+					else if( isBool ) {
+						mixin("resultStructure.%1$s = cast(%2$s)(jsonValue[\"%1$s\"].str == \"VK_TRUE\" ? VK_TRUE : VK_FALSE);\n".format(iterationMemberName, typeLookup[iterationMemberName]));
 					}
 					else {
 						enum convertToType = isNativeType ? typeOfIterationName : "erupted.types." ~ typeOfIterationName;

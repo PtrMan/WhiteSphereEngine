@@ -439,7 +439,23 @@ class GraphicsVulkan {
 			~ "    'offset':'0'"
 			~ "  }"
 			~ "]"
+			~ "},"
+			
+			~ "'rasterizationState':{"
+			~ "'depthClampEnable':'VK_FALSE',"
+			~ "'rasterizerDiscardEnable':'VK_FALSE',"
+			~ "'polygonMode':'VK_POLYGON_MODE_FILL',"
+			~ "'cullMode':'VK_CULL_MODE_NONE',"
+			~ "'frontFace':'VK_FRONT_FACE_COUNTER_CLOCKWISE',"
+			~ "'depthBiasEnable':'VK_FALSE',"
+			~ "'depthBiasConstantFactor':'0.0',"
+			~ "'depthBiasClamp':'0.0',"
+			~ "'depthBiasSlopeFactor':'0.0',"
+			~ "'lineWidth':'1.0'"
+			
+			
 			~ "}"
+			
 			~ "}";
 			
 			import std.string : replace; // just for testing
@@ -479,23 +495,6 @@ class GraphicsVulkan {
 				pScissors = cast(immutable(VkRect2D)*)scissors.ptr;
 			};
 			
-			
-			// prepare rasterisatio state description
-			VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {
-				VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,   // VkStructureType                                sType
-				null,                                                      // const void                                    *pNext
-				0,                                                            // VkPipelineRasterizationStateCreateFlags        flags
-				VK_FALSE,                                                     // VkBool32                                       depthClampEnable
-				VK_FALSE,                                                     // VkBool32                                       rasterizerDiscardEnable
-				VK_POLYGON_MODE_FILL,                                         // VkPolygonMode                                  polygonMode
-				VK_CULL_MODE_NONE,//VK_CULL_MODE_BACK_BIT,                                        // VkCullModeFlags                                cullMode
-				VK_FRONT_FACE_COUNTER_CLOCKWISE,                              // VkFrontFace                                    frontFace
-				VK_FALSE,                                                     // VkBool32                                       depthBiasEnable
-				0.0f,                                                         // float                                          depthBiasConstantFactor
-				0.0f,                                                         // float                                          depthBiasClamp
-				0.0f,                                                         // float                                          depthBiasSlopeFactor
-				1.0f                                                          // float                                          lineWidth
-			};
 			
 			VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.init;
 			with(multisampleStateCreateInfo) {
@@ -562,7 +561,7 @@ class GraphicsVulkan {
 				inputAssemblyState = inputAssemblyStateCreateInfo;
 				tessellationState = null;
 				viewportState = viewportStateCreateInfo;
-				rasterizationState = rasterization_state_create_info;
+				rasterizationState = convertForPipelineRasterizationStateCreateInfo(json2["rasterizationState"]);
 				multisampleState = multisampleStateCreateInfo;
 				depthStencilState = null;
 				colorBlendState = colorBlendStateCreateInfo;
