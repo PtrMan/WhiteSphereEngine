@@ -190,7 +190,7 @@ VkPipelineRasterizationStateCreateInfo convertForPipelineRasterizationStateCreat
 		"depthClampEnable":"VkBool32",
 		"rasterizerDiscardEnable":"VkBool32",
 		"polygonMode":"VkPolygonMode",
-		"cullMode":"VkCullModeFlagBits", // not like in the "specification", where its VkCullModeFlags, which is _not_ the type
+		"cullMode":"VkCullModeFlags",
 		"frontFace":"VkFrontFace",
 		"depthBiasEnable":"VkBool32",
 		"depthBiasConstantFactor":"float",
@@ -230,14 +230,17 @@ private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[st
 					
 					enum typeOfIterationName = typeLookup[iterationMemberName];
 					enum isNativeType = typeOfIterationName == "uint32_t" || typeOfIterationName == "float";
-					enum isEnum = iterationMemberName == "flags" || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits") || (typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits");
+					enum isEnum = /*iterationMemberName == "flags" || */(typeOfIterationName.length >= 4 && typeOfIterationName[$-4..$] == "Bits") || (typeOfIterationName.length >= 8 && typeOfIterationName[$-8..$] == "FlagBits");
 					enum isBool = typeOfIterationName == "VkBool32";
+					enum isFlags =
+						/* ignore the field called flags */iterationMemberName != "flags" &&
+						typeOfIterationName.length > 5 && typeOfIterationName[$-5..$] == "Flags";
 					
-					
-					static if( isEnum ) {
-						mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%2$s));\n".format(iterationMemberName, typeLookup[iterationMemberName]));
+					static if( isFlags || isEnum ) {
+						enum enumTypeName = isEnum ? typeLookup[iterationMemberName] : /* remove "Flags"*/typeOfIterationName[0..$-5] ~ "FlagBits";
+						mixin("resultStructure.%1$s = cast(%2$s)or(jsonValue[\"%1$s\"].str, &convertFlagToNumber!(erupted.types.%3$s));\n".format(iterationMemberName, typeLookup[iterationMemberName], enumTypeName));
 					}
-					else if( isBool ) {
+					else static if( isBool ) {
 						mixin("resultStructure.%1$s = cast(%2$s)(jsonValue[\"%1$s\"].str == \"VK_TRUE\" ? VK_TRUE : VK_FALSE);\n".format(iterationMemberName, typeLookup[iterationMemberName]));
 					}
 					else {
