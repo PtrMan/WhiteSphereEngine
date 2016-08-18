@@ -404,6 +404,8 @@ class GraphicsVulkan {
 			
 			// prepare description of stages
 			
+			
+			
 			VkShaderModule vertexShaderModule, fragmentShaderModule;
 			IDisposable vertexShaderMemory = loadShader("SimpleTransforming_3.vert.spv", vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
 			scope(exit) vertexShaderMemory.dispose();
@@ -419,9 +421,9 @@ class GraphicsVulkan {
 			
 			
 			
-			// TODO< put this whle thing into a function with the variable reading of vertexInputBindingDescriptions and vertexInputAttributeDescriptions >
-			string jsonStringPipelineVertexInputStateCreateInfo = ""
+			string jsonString2 = ""
 			~ "{"
+			~ "'vertexInputState':{"
 			~ "'vertexInputBindingDescriptions':["
 			~ "  {"
 			~ "    'binding':'0',"
@@ -437,37 +439,16 @@ class GraphicsVulkan {
 			~ "    'offset':'0'"
 			~ "  }"
 			~ "]"
+			~ "}"
 			~ "}";
 			
 			import std.string : replace; // just for testing
-			jsonStringPipelineVertexInputStateCreateInfo = jsonStringPipelineVertexInputStateCreateInfo.replace("'", "\"");
+			jsonString2 = jsonString2.replace("'", "\"");
 			
-			
-			JsonValue jsonPipelineVertexInputStateCreateInfo = parseJson(jsonStringPipelineVertexInputStateCreateInfo);
-			
-			VkVertexInputBindingDescription[] vertexInputBindingDescriptions = [];
-			foreach( iterationJsonValue; jsonPipelineVertexInputStateCreateInfo["vertexInputBindingDescriptions"].array ) {
-				vertexInputBindingDescriptions ~= convertForVertexInputBindingDescription(iterationJsonValue);
-			}
-			
-			VkVertexInputAttributeDescription[] vertexInputAttributeDescriptions = [];
-			foreach( iterationJsonValue; jsonPipelineVertexInputStateCreateInfo["vertexInputAttributeDescriptions"].array ) {
-				vertexInputAttributeDescriptions ~= convertForVertexInputAttributeDescription(iterationJsonValue);
-			}
+			JsonValue json2 = parseJson(jsonString2);
 			
 			
 			
-			
-			assert(vertexInputBindingDescriptions.length == vertexInputAttributeDescriptions.length);
-			VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.init;
-			with(vertexInputStateCreateInfo) {
-				sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-				flags = 0; // reserved for future use
-				vertexBindingDescriptionCount = cast(uint32_t)vertexInputBindingDescriptions.length;
-				pVertexBindingDescriptions = cast(immutable(VkVertexInputBindingDescription)*)vertexInputBindingDescriptions.ptr;                                                            // uint32_t                                       vertexBindingDescriptionCount
-				vertexAttributeDescriptionCount = cast(uint32_t)vertexInputAttributeDescriptions.length;
-				pVertexAttributeDescriptions = cast(immutable(VkVertexInputAttributeDescription)*)vertexInputAttributeDescriptions.ptr;
-			}
 			
 			// prepare description of input assembly
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.init;
@@ -577,7 +558,7 @@ class GraphicsVulkan {
 			with(createGraphicsPipelineArguments) {
 				flags = 0;
 				stages = shaderStageCreateInfo;
-				vertexInputState = vertexInputStateCreateInfo;
+				vertexInputState = convertForPipelineVertexInputState(json2["vertexInputState"]);
 				inputAssemblyState = inputAssemblyStateCreateInfo;
 				tessellationState = null;
 				viewportState = viewportStateCreateInfo;

@@ -158,6 +158,30 @@ VkVertexInputAttributeDescription convertForVertexInputAttributeDescription(Json
 	)(jsonValue);
 }
 
+VkPipelineVertexInputStateCreateInfo convertForPipelineVertexInputState(JsonValue jsonValue) {
+	VkVertexInputBindingDescription[] vertexInputBindingDescriptions = [];
+	foreach( iterationJsonValue; jsonValue["vertexInputBindingDescriptions"].array ) {
+		vertexInputBindingDescriptions ~= convertForVertexInputBindingDescription(iterationJsonValue);
+	}
+	
+	VkVertexInputAttributeDescription[] vertexInputAttributeDescriptions = [];
+	foreach( iterationJsonValue; jsonValue["vertexInputAttributeDescriptions"].array ) {
+		vertexInputAttributeDescriptions ~= convertForVertexInputAttributeDescription(iterationJsonValue);
+	}
+	
+	assert(vertexInputBindingDescriptions.length == vertexInputAttributeDescriptions.length);
+	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.init;
+	with(vertexInputStateCreateInfo) {
+		sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		flags = 0; // reserved for future use
+		vertexBindingDescriptionCount = cast(uint32_t)vertexInputBindingDescriptions.length;
+		pVertexBindingDescriptions = cast(immutable(VkVertexInputBindingDescription)*)vertexInputBindingDescriptions.ptr;                                                            // uint32_t                                       vertexBindingDescriptionCount
+		vertexAttributeDescriptionCount = cast(uint32_t)vertexInputAttributeDescriptions.length;
+		pVertexAttributeDescriptions = cast(immutable(VkVertexInputAttributeDescription)*)vertexInputAttributeDescriptions.ptr;
+	}
+	
+	return vertexInputStateCreateInfo;
+}
 
 
 
