@@ -1,0 +1,55 @@
+{
+	"stages":{
+		"vertex":"SimpleTransforming_3.vert.spv",
+		"fragment":"Simple1.frag.spv"
+	},
+
+	"vertexInputState":{
+		"vertexInputBindingDescriptions":[
+			{
+				"binding":"0",
+				"stride":"16",
+				"inputRate":"VK_VERTEX_INPUT_RATE_VERTEX"
+			}
+		],
+		"vertexInputAttributeDescriptions":[
+			{
+				"location" : "0",
+				"binding":"0",
+				"format":"VK_FORMAT_R32G32B32A32_SFLOAT",
+				"offset":"0"
+			}
+		]
+	},
+				
+	"rasterizationState":{
+		"depthClampEnable":"VK_FALSE",
+		"rasterizerDiscardEnable":"VK_FALSE",
+		"polygonMode":"VK_POLYGON_MODE_FILL",
+		"cullMode":"VK_CULL_MODE_NONE",
+		"frontFace":"VK_FRONT_FACE_COUNTER_CLOCKWISE",
+		"depthBiasEnable":"VK_FALSE",
+		"depthBiasConstantFactor":"0.0",
+		"depthBiasClamp":"0.0",
+		"depthBiasSlopeFactor":"0.0",
+		"lineWidth":"1.0"
+	},
+				
+	"colorBlendState":{
+			"logicOpEnable":"VK_FALSE",
+			"logicOp":"VK_LOGIC_OP_COPY",
+			"blendConstants":[0.0, 0.0, 0.0, 0.0],
+			"attachments":[
+				{
+					"blendEnable":"VK_FALSE",
+					"srcColorBlendFactor":"VK_BLEND_FACTOR_ONE",
+					"dstColorBlendFactor":"VK_BLEND_FACTOR_ZERO",
+					"colorBlendOp":"VK_BLEND_OP_ADD",
+					"srcAlphaBlendFactor":"VK_BLEND_FACTOR_ONE",
+					"dstAlphaBlendFactor":"VK_BLEND_FACTOR_ZERO",
+					"alphaBlendOp":"VK_BLEND_OP_ADD",
+					"colorWriteMask":"VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT"
+				}
+			]
+	}
+}
