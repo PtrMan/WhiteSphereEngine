@@ -190,7 +190,7 @@ VkPipelineRasterizationStateCreateInfo convertForPipelineRasterizationStateCreat
 		"depthClampEnable":"VkBool32",
 		"rasterizerDiscardEnable":"VkBool32",
 		"polygonMode":"VkPolygonMode",
-		"cullMode":"VkCullModeFlagBits",
+		"cullMode":"VkCullModeFlagBits", // not like in the "specification", where its VkCullModeFlags, which is _not_ the type
 		"frontFace":"VkFrontFace",
 		"depthBiasEnable":"VkBool32",
 		"depthBiasConstantFactor":"float",
