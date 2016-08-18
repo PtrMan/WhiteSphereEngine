@@ -314,7 +314,7 @@ class GraphicsVulkan {
 			}
 		}
 		
-		void createPipeline() {
+		void createPipeline(JsonValue jsonValue) {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
@@ -348,92 +348,13 @@ class GraphicsVulkan {
 				
 				return pipelineLayout;
 			}
-	
-			
-			
-			
-			
-			string jsonString2 = ""
-			~ "{"
-			
-			~ "'stages':{"
-			~ "    'vertex':'SimpleTransforming_3.vert.spv',"
-			~ "    'fragment':'Simple1.frag.spv'"
-			~ "},"
-						
-			~ "'vertexInputState':{"
-			~ "'vertexInputBindingDescriptions':["
-			~ "  {"
-			~ "    'binding':'0',"
-			~ "    'stride':'16',"
-			~ "    'inputRate':'VK_VERTEX_INPUT_RATE_VERTEX'"
-			~ "  }"
-			~ "],"
-			~ "'vertexInputAttributeDescriptions':["
-			~ "  {"
-			~ "    'location' : '0',"
-			~ "    'binding':'0',"
-			~ "    'format':'VK_FORMAT_R32G32B32A32_SFLOAT',"
-			~ "    'offset':'0'"
-			~ "  }"
-			~ "]"
-			~ "},"
-			
-			~ "'rasterizationState':{"
-			~ "'depthClampEnable':'VK_FALSE',"
-			~ "'rasterizerDiscardEnable':'VK_FALSE',"
-			~ "'polygonMode':'VK_POLYGON_MODE_FILL',"
-			~ "'cullMode':'VK_CULL_MODE_NONE',"
-			~ "'frontFace':'VK_FRONT_FACE_COUNTER_CLOCKWISE',"
-			~ "'depthBiasEnable':'VK_FALSE',"
-			~ "'depthBiasConstantFactor':'0.0',"
-			~ "'depthBiasClamp':'0.0',"
-			~ "'depthBiasSlopeFactor':'0.0',"
-			~ "'lineWidth':'1.0'"
-			~ "},"
-			
-			~ "'colorBlendState':"
-			
-			~ "{"
-			
-			~ "'logicOpEnable':'VK_FALSE',"
-			~ "'logicOp':'VK_LOGIC_OP_COPY',"
-			~ "'blendConstants':[0.0, 0.0, 0.0, 0.0],"
-			
-			~ "'attachments':[ {"
-			~ "'blendEnable':'VK_FALSE',"
-			~ "'srcColorBlendFactor':'VK_BLEND_FACTOR_ONE',"
-			~ "'dstColorBlendFactor':'VK_BLEND_FACTOR_ZERO',"
-			~ "'colorBlendOp':'VK_BLEND_OP_ADD',"
-			~ "'srcAlphaBlendFactor':'VK_BLEND_FACTOR_ONE',"
-			~ "'dstAlphaBlendFactor':'VK_BLEND_FACTOR_ZERO',"
-			~ "'alphaBlendOp':'VK_BLEND_OP_ADD',"
-			~ "'colorWriteMask':'VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT'}]"
-			
-			~ "}"
-			
-			
-			
-			
-			
-			~ "}";
-			
-			import std.string : replace; // just for testing
-			jsonString2 = jsonString2.replace("'", "\"");
-			
-			JsonValue json2 = parseJson(jsonString2);
-			
-
-			
-			
-			
 			
 			
 			VkShaderModule vertexShaderModule, fragmentShaderModule;
-			IDisposable vertexShaderMemory = loadShader(json2["stages"]["vertex"].str, vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
+			IDisposable vertexShaderMemory = loadShader(jsonValue["stages"]["vertex"].str, vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_VERTEX_BIT, &vertexShaderModule);
 			scope(exit) vertexShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, vertexShaderModule, null);
-			IDisposable fragmentShaderMemory = loadShader(json2["stages"]["fragment"].str, vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
+			IDisposable fragmentShaderMemory = loadShader(jsonValue["stages"]["fragment"].str, vulkanContext.chosenDevice.logicalDevice, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShaderModule);
 			scope(exit) fragmentShaderMemory.dispose();
 			scope(exit) vkDestroyShaderModule(vulkanContext.chosenDevice.logicalDevice, fragmentShaderModule, null);
 			
@@ -444,16 +365,12 @@ class GraphicsVulkan {
 			
 			
 			
-			
-			
-			
 			// prepare description of input assembly
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.init;
 			inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 			inputAssemblyStateCreateInfo.flags = 0;
 			inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
-			
 			
 			
 			
@@ -489,11 +406,6 @@ class GraphicsVulkan {
 			
 			
 			
-			
-			
-			
-
-
 			// create graphics pipeline
 			TypesafeVkPipelineLayout pipelineLayout = createPipelineLayout();
 			
@@ -515,14 +427,14 @@ class GraphicsVulkan {
 			with(createGraphicsPipelineArguments) {
 				flags = 0;
 				stages = shaderStageCreateInfo;
-				vertexInputState = convertForPipelineVertexInputState(json2["vertexInputState"]);
+				vertexInputState = convertForPipelineVertexInputState(jsonValue["vertexInputState"]);
 				inputAssemblyState = inputAssemblyStateCreateInfo;
 				tessellationState = null;
 				viewportState = viewportStateCreateInfo;
-				rasterizationState = convertForPipelineRasterizationStateCreateInfo(json2["rasterizationState"]);
+				rasterizationState = convertForPipelineRasterizationStateCreateInfo(jsonValue["rasterizationState"]);
 				multisampleState = multisampleStateCreateInfo;
 				depthStencilState = null;
-				colorBlendState = convertForPipelineColorBlendStateCreateInfo(json2["colorBlendState"]);
+				colorBlendState = convertForPipelineColorBlendStateCreateInfo(jsonValue["colorBlendState"]);
 				dynamicState = null;
 				
 				layout = pipelineLayout;
@@ -902,7 +814,15 @@ class GraphicsVulkan {
 		// create graphics pipeline
 		//////////////////
 
-		createPipeline();
+		{
+			string path = "resources/engine/graphics/configuration/preset/pipelineReset.json";
+			
+			import std.file : read;
+			string str = cast(string)read(path);
+			
+			JsonValue jsonValue = parseJson(str);
+			createPipeline(jsonValue);
+		}
 		scope(exit) releasePipelineResources();
 		
 		
