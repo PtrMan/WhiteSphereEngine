@@ -1,4 +1,4 @@
-module graphics.vulkan.resourceManagment.StackResourceAllocator;
+module graphics.vulkan.resourceManagement.StackResourceAllocator;
 
 import common.IDisposable;
 
@@ -9,8 +9,8 @@ import common.IDisposable;
  * allocation and freeing are one over delegates (which have to point to valid methods/functions)
  */
 class StackResourceAllocator(ResourceType) : IDisposable {
-	public Type[] delegate(size_t number) AllocateDelegate;
-	public void delegate(Type[] toFree) FreeDelegate;
+	public alias ResourceType[] delegate(size_t number) AllocateDelegate;
+	public alias void delegate(ResourceType[] toFree) FreeDelegate;
 	
 	
 	public final this(AllocateDelegate allocate, FreeDelegate free, size_t initialAllocation = 32, size_t incrementAllocation = 64) {

@@ -14,6 +14,8 @@ import vulkan.VulkanTools;
 import common.IDisposable;
 import helpers.VariableValidator;
 import graphics.vulkan.abstraction.VulkanJsonReader;
+import graphics.vulkan.resourceManagement.StackResourceAllocator;
+
 
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
@@ -96,7 +98,8 @@ class GraphicsVulkan {
 		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
 		
 		// semaphores for chaining
-		TypesafeVkSemaphore chainSemaphore2;
+		////TypesafeVkSemaphore chainSemaphore2;
+		
 		
 		// just for testing in here
 		Mesh testMesh;
@@ -108,6 +111,28 @@ class GraphicsVulkan {
 		
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboPositionBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
+		
+		
+		TypesafeVkSemaphore[] allocateSemaphores(size_t count) {
+			TypesafeVkSemaphore[] resultSemaphores;
+			foreach( i; 0..count) {
+				resultSemaphores ~= vkDevFacade.createSemaphore();
+			}
+			return resultSemaphores;
+		}
+		
+		void destroySemaphores(TypesafeVkSemaphore[] semaphores) {
+			vkDevFacade.destroySemaphores(semaphores);
+		}
+		
+		size_t semaphoresInitialAllocationSize = 5;
+		StackResourceAllocator!TypesafeVkSemaphore chainingSemaphoreAllocator = new StackResourceAllocator!TypesafeVkSemaphore(&allocateSemaphores, &destroySemaphores, semaphoresInitialAllocationSize);
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			
+			chainingSemaphoreAllocator.dispose();
+		}
 
 
 
@@ -646,6 +671,8 @@ class GraphicsVulkan {
 			
 			uint semaphorePairIndex = 0;
 			do {
+				chainingSemaphoreAllocator.reset();
+				
 				uint32_t imageIndex = UINT32_MAX;
 				
 				// get the next available swapchain image
@@ -677,10 +704,13 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
 				
+				
+				TypesafeVkSemaphore chainSemaphore1 = chainingSemaphoreAllocator.allocateOne();
+				
 				{ // do rendering work and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
-					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore2];
+					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore1];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForRendering];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
@@ -690,10 +720,13 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
 				
+				TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
+				
+				
 				{ // do copy
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_TRANSFER_BIT];
-					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore2];
-					TypesafeVkSemaphore[1] signalSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore];
+					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore1];
+					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore2];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBuffersForCopy[imageIndex]];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
@@ -708,7 +741,7 @@ class GraphicsVulkan {
 				// Submit present operation to present queue
 				vulkanResult = vulkanContext.swapChain.queuePresent(
 					vulkanContext.queueManager.getQueueByName("present"),
-					vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].renderingCompleteSemaphore,
+					cast(VkSemaphore)chainSemaphore2,
 					imageIndex
 				);
 				
@@ -758,13 +791,6 @@ class GraphicsVulkan {
 		
 		scope(exit) checkForReleasedResourcesAndRelease();
 		
-		chainSemaphore2 = vkDevFacade.createSemaphore();
-		scope(exit) {
-			// before destruction of vulkan resources we have to ensure that the decive idles
-			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
-			
-			vkDevFacade.destroySemaphore(chainSemaphore2);
-		}
 		
 		
 		//////////////////
