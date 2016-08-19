@@ -761,7 +761,7 @@ class GraphicsVulkan {
 				}
 				*/
 				
-				{ // do rendering work and wait for it
+				{ // do clearing work and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
 					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore1];
@@ -774,14 +774,31 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
 				
-				
 				TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
+
+				
+				{ // do clearing work and wait for it
+					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
+					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore1];
+					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore2];
+					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForRendering];
+					DevicelessFacade.queueSubmit(
+						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
+						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+						cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
+					);
+					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
+				}
+
+				
+				
+				TypesafeVkSemaphore chainSemaphore3 = chainingSemaphoreAllocator.allocateOne();
 				
 				
 				{ // do copy
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_TRANSFER_BIT];
-					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore1];
-					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore2];
+					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore2];
+					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore3];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBuffersForCopy[imageIndex]];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
@@ -796,7 +813,7 @@ class GraphicsVulkan {
 				// Submit present operation to present queue
 				vulkanResult = vulkanContext.swapChain.queuePresent(
 					vulkanContext.queueManager.getQueueByName("present"),
-					cast(VkSemaphore)chainSemaphore2,
+					cast(VkSemaphore)chainSemaphore3,
 					imageIndex
 				);
 				
