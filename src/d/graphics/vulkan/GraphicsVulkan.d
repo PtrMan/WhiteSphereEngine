@@ -77,10 +77,6 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
-		Matrix44Type mvpMatrix;
-		// fill mvp with identity
-		
-		mvpMatrix = createIdentity!float();
 		
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
@@ -515,7 +511,77 @@ class GraphicsVulkan {
 			/* out */pipelineResourceNode.incrementExternalReferenceCounter();
 		}
 		
-		// function just for the example code, eeds to get refactored later
+		
+		//
+		void refillCommandBufferForTransform(Matrix44Type mvpMatrix) {
+			VkResult vulkanResult;
+			
+			VkClearValue clear_value;
+			clear_value.color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
+			
+			TypesafeVkRenderPass renderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDrawover.resource).resource;
+			
+			TypesafeVkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineResourceNode.resource).resource;
+			
+			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
+			
+			VkCommandBufferBeginInfo graphicsCommandBufferBeginInfo = VkCommandBufferBeginInfo.init;
+			with(graphicsCommandBufferBeginInfo) {
+				sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				pInheritanceInfo = null;
+			}
+			
+				// for actual rendering
+			{ // to scope command buffer filling
+				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
+				scope(success) {
+					if( !vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering).vulkanSuccess ) {
+						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+					}
+				} 
+				
+				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
+				
+				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
+				with(renderPassBeginInfo) {
+					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+					clearValueCount = cast(uint32_t)1;
+					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
+				}
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassDrawover;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
+				
+				
+				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+				
+				VkBuffer[1] vertexBuffersToBind = [cast(VkBuffer)vboPositionBufferResource.resource.value];
+				VkDeviceSize[1] offsets = [0];
+				assert(vertexBuffersToBind.length == offsets.length);
+				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr);
+				
+				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
+				
+				if( testMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
+					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBufferForRendering, cast(VkBuffer)vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
+				}
+				else {
+					throw new EngineException(true, true, "Vulkan Renderer - index buffer not implemented for non-uint32bit !");
+				}
+				
+				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBufferForRendering, testMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
+				
+				
+				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
+			}
+			
+		}
+		
+		// function just for the example code, needs to get refactored later
 		void recordingCommandBuffers() {
 			VkResult vulkanResult;
 			
@@ -524,8 +590,8 @@ class GraphicsVulkan {
 				sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 				flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 				pInheritanceInfo = null;
-			};
-
+			}
+			
 			VkImageSubresourceRange imageSubresourceRange;
 			with(imageSubresourceRange) {
 				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -533,7 +599,7 @@ class GraphicsVulkan {
 				levelCount = 1;
 				baseArrayLayer = 0;
 				layerCount = 1;
-			};
+			}
 
 			VkClearValue clear_value;
 			clear_value.color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
@@ -541,7 +607,7 @@ class GraphicsVulkan {
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
 			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
-			VkQueue presentQueue = vulkanContext.queueManager.getQueueByName("present");;
+			VkQueue presentQueue = vulkanContext.queueManager.getQueueByName("present");
 			
 			TypesafeVkRenderPass renderPassReset = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassReset.resource).resource;
 			TypesafeVkRenderPass renderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDrawover.resource).resource;
@@ -685,7 +751,7 @@ class GraphicsVulkan {
 			
 			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
 
-			
+			/+ uncommented because its done by the rebuildCommandBuffer??() method
 			// for actual rendering
 			{ // to scope command buffer filling
 				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
@@ -731,12 +797,17 @@ class GraphicsVulkan {
 				
 				
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
-			}
+			}+/
 
 		}
 		
 		void loop() {
 			VkResult vulkanResult;
+			
+			Matrix44Type mvpMatrix;
+			// fill mvp with identity
+			mvpMatrix = createIdentity!float();
+			
 			
 			uint semaphorePairIndex = 0;
 			do {
@@ -803,7 +874,8 @@ class GraphicsVulkan {
 				
 				// a testloop to draw two times
 				foreach( iteration; 0..2) {
-				
+					refillCommandBufferForTransform(mvpMatrix);
+					
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
 					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
@@ -818,7 +890,7 @@ class GraphicsVulkan {
 					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
 				
 					// we do it here so the transformation for the 2nd draw should be different
-					mvpMatrix = createTranslation!float(-0.2f, 0.0f, 0.0f);
+					mvpMatrix = createRotationZ!float(0.2f);
 				}
 
 				
