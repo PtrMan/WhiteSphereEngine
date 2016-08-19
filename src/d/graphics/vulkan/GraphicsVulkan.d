@@ -746,25 +746,16 @@ class GraphicsVulkan {
 				
 				TypesafeVkSemaphore chainSemaphore1 = chainingSemaphoreAllocator.allocateOne();
 				
-				/*** uncommented for testing if the clearing works
-				{ // do rendering work and wait for it
-					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
-					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
-					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore1];
-					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForRendering];
-					DevicelessFacade.queueSubmit(
-						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
-						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
-						cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
-					);
-					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
-				}
-				*/
+				
+				
+				TypesafeVkSemaphore[2] doublebufferedChainSemaphores = [chainingSemaphoreAllocator.allocateOne(), chainingSemaphoreAllocator.allocateOne()];
+				size_t doublebufferedChainSemaphoresIndex = 0;
+				
 				
 				{ // do clearing work and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
-					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore1];
+					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[0]];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForClear];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
@@ -774,13 +765,15 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
 				
-				TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
-
 				
-				{ // do clearing work and wait for it
+				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
+				
+				// a testloop to draw two times
+				foreach( iteration; 0..2) {
+				
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
-					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore1];
-					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore2];
+					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
+					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForRendering];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
@@ -788,6 +781,8 @@ class GraphicsVulkan {
 						cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
 					);
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
+					
+					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
 				}
 
 				
@@ -797,7 +792,7 @@ class GraphicsVulkan {
 				
 				{ // do copy
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_TRANSFER_BIT];
-					TypesafeVkSemaphore[1] waitSemaphores = [chainSemaphore2];
+					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
 					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore3];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBuffersForCopy[imageIndex]];
 					DevicelessFacade.queueSubmit(
