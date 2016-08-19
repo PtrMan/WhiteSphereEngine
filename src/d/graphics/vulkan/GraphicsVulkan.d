@@ -171,7 +171,7 @@ class GraphicsVulkan {
 		}
 		
 		
-		void createFramebuffer() {
+		void createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode) {
 			VkResult vulkanResult;
 			
 			VkExtent3D framebufferImageExtent = {300, 300, 1};
@@ -513,7 +513,9 @@ class GraphicsVulkan {
 			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
 			VkQueue presentQueue = vulkanContext.queueManager.getQueueByName("present");;
 			
-			TypesafeVkRenderPass renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
+			TypesafeVkRenderPass renderPassReset = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassReset.resource).resource;
+			TypesafeVkRenderPass renderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDrawover.resource).resource;
+			
 			TypesafeVkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineResourceNode.resource).resource;
 
 			foreach( i; 0..commandBuffersForCopy.length ) {
@@ -621,12 +623,30 @@ class GraphicsVulkan {
 			
 			{ // for clearing the screen
 				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForClear, &graphicsCommandBufferBeginInfo);
+				scope(success) {
+					if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForClear) != VK_SUCCESS ) {
+						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+					}
+				} 
 				
-				assert(false, "TODO");
+				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
-				if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForClear) != VK_SUCCESS ) {
-					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
+				with(renderPassBeginInfo) {
+					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+					clearValueCount = cast(uint32_t)1;
+					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
 				}
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
+				
+				
+				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForClear, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForClear, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+				
+				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForClear);
 			}
 			
 			
@@ -655,7 +675,7 @@ class GraphicsVulkan {
 					clearValueCount = cast(uint32_t)1;
 					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
 				}
-				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPass;
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassDrawover;
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
 				
 				
@@ -869,7 +889,9 @@ class GraphicsVulkan {
 		// create framebuffer
 		/////////////////
 
-		createFramebuffer();
+		// we only give it the renderPass of the reset because 
+		// renderPass for the reset and the actually drawing are comptible to each other
+		createFramebuffer(renderPassReset);
 		scope(exit) releaseFramebufferResources();
 		
 		
@@ -883,7 +905,7 @@ class GraphicsVulkan {
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createPipelineWithRenderPass(
 				jsonValue,
-				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource,
+				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassReset.resource).resource,
 				/*out*/ pipelineResourceNode,
 				/*out*/ pipelineLayoutResourceNode
 			);
