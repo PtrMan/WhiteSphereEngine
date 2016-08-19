@@ -782,17 +782,16 @@ class GraphicsVulkan {
 		}
 		
 		
+		
+		
+		
 		//////////////////
 		// create renderpass
 		//////////////////
 		
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassReset.json";
-			
-			import std.file : read;
-			string str = cast(string)read(path);
-			
-			JsonValue jsonValue = parseJson(str);
+			JsonValue jsonValue = readJsonEngineResource(path);
 			createRenderpass(jsonValue);
 		}
 		scope(exit) releaseRenderpassResources();
@@ -812,11 +811,7 @@ class GraphicsVulkan {
 
 		{
 			string path = "resources/engine/graphics/configuration/preset/pipelineReset.json";
-			
-			import std.file : read;
-			string str = cast(string)read(path);
-			
-			JsonValue jsonValue = parseJson(str);
+			JsonValue jsonValue = readJsonEngineResource(path);
 			createPipelineWithRenderPass(jsonValue, (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource);
 		}
 		scope(exit) releaseResourceNodes([pipelineLayoutResourceNode, pipelineResourceNode]);
@@ -1057,5 +1052,21 @@ class GraphicsVulkan {
 	
 	// we need this here for the resource* method family
 	protected VulkanDeviceFacade vkDevFacade;
+	
+	
+	
+	// TODO< move this into an helper of the engine >
+	static protected JsonValue readJsonEngineResource(string path) {
+		try {
+			// TODO< catch file exceptions >
+			import std.file : read;
+			string str = cast(string)read(path);
+			return parseJson(str);
+		}
+		catch( JsonException exception ) {
+			import std.format : format;
+			throw new EngineException(false, true, "Couldn't parse json file \"%s\"!".format(path));
+		}
+	}
 }
 
