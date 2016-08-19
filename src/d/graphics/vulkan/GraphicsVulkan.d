@@ -93,6 +93,7 @@ class GraphicsVulkan {
 		
 		TypesafeVkCommandBuffer[] commandBuffersForCopy; // no need to manage this with the resource dag, because we need it just once
 		TypesafeVkCommandBuffer commandBufferForRendering;
+		TypesafeVkCommandBuffer commandBufferForClear;
 		
 		TypesafeVkCommandBuffer setupCommandBuffer; // used for setup of images and such
 		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
@@ -614,6 +615,22 @@ class GraphicsVulkan {
 			}
 			
 			
+			
+			
+			{ // for clearing the screen
+				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForClear, &graphicsCommandBufferBeginInfo);
+				
+				assert(false, "TODO");
+				
+				if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForClear) != VK_SUCCESS ) {
+					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+				}
+			}
+			
+			
+			
+			
+			
 			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
 
 			
@@ -707,6 +724,7 @@ class GraphicsVulkan {
 				
 				TypesafeVkSemaphore chainSemaphore1 = chainingSemaphoreAllocator.allocateOne();
 				
+				/*** uncommented for testing if the clearing works
 				{ // do rendering work and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
@@ -719,6 +737,21 @@ class GraphicsVulkan {
 					);
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
+				*/
+				
+				{ // do rendering work and wait for it
+					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
+					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
+					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore1];
+					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForClear];
+					DevicelessFacade.queueSubmit(
+						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
+						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+						cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
+					);
+					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
+				}
+				
 				
 				TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
 				
@@ -878,6 +911,15 @@ class GraphicsVulkan {
 			
 			vkDevFacade.freeCommandBuffer(commandBufferForRendering, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
+		
+		commandBufferForClear = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			
+			vkDevFacade.freeCommandBuffer(commandBufferForClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
+		}
+		
 		
 		//////////////////
 		// allocate and bind resources
