@@ -314,7 +314,7 @@ class GraphicsVulkan {
 			}
 		}
 		
-		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass) {
+		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass, out ResourceDag.ResourceNode pipelineResourceNode, out ResourceDag.ResourceNode pipelineLayoutResourceNode) {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
@@ -413,10 +413,12 @@ class GraphicsVulkan {
 				const(VkAllocationCallbacks*) allocator = null;
 				
 				VulkanResourceDagResource!TypesafeVkPipelineLayout pipelineLayoutDagResource = new VulkanResourceDagResource!TypesafeVkPipelineLayout(vkDevFacade, pipelineLayout, allocator, &disposePipelineLayout);
-				pipelineLayoutResourceNode = resourceDag.createNode(pipelineLayoutDagResource);
+				/* out */pipelineLayoutResourceNode = resourceDag.createNode(pipelineLayoutDagResource);
+				
+				// TODO< make destruction of this dependend on destruction of renderpass ? >
 				
 				// we hold this because else the resourceDag would dispose them
-				pipelineLayoutResourceNode.incrementExternalReferenceCounter();
+				/*out */pipelineLayoutResourceNode.incrementExternalReferenceCounter();
 			}
 			
 			
@@ -448,10 +450,11 @@ class GraphicsVulkan {
 			
 			
 			VulkanResourceDagResource!TypesafeVkPipeline pipelineDagResource = new VulkanResourceDagResource!TypesafeVkPipeline(vkDevFacade, createdGraphicsPipeline, allocator, &disposePipeline);
-			pipelineResourceNode = resourceDag.createNode(pipelineDagResource);
+			
+			/* out */pipelineResourceNode = resourceDag.createNode(pipelineDagResource);
 			
 			// we hold this because else the resourceDag would dispose them
-			pipelineResourceNode.incrementExternalReferenceCounter();
+			/* out */pipelineResourceNode.incrementExternalReferenceCounter();
 		}
 		
 		// function just for the example code, eeds to get refactored later
@@ -812,7 +815,19 @@ class GraphicsVulkan {
 		{
 			string path = "resources/engine/graphics/configuration/preset/pipelineReset.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createPipelineWithRenderPass(jsonValue, (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource);
+			createPipelineWithRenderPass(
+				jsonValue,
+				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource,
+				/*out*/ pipelineResourceNode,
+				/*out*/ pipelineLayoutResourceNode
+			);
+			
+			// TODO TODO TODO< look for hardcoded uses of
+			// -renderpass
+			// -pipeline
+			// -other things in regards to renderpass and pipeline
+			// and rewrite it so its more flexible and works fine with multiple renderpasses/pipelines
+			
 		}
 		scope(exit) releaseResourceNodes([pipelineLayoutResourceNode, pipelineResourceNode]);
 		
