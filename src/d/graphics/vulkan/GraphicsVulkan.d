@@ -84,7 +84,10 @@ class GraphicsVulkan {
 		
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
-		ResourceDag.ResourceNode renderPassResourceNode;
+		
+		ResourceDag.ResourceNode renderPassReset;
+		ResourceDag.ResourceNode renderPassDrawover;
+		
 		
 		ResourceDag.ResourceNode pipelineResourceNode;
 		ResourceDag.ResourceNode pipelineLayoutResourceNode;
@@ -98,9 +101,6 @@ class GraphicsVulkan {
 		TypesafeVkCommandBuffer setupCommandBuffer; // used for setup of images and such
 		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
 		
-		// semaphores for chaining
-		////TypesafeVkSemaphore chainSemaphore2;
-		
 		
 		// just for testing in here
 		Mesh testMesh;
@@ -112,6 +112,8 @@ class GraphicsVulkan {
 		
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboPositionBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
 		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
+		
+		
 		
 		
 		TypesafeVkSemaphore[] allocateSemaphores(size_t count) {
@@ -137,7 +139,7 @@ class GraphicsVulkan {
 
 
 
-		void createRenderpass(JsonValue jsonValue) {
+		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode) {
 			VkResult vulkanResult;
 			
 			
@@ -807,9 +809,6 @@ class GraphicsVulkan {
 		}
 
 		
-		void releaseRenderpassResources() {
-			renderPassResourceNode.decrementExternalReferenceCounter();
-		}
 		
 		void releaseFramebufferResources() {
 			scope(exit) vkDevFacade.destroyImage(framebufferImageResource.resource.value);
@@ -848,15 +847,23 @@ class GraphicsVulkan {
 		
 		
 		//////////////////
-		// create renderpass
+		// create renderPasses
 		//////////////////
 		
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassReset.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue);
+			createRenderpass(jsonValue, /*out*/ renderPassReset);
 		}
-		scope(exit) releaseRenderpassResources();
+		scope(exit) releaseResourceNodes([renderPassReset]);
+		
+		{
+			string path = "resources/engine/graphics/configuration/preset/renderpassDrawover.json";
+			JsonValue jsonValue = readJsonEngineResource(path);
+			createRenderpass(jsonValue, /*out*/ renderPassDrawover);
+		}
+		scope(exit) releaseResourceNodes([renderPassDrawover]);
+		
 		
 		/////////////////
 		// create framebuffer
