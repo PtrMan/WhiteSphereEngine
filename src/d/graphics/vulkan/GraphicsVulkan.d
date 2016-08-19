@@ -342,6 +342,36 @@ class GraphicsVulkan {
 			}
 		}
 		
+		/+ uncommented because its incomplete
+		void createDescriptorSetLayout() {
+			VkDescriptorSetLayoutBinding uboLayoutBinding = VkDescriptorSetLayoutBinding.init;
+			uboLayoutBinding.binding = 0;
+			uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			uboLayoutBinding.descriptorCount = 1;
+			uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			uboLayoutBinding.pImmutableSamplers = null; // Optional
+			
+			VkDescriptorSetLayout descriptorSetLayout;
+			VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.init;
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = 1;
+			layoutInfo.pBindings = &uboLayoutBinding;
+
+			if (!vkCreateDescriptorSetLayout(device, &layoutInfo, null, &descriptorSetLayout).vulkanSuccess) {
+				throw new EngineException(true, true, "Couldn't create an descriptor set layout [vkCreateDescriptorSetLayout]!");
+			}
+			//scope(exit) vkDestroyDescriptorSetLayout(device, descriptorSetLayout, null);
+			
+			VkDescriptorSetLayout setLayouts[] = {descriptorSetLayout};
+			VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			pipelineLayoutInfo.setLayoutCount = cast(uint32_t)setLayouts.length;
+			pipelineLayoutInfo.pSetLayouts = setLayouts.ptr;
+			
+			// TODO< remaining part 
+		}+/
+		
+		
 		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass, out ResourceDag.ResourceNode pipelineResourceNode, out ResourceDag.ResourceNode pipelineLayoutResourceNode) {
 			VkResult vulkanResult;
 			
@@ -767,6 +797,9 @@ class GraphicsVulkan {
 				
 				
 				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
+				
+				
+				
 				
 				// a testloop to draw two times
 				foreach( iteration; 0..2) {
