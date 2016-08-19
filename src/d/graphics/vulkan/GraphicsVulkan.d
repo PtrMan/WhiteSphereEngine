@@ -887,6 +887,7 @@ class GraphicsVulkan {
 					);
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 					
+					
 					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
 				
 					// we do it here so the transformation for the 2nd draw should be different
