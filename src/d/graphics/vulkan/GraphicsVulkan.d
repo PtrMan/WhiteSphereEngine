@@ -77,7 +77,7 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
-		Matrix44Type mvpMatrix = new Matrix44Type();
+		Matrix44Type mvpMatrix;
 		// fill mvp with identity
 		
 		mvpMatrix = createIdentity!float();
@@ -798,7 +798,7 @@ class GraphicsVulkan {
 				
 				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
 				
-				
+				mvpMatrix = createIdentity!float();
 				
 				
 				// a testloop to draw two times
@@ -816,6 +816,9 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 					
 					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
+				
+					// we do it here so the transformation for the 2nd draw should be different
+					mvpMatrix = createTranslation!float(-0.2f, 0.0f, 0.0f);
 				}
 
 				
