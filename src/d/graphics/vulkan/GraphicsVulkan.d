@@ -314,7 +314,7 @@ class GraphicsVulkan {
 			}
 		}
 		
-		void createPipeline(JsonValue jsonValue) {
+		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass) {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
@@ -420,7 +420,6 @@ class GraphicsVulkan {
 			}
 			
 			
-			TypesafeVkRenderPass renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
 			
 			
 			VulkanDeviceFacade.CreateGraphicsPipelineArguments createGraphicsPipelineArguments = VulkanDeviceFacade.CreateGraphicsPipelineArguments.init;
@@ -732,6 +731,13 @@ class GraphicsVulkan {
 		
 		
 		// resource managment helpers
+		static void releaseResourceNodes(ResourceDag.ResourceNode[] resourceNodes) {
+			foreach( iterationResourceNode; resourceNodes ) {
+				iterationResourceNode.decrementExternalReferenceCounter();
+			}
+		}
+
+		
 		void releaseRenderpassResources() {
 			renderPassResourceNode.decrementExternalReferenceCounter();
 		}
@@ -739,17 +745,7 @@ class GraphicsVulkan {
 		void releaseFramebufferResources() {
 			scope(exit) vkDevFacade.destroyImage(framebufferImageResource.resource.value);
 			
-			scope(exit) {
-				foreach( iterationImageView; framebufferImageViewsResourceNodes ) {
-					iterationImageView.decrementExternalReferenceCounter();
-				}
-			}
-			
-		}
-		
-		void releasePipelineResources() {
-			pipelineLayoutResourceNode.decrementExternalReferenceCounter();
-			pipelineResourceNode.decrementExternalReferenceCounter();
+			scope(exit) releaseResourceNodes(framebufferImageViewsResourceNodes);
 		}
 		
 		
@@ -821,9 +817,9 @@ class GraphicsVulkan {
 			string str = cast(string)read(path);
 			
 			JsonValue jsonValue = parseJson(str);
-			createPipeline(jsonValue);
+			createPipelineWithRenderPass(jsonValue, (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource);
 		}
-		scope(exit) releasePipelineResources();
+		scope(exit) releaseResourceNodes([pipelineLayoutResourceNode, pipelineResourceNode]);
 		
 		
 		//////////////////
