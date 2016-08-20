@@ -1,13 +1,13 @@
-#include "ISectorGenerator.h"
+import sectorGenerators.ISectorGenerator;
 #include "CelestialObject.h"
 #include "Math/EnumeratedDistribution.h"
 
-class DefaultSectorGenerator : public ISectorGenerator {
+class DefaultSectorGenerator : ISectorGenerator {
 	private static struct CelestialOrbitInfo {
 		FCelestialObject celestialObject;
 
 		double orbitRadius;
-	};
+	}
 
 	private static struct CelestialNoncenterBlueprint {
 		EEnumCelestialObjectType celestialObjectType;
@@ -26,8 +26,8 @@ class DefaultSectorGenerator : public ISectorGenerator {
 
 	}
 
-	public /*virtual*/ void createCelestialClustersForSector(ref FCelestialCluster[] destinationArray, const int64_t[3] sectorPosition, const InternalScalar sectorsize, const FCelestialSettings &celestialSettings) override {
-		const InternalPreciseVector sectorOffset = InternalPreciseVector((InternalScalar)sectorPosition[0] * sectorsize, (InternalScalar)sectorPosition[1] * sectorsize, (InternalScalar)sectorPosition[2] * sectorsize);
+	public /*virtual*/ void createCelestialClustersForSector(ref FCelestialCluster[] destinationArray, const int64_t[3] sectorPosition, const InternalScalar sectorsize, const ref FCelestialSettings celestialSettings) {
+		const InternalPreciseVector sectorOffset = InternalPreciseVector(cast(InternalScalar)sectorPosition[0] * sectorsize, cast(InternalScalar)sectorPosition[1] * sectorsize, cast(InternalScalar)sectorPosition[2] * sectorsize);
 
 		const int64_t spatialHashForPosition = calculateHashForUniverseSector(sectorPosition);
 
@@ -53,7 +53,7 @@ class DefaultSectorGenerator : public ISectorGenerator {
 			FRandomStream randomStream(runningRng);
 			
 			// build address of center
-			int32_t[] randomNumberGeneratorCoordinatesForCenter;
+			int32_t[2] randomNumberGeneratorCoordinatesForCenter;
 			randomNumberGeneratorCoordinatesForCenter ~= cast(int32_t)runningRng;
 			randomNumberGeneratorCoordinatesForCenter ~= 0; // add coordinate for indicating that its a center celestial
 			
@@ -63,20 +63,20 @@ class DefaultSectorGenerator : public ISectorGenerator {
 			rootCelestialCluster.subclusters.Append(centerClusters);
 			
 			// build address of noncenter
-			int32_t[]  randomNumberGeneratorCoordinatesForNonCenter;
+			int32_t[2]  randomNumberGeneratorCoordinatesForNonCenter;
 			randomNumberGeneratorCoordinatesForNonCenter ~= cast(int32_t)runningRng;
 			randomNumberGeneratorCoordinatesForNonCenter ~= 1; // add coordinate for indicating that its a noncenter celestial
 			
-			rootCelestialCluster.subclusters.Append(calculateCelestialClustersForNoncenterObjects(randomStream, centerSumMass, randomNumberGeneratorCoordinatesForNonCenter, celestialSettings));
+			rootCelestialCluster.subclusters ~= calculateCelestialClustersForNoncenterObjects(randomStream, centerSumMass, randomNumberGeneratorCoordinatesForNonCenter, celestialSettings);
 			
-			destinationArray.Add(rootCelestialCluster);
+			destinationArray ~= rootCelestialCluster;
 			
 			celestialPseudorandomPositionCounter++;
 			runningRng++;
 		}
 	}
 
-	protected static FCelestialCluster[] calculateCelestialClustersForCenter(FRandomStream &random, const TArray<int32> &randomNumberGeneratorCoordinatesForCenter) {
+	protected static FCelestialCluster[] calculateCelestialClustersForCenter(FRandomStream &random, const int32_t[] randomNumberGeneratorCoordinatesForCenter) {
 		FCelestialCluster[] resultClusters;
 
 		// TODO< weighted random number generator >
@@ -114,7 +114,7 @@ class DefaultSectorGenerator : public ISectorGenerator {
 		// TODO< use a random process for the random sampling of the temperature of the star >
 		float surfaceTemperatureInKelvin = linearInterpolate(random.GetFraction(), 3000.0f, 40000.0f);
 		
-		FCelestialObject resultCelestial = new FCelestialObject(EEnumCelestialObjectType::Star);
+		FCelestialObject resultCelestial = new FCelestialObject(EnumCelestialObjectType.Star);
 		resultCelestial.luminosityLogarithmic = StarGeneration.calculateLuminosityByTemperature(surfaceTemperatureInKelvin);
 		resultCelestial.surfaceTemperatureInKelvin = surfaceTemperatureInKelvin;
 		resultCelestial.randomNumberGeneratorCoordinates = randomNumberGeneratorCoordinates;
@@ -135,7 +135,7 @@ class DefaultSectorGenerator : public ISectorGenerator {
 	}
 
 
-	protected FCelestialCluster[] calculateCelestialClustersForNoncenterObjects(FRandomStream &random, const double centerSumMass, const TArray<int32> &randomNumberGeneratorCoordinates, const FCelestialSettings &celestialSettings) const {
+	protected FCelestialCluster[] calculateCelestialClustersForNoncenterObjects(ref FRandomStream random, const double centerSumMass, const ref int32_t[] randomNumberGeneratorCoordinates, const ref FCelestialSettings celestialSettings) const {
 		FCelestialCluster[] resultClusters;
 
 		bool youngSystem = false; // TODO< use randomnumber generator >
@@ -163,7 +163,7 @@ class DefaultSectorGenerator : public ISectorGenerator {
 		return resultClusters;
 	}
 
-	protected CelestialOrbitInfo[] calculateOrbitRadiusesAndCelestialInfo(FRandomStream &random, const double centerSumMass, const bool youngSystem, const TArray<int32> &randomNumberGeneratorCoordinates, const FCelestialSettings &celestialSettings) const {
+	protected CelestialOrbitInfo[] calculateOrbitRadiusesAndCelestialInfo(ref RandomStream random, const double centerSumMass, const bool youngSystem, const int32_t[] randomNumberGeneratorCoordinates, const ref FCelestialSettings celestialSettings) const {
 		DefaultSectorGenerator.CelestialOrbitInfo[] resultCelestialOrbits;
 
 		// factor for the range of gravity from a celestial body, gets multiplied with a constant to get real gravity value for the influence
@@ -188,7 +188,7 @@ class DefaultSectorGenerator : public ISectorGenerator {
 			// choose orbitRadius at random
     
 			// TODO< take the maximal radius of the ecenter objects into account and the radius of the bigest center object >
-			const double chosenNewCelestialOrbitRadius = random.GetFraction() * Constants::AstronomicalUnit * 500.0;
+			const double chosenNewCelestialOrbitRadius = random.GetFraction() * Constants.AstronomicalUnit * 500.0;
 			
 			// NOTE< does NOT work this way for belts >
 			FCelestialObject generatedCelestialObject = generateCandidateForNoncenterCelestialObject(random);
@@ -227,12 +227,12 @@ class DefaultSectorGenerator : public ISectorGenerator {
 		return true;
 	}
    
-	protected FCelestialObject generateCandidateForNoncenterCelestialObject(FRandomStream &random) const {
-		const CelestialNoncenterBlueprint blueprint = celestialNoncenterBlueprints.sample(random.GetFraction());
-  
+	protected FCelestialObject generateCandidateForNoncenterCelestialObject(ref RandomStream random) const {
+		const CelestialNoncenterBlueprint blueprint = celestialNoncenterBlueprints.sample(random.getFraction());
+
 		FCelestialObject resultCelestialObject;
 		resultCelestialObject.type = blueprint.celestialObjectType;
-		resultCelestialObject.mass = linearInterpolate((double)random.GetFraction(), blueprint.massMin, blueprint.massMax);
+		resultCelestialObject.mass = linearInterpolate((double)random.getFraction(), blueprint.massMin, blueprint.massMax);
 		
 		if( blueprint.canHaveAtmosphere ) {
 			resultCelestialObject.hasAtmosphere = ((random.GetUnsignedInt() % 2) == 1);
@@ -244,7 +244,21 @@ class DefaultSectorGenerator : public ISectorGenerator {
 		return resultCelestialObject;
 	}
 
-	protected EnumeratedDistribution<CelestialNoncenterBlueprint> celestialNoncenterBlueprints;
+	protected EnumeratedDistribution!CelestialNoncenterBlueprint celestialNoncenterBlueprints;
   
-	protected virtual void initializeCelestialNoncenterBlueprints();
+	protected /*virtual*/ void initializeCelestialNoncenterBlueprints() {
+		// PLANET
+		{
+			EnumeratedDistribution!CelestialNoncenterBlueprint.Entry newEntry;
+			newEntry.data.celestialObjectType = EnumCelestialObjectType.GenericCelestialBody;
+			newEntry.data.massMin = 3.3 * Math.exponentInteger!double(10.0, 23); // min mass for a planet, i've just taken the mass of mercury
+			newEntry.data.massMax = 13.0 * MassTable.Jupiter; // see https://en.wikipedia.org/wiki/Planet#Extrasolar_planet_definition
+			newEntry.data.canHaveAtmosphere = true;
+			newEntry.normalizedPropability = 1.0;
+			    
+			celestialNoncenterBlueprints.addEntry(newEntry);
+		}
+			  
+		// TODO< others >
+	}
 }
