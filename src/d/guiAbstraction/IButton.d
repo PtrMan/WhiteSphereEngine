@@ -1,43 +1,41 @@
-module Client.GuiAbstraction.IButton;
+module guiAbstraction.IButton;
 
-import Engine.Common.Vector;
-import Client.GuiAbstraction.GuiDrawer;
-import Engine.Common.WideString;
+import math.NumericSpatialVectors;
+import math.VectorAlias;
+import guiAbstraction.GuiDrawer;
 
-// TOUML
 
 /** \brief Interface for a GUI Button
  *
  */
-interface IButton
-{
-   /** \brief set size
-    *
-    * \param Size ...
-    */
-   public void setSize(Vector2f Size);
+interface IButton {
+	/** \brief set size
+	 *
+	 * \param Size ...
+	 */
+	void setSize(Vector2f size);
 
-   /** \brief is called from the rendering Stuff if the GUI is drawn
-    *
-    * \param Drawer is a Context that contains all mthods for drawing
-    */
-   public void render(GuiDrawer Drawer);
+	/** \brief is called from the rendering Stuff if the GUI is drawn
+	 *
+	 * \param Drawer is a Context that contains all mthods for drawing
+	 */
+	void render(GuiDrawer drawer);
 
-   /** \brief set Position
-    *
-    * \param Position ...
-    */
-   public void setPosition(Vector2f Position);
+	/** \brief set Position
+	 *
+	 * \param Position ...
+	 */
+	void setPosition(Vector2f position);
 
     /** \brief set Text content
-    *
-    * \param Text ...
-    */
-   public void setText(WideString Text);
+	 *
+	 * \param Text ...
+	 */
+	void setText(string text);
 
-   /** \brief sets the scale of one sign
-    *
-    * \param Scale ...
-    */
-   public void setSignScale(Vector2f Scale);
+	/** \brief sets the scale of one sign
+	 *
+	 * \param Scale ...
+	 */
+	void setSignScale(Vector2f scale);
 }

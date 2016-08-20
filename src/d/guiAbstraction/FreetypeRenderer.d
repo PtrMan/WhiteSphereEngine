@@ -1,270 +1,236 @@
-module Client.GuiAbstraction.FreetypeRenderer;
+module guiAbstraction.FreetypeRenderer;
 
 import std.string : toStringz;
 
-import Client.Api.Freetype;
+import api.freetype.Freetype;
 
-import Client.GuiAbstraction.SignInformation;
+import guiAbstraction.SignInformation;
 
 import std.stdio : writeln, write; // just for debugging
 
-// TOUML
-// TODOCU
 
-class FreetypeRenderer
-{
-   private static uint []Chars = [
-      ' ',
-      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-      'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-      '.', ',', ';', ':', '-', '_', '\'', '+', '#', '*', '~',
-      '!', '"', '§', '$', '%', '&', '/', '(', ')', '=', '?', '`', '^',
-      '´', '{', '[', ']', '}', '\\'
-      // sz, euro?
-   ];
+class FreetypeRenderer {
+	private static uint []Chars = [
+		' ',
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		'.', ',', ';', ':', '-', '_', '\'', '+', '#', '*', '~',
+		'!', '"', '§', '$', '%', '&', '/', '(', ')', '=', '?', '`', '^',
+		'´', '{', '[', ']', '}', '\\'
+		// sz, euro?
+	];
 
+	private FT_Library FreeTypeLib;
+	private FT_Face Face;
 
-   private FT_Library FreeTypeLib;
-   private FT_Face Face;
+	// Temporary bitmap used to convert from 1 bit to 8 bit representation
+	private FT_Bitmap TempBitmap;
 
-   // Temporary bitmap used to convert from 1 bit to 8 bit representation
-   private FT_Bitmap TempBitmap;
+	private bool LibraryInited = false;
 
-   private bool LibraryInited = false;
+	private SignInformation []InfoArray;
 
-   private SignInformation []InfoArray;
+	private uint FixedSignHeight, FixedSignWidth;
+	private uint BitmapWidth, BitmapHeight;
 
-   private uint FixedSignHeight, FixedSignWidth;
-   private uint BitmapWidth, BitmapHeight;
+	final void initialize(out bool success) {
+		int Error;
 
-   final public void initialize(out bool Success)
-   {
-      int Error;
+		success = false;
 
-      Success = false;
+		assert(!libraryInited, "initialize called more than once!");
 
-      assert(!LibraryInited, "initialize called more than once!");
+		int error = FT_Init_FreeType(&(this.FreeTypeLib));
+		if( error ) {
+			return;
+		}
 
-      Error = FT_Init_FreeType(&(this.FreeTypeLib));
+		FT_Bitmap_New(&tempBitmap);
 
-      if( Error )
-      {
-         return;
-      }
+		libraryInited = true;
+		success = true;
+		return;
+	}
 
-      FT_Bitmap_New(&(this.TempBitmap));
+	final void deinitialize() {
+		assert(libraryInited, "deinitialize called without succesfully calling initialize!");
 
-      this.LibraryInited = true;
-      Success = true;
-      return;
-   }
+		FT_Bitmap_Done(freeTypeLib, &tempBitmap);
+		FT_Done_FreeType(freeTypeLib);
 
-   final public void deinitialize()
-   {
-      assert(this.LibraryInited, "deinitialize called without succesfully calling initialize!");
+		libraryInited = false;
+	}
 
-      FT_Bitmap_Done(this.FreeTypeLib, &TempBitmap);
-      FT_Done_FreeType(this.FreeTypeLib);
+	final void render(string fontName, uint fixedSignWidth, uint fixedSignHeight, out bool[] bitmap, uint itmapWidth, uint bitmapHeight, out bool success) {
+		success = false;
 
-      this.LibraryInited = false;
-   }
+		this.fixedSignHeight = fixedSignHeight;
+		this.fixedSignWidth  = fixedSignWidth;
+		this.bitmapWidth     = bitmapWidth;
+		this.bitmapHeight    = bitmapHeight;
 
-   final public void render(string FontName, uint FixedSignWidth, uint FixedSignHeight, out bool[] Bitmap, uint BitmapWidth, uint BitmapHeight, out bool Success)
-   {
-      int Error;
-      uint CurrentX;
-      uint CurrentRow;
+		// create bitmap
+		bitmap = new bool[bitmapWidth*bitmapHeight];
 
-      Success = false;
+		int freetypeError = FT_New_Face(freeTypeLib, fontName.toStringz, 0, &face);
 
-      this.FixedSignHeight = FixedSignHeight;
-      this.FixedSignWidth  = FixedSignWidth;
-      this.BitmapWidth     = BitmapWidth;
-      this.BitmapHeight    = BitmapHeight;
+		if( freetypeError ) {
+			return;
+		}
 
-      // create bitmap
-      Bitmap = new bool[BitmapWidth*BitmapHeight];
+		freetypeError = FT_Set_Pixel_Sizes(
+			this.Face,   /* handle to face object */
+			FixedSignWidth, /* pixel_width           */
+			FixedSignHeight /* pixel_height          */
+		);
 
-      Error = FT_New_Face(this.FreeTypeLib, FontName.toStringz, 0, &(this.Face));
+		if( freetypeError ) {
+			return;
+		}
 
-      if( Error )
-      {
-         return;
-      }
+		uint currentX = 0;
+		uint currentRow = 0;
 
-      Error = FT_Set_Pixel_Sizes(
-         this.Face,   /* handle to face object */
-         FixedSignWidth, /* pixel_width           */
-         FixedSignHeight /* pixel_height          */
-      );
+		// for testing we just render the "A"
 
-      if( Error )
-      {
-         return;
-      }
+		foreach( i; 0..FreetypeRenderer.chars.length ) {
+			uint GlyphIndex;
+			SignInformation NewSignInformation;
 
-      CurrentX = 0;
-      CurrentRow = 0;
+			uint char = FreetypeRenderer.chars[i];
 
-      // for testing we just render the "A"
+			uint glyphIndex = FT_Get_Char_Index(this.Face, Char);
 
-      for( uint i = 0; i < FreetypeRenderer.Chars.length; )
-      {
-         uint Char;
-         uint GlyphIndex;
-         uint AdvanceX;
-         SignInformation NewSignInformation;
+			freetypeError = FT_Load_Glyph(face, glyphIndex, /* Flags */ 0);
 
-         Char = FreetypeRenderer.Chars[i];
+			if( freetypeError ) {
+	            return;
+			}
 
-         GlyphIndex = FT_Get_Char_Index(this.Face, Char);
+			uint advanceX = this.Face.glyph.advance.x/64;
 
-         Error = FT_Load_Glyph(this.Face, GlyphIndex, /* Flags */ 0);
+			// +2 because we need some spacing
+			if( currentX + advanceX + 2 > 255 ) {
+				// Sign needs to be on next Row
 
-         if( Error )
-         {
-            return;
-         }
+				currentX = 0;
+				currentRow++;
 
-         AdvanceX = this.Face.glyph.advance.x/64;
+				continue;
+			}
 
-         // +2 because we need some spacing
-         if( CurrentX + AdvanceX + 2> 255 )
-         {
-            // Sign needs to be on next Row
+			// draw Sign/Glyph
+			freetypeError = FT_Render_Glyph(
+				face.glyph,   /* glyph slot  */
+				FT_Render_Mode.FT_RENDER_MODE_MONO /* render mode */
+			);
 
-            CurrentX = 0;
-            CurrentRow++;
+			if( freetypeError ) {
+				return;
+			}
 
-            continue;
-         }
+			// convert
+			freetypeError = FT_Bitmap_Convert(
+				freeTypeLib,
+				&(face.glyph.bitmap), /* source */
+				&(tempBitmap),        /* destination */
+				1                          /* alignment */
+			);
 
-         // draw Sign/Glyph
+			if( freetypeError ) {
+				// render error
+				return;
+			}
 
-         Error = FT_Render_Glyph(
-            this.Face.glyph,   /* glyph slot  */
-            FT_Render_Mode.FT_RENDER_MODE_MONO /* render mode */
-         );
+			// draw it to the texture
+			drawToTexture(currentX, currentRow, fixedSignHeight, bitmapWidth, bitmapHeight, bitmap);
 
-         if( Error )
-         {
-            return;
-         }
+			writeln(face.glyph.bitmap_top);
 
-         // convert
+			newSignInformation = new SignInformation();
+			newSignInformation.topSpacing = this.Face.glyph.bitmap_top;
+			newSignInformation.positionX = currentX;
+			newSignInformation.row = currentRow;
+			newSignInformation.advanceX = advanceX;
 
-         Error = FT_Bitmap_Convert(
-            this.FreeTypeLib,
-            &(this.Face.glyph.bitmap), /* source */
-            &(this.TempBitmap),        /* destination */
-            1                          /* alignment */
-         );
+			this.infoArray ~= newSignInformation;
 
-         if( Error )
-         {
-            // render error
-            return;
-         }
+			// +2 because we need some spacing
+			currentX += advanceX + 2;
+		}
 
-         // draw it to the texture
-         this.drawToTexture(CurrentX, CurrentRow, FixedSignHeight, BitmapWidth, BitmapHeight, Bitmap);
+		success = true;
+	}
 
-         writeln(this.Face.glyph.bitmap_top);
+	/** \brief draws the current Glyph/Sign to the texture
+	 *
+	 * \param CurrentX is the CurrentX position in the Bitmap
+	 * \param CurrentRow is the Current row in the Bitmap (starts at 0)
+	 * \param FixedSignHeight is the Heiht of each Sign
+	 * \param BitmapWidth is the Width of the Bitmap
+	 * \param BitmapHeight is the Height of the Bitmap
+	 * \param Bitmap ...
+	 */
+	final private void drawToTexture(uint currentX, uint currentRow, uint fixedSignHeight, uint bitmapWidth, uint bitmapHeight, ref bool[] bitmap) {
+		for( int y = 0; y < this.TempBitmap.rows; y++ ) {
+			for( int x = 0; x < this.TempBitmap.width; x++ ) {
+				bitmap[x + currentX + (currentRow * fixedSignHeight + y) * bitmapWidth] = (tempBitmap.buffer[y * tempBitmap.width + x] != 0);
+			}
+		}
+	}
 
-         NewSignInformation = new SignInformation();
-         NewSignInformation.TopSpacing = this.Face.glyph.bitmap_top;
-         NewSignInformation.PositionX = CurrentX;
-         NewSignInformation.Row = CurrentRow;
-         NewSignInformation.AdvanceX = AdvanceX;
+	/** \brief returns the Bitmap/Texture coordinates for a Sign
+	 *
+	 * \param char ...
+	 * \param advanceX will on success contain the relative distance to the next character
+	 * \param topSpacing spacing from Top of the Anchor to foot of the text, in pixels
+	 * \param topX will contain Top X on success
+	 * \param topY will contain Top Y on success
+	 * \param bottomX will contain Bottom X on success
+	 * \param bottomY will contain Bottom Y on success
+	 * \param success will be true on success
+	 *
+	 * \note all returned Coordinates are relative to the top left
+	 *
+	 */
+	final void getBitmapCoordinatesFor(uint char, out uint topSpacing, out float advanceX, out float topX, out float topY, out float bottomX, out float bottomY, out bool success) {
+		success = false;
 
-         this.InfoArray ~= NewSignInformation;
+		for( uint charI = 0; charI < FreetypeRenderer.Chars.length; charI++ ) {
+			if( FreetypeRenderer.chars[charI] == char ) {
+				SignInformation signInfo;
 
-         // +2 because we need some spacing
-         CurrentX += AdvanceX + 2;
+				if( infoArray.length <= charI ) {
+					return;
+				}
 
-         i += 1;
-      }
+				signInfo = infoArray[CharI];
 
-      Success = true;
-   }
+				//signWidth = cast(float)(signInfo.signWidth+5/*spacing*/)/cast(float)this.fixedSignWidth;
+				advanceX = cast(float)SignInfo.advanceX/cast(float)fixedSignWidth;
 
-   /** \brief draws the current Glyph/Sign to the texture
-    *
-    * \param CurrentX is the CurrentX position in the Bitmap
-    * \param CurrentRow is the Current row in the Bitmap (starts at 0)
-    * \param FixedSignHeight is the Heiht of each Sign
-    * \param BitmapWidth is the Width of the Bitmap
-    * \param BitmapHeight is the Height of the Bitmap
-    * \param Bitmap ...
-    */
-   final private void drawToTexture(uint CurrentX, uint CurrentRow, uint FixedSignHeight, uint BitmapWidth, uint BitmapHeight, ref bool []Bitmap)
-   {
-      for( int y = 0; y < this.TempBitmap.rows; y++ )
-      {
-         for( int x = 0; x < this.TempBitmap.width; x++ )
-         {
-            Bitmap[x + CurrentX + (CurrentRow * FixedSignHeight + y) * BitmapWidth] = (this.TempBitmap.buffer[y * this.TempBitmap.width + x] != 0);
-         }
-      }
-   }
+				topX = cast(float)SignInfo.positionX/cast(float)bitmapWidth;
+				topY = cast(float)(fixedSignHeight*SignInfo.row)/cast(float)bitmapHeight;
 
-   /** \brief returns the Bitmap/Texture coordinates for a Sign
-    *
-    * \param Char ...
-    * \param AdvanceX will on success contain the relative distance to the next character
-    * \param TopSpacing spacing from Top of the Anchor to foot of the text, in pixels
-    * \param TopX will contain Top X on success
-    * \param TopY will contain Top Y on success
-    * \param BottomX will contain Bottom X on success
-    * \param BottomY will contain Bottom Y on success
-    * \param Success will be true on success
-    *
-    * \note all returned Coordinates are relative tothe top left
-    *
-    */
-   final public void getBitmapCoordinatesFor(uint Char, out uint TopSpacing, out float AdvanceX, out float TopX, out float TopY, out float BottomX, out float BottomY, out bool Success)
-   {
-      Success = false;
+				bottomX = cast(float)(SignInfo.positionX + SignInfo.advanceX-1)/cast(float)bitmapWidth;
+				bottomY = cast(float)(fixedSignHeight*(SignInfo.row+1)-1)/cast(float)bitmapHeight;
 
-      for( uint CharI = 0; CharI < FreetypeRenderer.Chars.length; CharI++ )
-      {
-         if( FreetypeRenderer.Chars[CharI] == Char )
-         {
-            SignInformation SignInfo;
+				topSpacing = SignInfo.topSpacing;
 
-            if( this.InfoArray.length <= CharI )
-            {
-               return;
-            }
+				success = true;
+				return;
+			}
+		}
 
-            SignInfo = this.InfoArray[CharI];
+		// NOTE< don't set Success to true because of fallthrough >
+	}
 
-            //SignWidth = cast(float)(SignInfo.SignWidth+5/*spacing*/)/cast(float)this.FixedSignWidth;
-            AdvanceX = cast(float)SignInfo.AdvanceX/cast(float)this.FixedSignWidth;
-
-            TopX = cast(float)SignInfo.PositionX/cast(float)this.BitmapWidth;
-            TopY = cast(float)(this.FixedSignHeight*SignInfo.Row)/cast(float)this.BitmapHeight;
-
-            BottomX = cast(float)(SignInfo.PositionX + SignInfo.AdvanceX-1)/cast(float)this.BitmapWidth;
-            BottomY = cast(float)(this.FixedSignHeight*(SignInfo.Row+1)-1)/cast(float)this.BitmapHeight;
-
-            TopSpacing = SignInfo.TopSpacing;
-
-            Success = true;
-            return;
-         }
-      }
-
-      // NOTE< don't set Success to true because of fallthrough >
-   }
-
-   /** \brief return the Height of the Signs
-    *
-    * \return ...
-    */
-   final public float getFixedSignHeight()
-   {
-      return this.FixedSignHeight;
-   }
+	/** \brief return the Height of the Signs
+	 *
+	 * \return ...
+	 */
+	final float getFixedSignHeight() {
+		return this.fixedSignHeight;
+	}
 }

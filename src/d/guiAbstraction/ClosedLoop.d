@@ -1,8 +1,7 @@
-module Client.GuiAbstraction.ClosedLoop;
+module guiAbstraction.ClosedLoop;
 
-import Engine.Common.Vector;
+import math.NumericSpatialVectors;
 
-// TOUML
 
 /** \brief A closed loop of points
  *
@@ -11,7 +10,6 @@ import Engine.Common.Vector;
  * This class doesn't define how it is drawn, the width, if it can be convex and so on
  *
  */
-class ClosedLoop
-{
-   public Vector2f []Points;
+class ClosedLoop {
+	Vector2f[] points;
 }

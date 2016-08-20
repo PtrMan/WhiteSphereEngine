@@ -1,159 +1,132 @@
-module Client.GuiAbstraction.MultiTextElement;
+module guiAbstraction.MultiTextElement;
 
-import Engine.Math.Math : max;
-import Engine.Common.WideString;
-import Engine.Common.Vector;
+import math.NumericSpatialVectors;
+import math.VectorAlias;
 
-import Client.GuiAbstraction.Color;
-import Client.GuiAbstraction.GuiDrawer;
+import guiAbstraction.Color;
+import guiAbstraction.GuiDrawer;
 
 
-// TOUML
 // TODOCU
 
-class MultiTextElement
-{
-   private static class Element
-   {
-      enum EnumType
-      {
-         NEWLINE,
-         TEXT
-      }
+class MultiTextElement {
+	private static class Element {
+		enum EnumType {
+		NEWLINE,
+		TEXT
+	}
 
-      public EnumType Type;
-      public WideString Text;
-      public Color OfColor;
-      public float SignHeight = 0.0f;
+	public EnumType type;
+	public string text;
+	public Color color;
+	public float signHeight = 0.0f;
 
-      this(EnumType Type)
-      {
-         this.Type = Type;
-         this.Text = new WideString();
-      }
-   }
+	final this(EnumType Type) {
+		this.type = type;
+	}
+	
+	final void render(GuiDrawer drawer) {
+		uint lineBeginI;
+		Vector2f currentPosition;
 
-   final public void render(GuiDrawer Drawer)
-   {
-      uint LineBeginI;
-      Vector2f CurrentPosition;
+		assert(position !is null, "this.Position was null!");
 
-      assert(!(this.Position is null), "this.Position was null!");
+		currentPosition = position.clone(); // clone needed?
+		
+		lineBeginI = 0;
+		
+		for(;;) {
+			uint iterationI;
+			uint lastElementOfLine;
+			uint i;
+			float lineHeight;
 
-      CurrentPosition = this.Position.clone(); // clone needed?
-      
-      LineBeginI = 0;
-      
-      for(;;)
-      {
-         uint IterationI;
-         uint LastElementOfLine;
-         uint i;
-         float LineHeight;
+			if( lineBeginI >= elements.length ) {
+				break;
+			}
 
-         if( LineBeginI >= this.Elements.length )
-         {
-            break;
-         }
+			// NOTE< doesn't have to be touched for implementing of position caching >
+			lastElementOfLine = findLastElementOfLine(lineBeginI);
 
-         // NOTE< doesn't have to be touched for implementing of position caching >
-         LastElementOfLine = this.findLastElementOfLine(LineBeginI);
+			// NOTE< doesn't have to be touched for implementing of position caching >
+			lineHeight = getMaxHeightOfElements(lineBeginI, lastElementOfLine);
 
-         // NOTE< doesn't have to be touched for implementing of position caching >
-         LineHeight = this.getMaxHeightOfElements(LineBeginI, LastElementOfLine);
+			// draw
 
-         // draw
+			for( i = lineBeginI; i <= /* right */ lastElementOfLine; i++ ) {
+				// TODO< better position calculation >
+				Drawer.drawText(elements[i].text, (currentPosition + new Vector2f(0.0f, lineHeight)), new Vector2f(0.05f, elements[i].signHeight), this.elements[i].color);
 
-         for( i = LineBeginI; i <= /* right */ LastElementOfLine; i++ )
-         {
-            // TODO< better position calculation >
-            Drawer.drawText(this.Elements[i].Text, (CurrentPosition + new Vector2f(0.0f, LineHeight)), new Vector2f(0.05f, this.Elements[i].SignHeight), this.Elements[i].OfColor);
+				currentPosition.X = currentPosition.X + drawer.getTextWidth(elements[i].text, new Vector2f(0.05f, 0.0f));
+			}
 
-            CurrentPosition.X = CurrentPosition.X + Drawer.getTextWidth(this.Elements[i].Text, new Vector2f(0.05f, 0.0f));
-         }
+			// skip all following linebreaks
+			for(;;) {
+				lastElementOfLine++;
 
-         // skip all following linebreaks
-         for(;;)
-         {
-            LastElementOfLine++;
+				if( lastElementOfLine >= elements.length ) {
+					break;
+				}
 
-            if( LastElementOfLine >= this.Elements.length )
-            {
-               break;
-            }
+				if( elements[lastElementOfLine].type == Element.EnumType.NEWLINE ) {
+					// more current position
+					CurrentPosition.x = position.x;
+					CurrentPosition.y = CurrentPosition.y + elements[lastElementOfLine].signHeight;
+				}
+				else {
+					break;
+				}
+			}
 
-            if( this.Elements[LastElementOfLine].Type == Element.EnumType.NEWLINE )
-            {
-               // more current position
-               CurrentPosition.X = this.Position.X;
-               CurrentPosition.Y = CurrentPosition.Y + this.Elements[LastElementOfLine].SignHeight;
-            }
-            else
-            {
-               break;
-            }
-         }
-         
-         // TODO
+			// TODO
 
-         LineBeginI = LastElementOfLine; // just for testing
-      }
-   }
+			lineBeginI = lastElementOfLine; // just for testing
+		}
+	}
 
-   final private uint findLastElementOfLine(uint LineBeginI)
-   {
-      uint CurrentI;
+	final private uint findLastElementOfLine(uint lineBeginI) {
+		assert(lineBeginI < this.Elements.length, "LineBeginI out of bounds!");
 
-      assert(LineBeginI < this.Elements.length, "LineBeginI out of bounds!");
+		for( uint currentI = lineBeginI;; currentI++ ) {
+			if( CurrentI >= this.Elements.length ) {
+				return this.Elements.length-1;
+			}
 
-      for( CurrentI = LineBeginI;; CurrentI++ )
-      {
-         if( CurrentI >= this.Elements.length )
-         {
-            return this.Elements.length-1;
-         }
-
-         if( this.Elements[CurrentI].Type == Element.EnumType.NEWLINE )
-         {
-            if( CurrentI > 0 )
-            {
-               return CurrentI-1;
-            }
-            return CurrentI;
-         }
-      }
-   }
+			if( elements[currentI].type == Element.EnumType.NEWLINE ) {
+				if( currentI > 0 ) {
+					return currentI-1;
+				}
+				return currentI;
+			}
+		}
+	}
    
-   final private float getMaxHeightOfElements(uint StartIndex, uint EndIndex)
-   {
-      uint i;
-      float MaxHeight = 0.0f;
+	final private float getMaxHeightOfElements(uint startIndex, uint endIndex) {
+		uint i;
+		float maxHeight = 0.0f;
 
-      assert(StartIndex >= 0, "StartIndex out of bounds!");
-      assert(StartIndex < this.Elements.length, "StartIndex out of bounds!");
-      
-      assert(EndIndex >= 0, "EndIndex out of bounds!");
-      assert(EndIndex < this.Elements.length, "EndIndex out of bounds!");
+		assert(startIndex >= 0, "StartIndex out of bounds!");
+		assert(startIndex < this.Elements.length, "StartIndex out of bounds!");
+		
+		assert(endIndex >= 0, "EndIndex out of bounds!");
+		assert(endIndex < this.Elements.length, "EndIndex out of bounds!");
 
-      assert(StartIndex <= EndIndex, "EndIndex greater than StartIndex!");
+		assert(startIndex <= endIndex, "EndIndex greater than StartIndex!");
 
-      for( i = StartIndex; i < EndIndex; i++ )
-      {
-         if( this.Elements[i].Type == Element.EnumType.TEXT )
-         {
-            MaxHeight = max(MaxHeight, this.Elements[i].SignHeight);
-         }
-      }
+		for( i = startIndex; i < endIndex; i++ ) {
+			if( elements[i].type == Element.EnumType.TEXT ) {
+				maxHeight = max(maxHeight, elements[i].signHeight);
+			}
+		}
 
-      return MaxHeight;
-   }
+		return MaxHeight;
+	}
 
-   final public void setPosition(Vector2f Position)
-   {
-      this.Position = Position;
-   }
+	final @property void position(Vector2f newPosition) {
+		position = newPosition;
+	}
 
-   public Element []Elements;
+	public Element[] elements;
 
-   private Vector2f Position;
+	protected Vector2f protectedPosition;
 }

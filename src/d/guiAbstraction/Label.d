@@ -1,57 +1,51 @@
-module Client.GuiAbstraction.Label;
+module guiAbstraction.Label;
 
-import Engine.Common.Vector;
-import Engine.Common.WideString;
-import Client.GuiAbstraction.ILabel;
-import Client.GuiAbstraction.Color;
-import Client.GuiAbstraction.GuiDrawer;
+import math.NumericSpatialVectors;
+import math.VectorAlias;
 
-// TODO< uml, change LabelView to Label >
+import guiAbstraction.ILabel;
+import guiAbstraction.Color;
+import guiAbstraction.GuiDrawer;
 
-class Label : ILabel
-{
-   private Vector2f Position;
-   private Vector2f SignScale;
-   private Color ColorObject;
-   private WideString Text;
+// TODO< change LabelView to Label >
 
-   this()
-   {
-      this.Position = new Vector2f(0.0f, 0.0f);
-   }
+class Label : ILabel {
+	private Vector2f position;
+	private Vector2f signScale;
+	private Color color;
+	private string text;
 
-   public void setPosition(Vector2f Position)
-   {
-      // Position is allready checked
+	final this() {
+		position = new Vector2f(0.0f, 0.0f);
+	}
 
-      this.Position = Position;
-   }
+	void setPosition(Vector2f position) {
+		// Position is allready checked
+
+		this.position = position;
+	}
    
-   public void setText(WideString Text)
-   {
-      // Text is allready checked
+	void setText(WideString text) {
+		// Text is allready checked
 
-      this.Text = Text;
-   }
+		this.Text = Text;
+	}
    
-   public void render(GuiDrawer DrawObject)
-   {
-      assert(this.Text !is null, "Text was null!");
-      assert(this.SignScale !is null, "SignScale was null!");
-      // no assert for Position because it is gurantueed to be non null
+	void render(GuiDrawer drawObject) {
+		assert(text !is null, "Text was null!");
+		assert(signScale !is null, "SignScale was null!");
+		// no assert for Position because it is gurantueed to be non null
 
-      DrawObject.drawText(this.Text, this.Position, this.SignScale, this.ColorObject);
-   }
-   
-   public void setColor(Color ColorObject)
-   {
-      this.ColorObject = ColorObject;
-   }
+		drawObject.drawText(text, position, signScale, colorObject);
+	}
 
-   public void setSignScale(Vector2f Scale)
-   {
-      // Scale is allready checked
+	void setColor(Color color) {
+		this.color = color;
+	}
 
-      this.SignScale = Scale;
-   }
+	void setSignScale(Vector2f scale) {
+		// Scale is allready checked
+
+		this.signScale = scale;
+	}
 }

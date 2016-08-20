@@ -1,31 +1,28 @@
-module Client.GuiAbstraction.ChatWindowModel;
+module guiAbstraction.ChatWindowModel;
 
-import Client.GuiAbstraction.IChatWindowModel;
-import Client.InputAbstraction;
+import guiAbstraction.IChatWindowModel;
+import InputAbstraction;
 
 /** \brief Model of the Chat Window
  *
  * (MVP Pattern)
  */
-class ChatWindowModel : IChatWindowModel
-{
-   private InputAbstraction Input;
+class ChatWindowModel : IChatWindowModel {
+	private InputAbstraction input;
 
-   /* \brief ...
-    *
-    * \return ...
-    */
-   public uint[] getLastSigns()
-   {
-      return this.Input.getLastSigns();
-   }
+	/* \brief ...
+	 *
+	 * \return ...
+	 */
+	uint[] getLastSigns() {
+		return input.getLastSigns();
+	}
 
-   /** \brief set the Input Object from which the data gets transfered
-    *
-    * \param Input ...
-    */
-   final public void setInput(InputAbstraction Input)
-   {
-      this.Input = Input;
-   }
+	/** \brief set the Input Object from which the data gets transfered
+	 *
+	 * \param Input ...
+	 */
+	final void setInput(InputAbstraction input) {
+		this.input = input;
+	}
 }

@@ -1,119 +1,56 @@
-module Client.GuiAbstraction.EditField;
+module guiAbstraction.EditField;
 
-import Client.GuiAbstraction.Color;
-import Client.GuiAbstraction.GuiDrawer;
-import Client.GuiAbstraction.IClickable;
+import guiAbstraction.Color;
+import guiAbstraction.GuiDrawer;
+import guiAbstraction.IClickable;
 
-import Engine.Common.Vector;
-import Engine.Common.WideString;
+import math.NumericSpatialVectors;
+import math.VectorAlias;
 
-// TOUML
-class EditField : IClickable
-{
-	private Vector2f Position;
-   private Color TextColor;
-   private WideString Text;
-   private uint MaxSigns;
-   private float Width;
-   private Vector2f SignScale;
-   private float BorderWidth;
-   private Color BorderColor;
-   private Vector2f Size;
+//import Engine.Common.WideString;
 
-   public bool WasClicked;
+class EditField : IClickable {
+	public Vector2f position;
+	public Color textColor;
+	public string text;
+	public uint maxSigns;
+	public float width;
+	public Vector2f signScale;
+	public float borderWidth;
+	public Color borderColor;
+	public Vector2f size;
 
-   this()
-   {
-      this.Text = new WideString();
-   }
+	public bool wasClicked;
 
-   // TOUML
-   final public void setPosition(Vector2f Position)
-   {
-      this.Position = Position;
-   }
+	final this() {
+	}
 
-   final public void setSize(Vector2f Size)
-   {
-      this.Size = Size;
-   }
-   
-   /*
-   public void setWidth(float Width)
-   {
-      if( Width < 0.0f )
-      {
-         Width = 0.0f;
-      }
+	/* uncommented from the old source code
+	public void setWidth(float width) {
+		this.width = max(0.0f, width)
+	}
+	 */
 
-      this.Width = Width;
-   }
-   */
+	public void render(GuiDrawer drawer) {
+		assert(this.Position !is null, "Position was null!");
+		assert(this.Size !is null, "Size was null!");
+		assert(this.SignScale !is null, "SignScale was null!");
+		// TODO< draw cursor >
 
-   final public void setBorderWidth(float Width)
-   {
-      this.BorderWidth = Width;
-   }
+		drawer.drawBox(this.Position, this.Size, this.BorderWidth, this.BorderColor);
+		
+		drawer.drawText(this.Text, this.Position, this.SignScale, this.TextColor);
+	}
 
-   public void setMaxSigns(uint Max)
-   {
-      this.MaxSigns = Max;
-   }
+	// from IClickabled
+	void mouseDown(Vector2f position) {
+		// do nothing
+	}
 
-   public void setText(WideString Text)
-   {
-      // TODO< limit length >
-
-      this.Text = Text;
-   }
-
-   public WideString getText()
-   {
-      return this.Text;
-   }
-   
-   // TOUML
-   public void render(GuiDrawer Drawer)
-   {
-      assert(!(this.Position is null), "Position was null!");
-      assert(!(this.Size is null), "Size was null!");
-      assert(!(this.SignScale is null), "SignScale was null!");
-      // TODO< draw cursor >
-
-      Drawer.drawBox(this.Position, this.Size, this.BorderWidth, this.BorderColor);
-      
-      Drawer.drawText(this.Text, this.Position, this.SignScale, this.TextColor);
-   }
-   
-   public void setTextColor(Color NewColor)
-   {
-      this.TextColor = NewColor;
-   }
-
-   final public void setBorderColor(Color NewColor)
-   {
-      this.BorderColor = BorderColor;
-   }
-
-   public void setSignScale(Vector2f Scale)
-   {
-      this.SignScale = Scale;
-   }
-
-   // ALLREADYDOC
-   // from IClickabled
-   public void mouseDown(Vector2f Position)
-   {
-      // do nothing
-   }
-
-   // ALLREADYDOC
-   // from IClickable
-   public void mouseUp (Vector2f Position)
-   {
-      if( Position.X > this.Position.X && Position.Y > this.Position.Y && Position.X < this.Position.X + this.Size.X && Position.Y < this.Position.Y + this.Size.Y )
-      {
-         this.WasClicked = true;
-      }
-   }
+	// from IClickable
+	void mouseUp(Vector2f position) {
+		if( position.x > this.Position.x && Position.y > this.Position.y && Position.x < this.Position.x + this.Size.x && Position.y < this.Position.y + this.Size.y ) {
+			this.WasClicked = true;
+		}
+	}
 }

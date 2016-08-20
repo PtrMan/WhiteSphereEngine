@@ -1,9 +1,9 @@
-module Client.GuiAbstraction.IClickable;
+module guiAbstraction.IClickable;
 
-import Engine.Common.Vector;
+import math.NumericSpatialVectors;
+import math.VectorAlias;
 
-interface IClickable
-{
-   public void mouseDown(Vector2f Position);
-   public void mouseUp(Vector2f Position);
+interface IClickable {
+	void mouseDown(Vector2f Position);
+	void mouseUp(Vector2f Position);
 }
