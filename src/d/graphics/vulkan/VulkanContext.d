@@ -35,14 +35,19 @@ class VulkanContext {
 	
 	protected VulkanMemoryAllocator[uint32_t] allocatorsByMemoryTypeIndex;
 	
-	public VulkanMemoryAllocator retriveOrCreateMemoryAllocatorByTypeIndex(uint32_t typeIndex, VulkanMemoryAllocator.AllocatorConfiguration allocatorConfiguration) {
+	final VulkanMemoryAllocator retriveOrCreateMemoryAllocatorByTypeIndex(uint32_t typeIndex, VulkanMemoryAllocator.AllocatorConfiguration allocatorConfiguration) {
 		if( !(typeIndex in allocatorsByMemoryTypeIndex) ) {
 			VulkanMemoryAllocator createdMemoryAllocator = new VulkanMemoryAllocator(this, allocatorConfiguration);
 			allocatorsByMemoryTypeIndex[typeIndex] = createdMemoryAllocator;
 			return createdMemoryAllocator;
 		}
 		else {
-			return allocatorsByMemoryTypeIndex[typeIndex];
+			return retriveByTypeIndex(typeIndex);
 		}
+	}
+	
+	final VulkanMemoryAllocator retriveByTypeIndex(uint32_t typeIndex) {
+		assert( typeIndex in allocatorsByMemoryTypeIndex );
+		return allocatorsByMemoryTypeIndex[typeIndex];
 	}
 }

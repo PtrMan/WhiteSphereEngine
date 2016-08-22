@@ -2,6 +2,7 @@ module graphics.vulkan.VulkanResourceWithMemoryDecoration;
 
 import std.stdint;
 
+import api.vulkan.Vulkan;
 import helpers.VariableValidator;
 import graphics.vulkan.VulkanMemoryAllocator;
 
