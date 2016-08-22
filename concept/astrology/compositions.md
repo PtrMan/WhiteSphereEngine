@@ -1,0 +1,1 @@
+https://upload.wikimedia.org/wikipedia/commons/e/e6/SolarSystemAbundances.png

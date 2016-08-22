@@ -59,4 +59,18 @@ astronomy
 
 * calculate deformation of planetary objects based on rotation speed (fast rotating objects get squished)
 	https://en.wikipedia.org/wiki/Equatorial_bulge
-	
+
+
+http://en.spaceengine.org/forum/22-689-2
+	* discussion of shape of red giants
+
+long term simulation
+	http://en.spaceengine.org/forum/22-816-1
+		* stellar evolution
+
+discussion about weird planets
+http://listverse.com/2010/01/25/15-fascinating-planets-outside-our-solar-system/
+
+
+formulas for orbital mechanics
+http://www.braeunig.us/space/orbmech.htm
