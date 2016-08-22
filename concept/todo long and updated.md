@@ -4,7 +4,7 @@ e entrydata d donedate  priority
 Graphics - Vulkan
 ---
 
-- e 22.08.2016 d - : implement GraphicsVulkanAbstractGraphicsEngineAdapter and refactor Graphics vulkan for it
+
 - e 22.08.2016 d - LOW : implement textures
 - e 22.08.2016 d - LOW :  use vkCmdBlitImage for copy for the right conversion
 
@@ -49,3 +49,28 @@ refactoring
 
 - e 22.08.2016 d - : refactor code so its based in a directory called "whiteSphereEngine"
 - e 22.08.2016 d - : include nuclear physics simulation code
+
+core
+---
+
+- e 22.08.2016 d - : include task schedueling code from old engine code (if its there)
+- e 22.08.2016 d - LOW : using task schedueling code for multithreading
+
+atronomical
+---
+
+- e 22.08.2016 d - : translate c++ code for astronomical simulation to D and integrate
+- e 22.08.2016 d - : pull in other C++ code from spacesimcore and translate to D
+- e 22.08.2016 d - : use Motion.d in this codebase to calculate celestial position and velocity
+
+
+
+
+
+DONE
+---
+
+graphics
+----
+
+- e 22.08.2016 d 22.08.2016? : implement GraphicsVulkanAbstractGraphicsEngineAdapter and refactor Graphics vulkan for it
