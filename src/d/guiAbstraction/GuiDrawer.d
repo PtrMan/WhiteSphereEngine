@@ -1,3 +1,5 @@
+// TODO< get rid of this code :/ >
+
 module Client.GuiAbstraction.GuiDrawer;
 
 import std.string : stringIndexOf = indexOf;
