@@ -9,12 +9,10 @@ physics
 		* (TU) code to trace through hashgrid, for raylike fast colli
 
 ==================
-very old:
+very old (opengl)
 
 
 
-* recode OpenCl wrapper from C++ to D
-   * add the aqusation and release to the D code
 
 * render simple triangle (!!!)
 
