@@ -22,10 +22,7 @@ import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
 // API independent graphics classes
-import graphics.Mesh;
-import graphics.AbstractMeshComponent;
-import graphics.ImmutableMeshComponent;
-import graphics.MeshComponentConverter;
+import graphics;
 
 import math.Matrix44;
 import math.Matrix;
@@ -1252,6 +1249,11 @@ class GraphicsVulkan {
 		
 		
 		return resultDecoratedMesh;
+	}
+	
+	final disposeDecoratedMesh(AbstractDecoratedMesh decoratedMesh) {
+		(cast(VulkanDecoratedMesh)decoratedMesh).decoration.dispose(vkDevFacade, vulkanContext);
+		(cast(VulkanDecoratedMesh)decoratedMesh).decoration = null; // for safety against double free
 	}
 	
 	

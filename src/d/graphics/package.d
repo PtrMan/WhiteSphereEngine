@@ -1,8 +1,9 @@
 module graphics;
 
-import graphics.AbstractMeshComponent;
-import graphics.ImmutableMeshComponent;
-import graphics.Mesh;
-import graphics.GraphicsObject;
-import graphics.AbstractDecoratedMesh;
-import graphics.AbstractGraphicsEngine;
+public import graphics.AbstractDecoratedMesh;
+public import graphics.AbstractMeshComponent;
+public import graphics.ImmutableMeshComponent;
+public import graphics.Mesh;
+public import graphics.GraphicsObject;
+public import graphics.AbstractGraphicsEngine;
+public import graphics.MeshComponentConverter;

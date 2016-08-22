@@ -12,20 +12,20 @@ import graphics.vulkan.GraphicsVulkan;
  *
  */
 class GraphicsVulkanAbstractGraphicsEngineAdapter : AbstractGraphicsEngine {
-	GraphicsObject createGraphicsObject() {
-		assert(false, "TODO");
+	GraphicsObject createGraphicsObject(AbstractDecoratedMesh decoratedMesh) {
+		return new GraphicsObject(decoratedMesh);
 	}
 	
 	void disposeGraphicsObject(GraphicsObject graphicsObject) {
-		assert(false, "TODO");
+		// do nothing
 	}
 	
-	AbstractDecoratedMesh createMeshWithDecorationForMesh(Mesh mesh)  {
-		assert(false, "TODO");
+	AbstractDecoratedMesh createDecoratedMesh(Mesh mesh)  {
+		return graphicsVulkan.createDecoratedMesh(mesh);
 	}
 	
-	void disposeMeshWithDecoration(AbstractDecoratedMesh decoratedMesh) {
-		assert(false, "TODO");
+	void disposeDecoratedMesh(AbstractDecoratedMesh decoratedMesh) {
+		graphicsVulkan.disposeDecoratedMesh(decoratedMesh);
 	}
 	
 	final this(GraphicsVulkan graphicsVulkan) {
