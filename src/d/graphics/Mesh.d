@@ -59,7 +59,7 @@ class Mesh {
 		}
 	}
 	
-	final protected @property numberOfComponents() {
+	final public @property numberOfComponents() {
 		return protectedMeshComponents.length;
 	}
 	

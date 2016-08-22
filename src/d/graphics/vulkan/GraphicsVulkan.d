@@ -1089,94 +1089,7 @@ class GraphicsVulkan {
 			testMesh = new Mesh([componentPosition], componentIndex, 0);
 		}
 		
-		VulkanDecoratedMesh createDecoratedMesh(Mesh mesh) {
-			VulkanDecoratedMesh resultDecoratedMesh = new VulkanDecoratedMesh(mesh);
-			
-			resultDecoratedMesh.decoration = new VulkanMeshDecoration();
-			
-			resultDecoratedMesh.decoration.vbosOfBuffers.length = 1;
-			resultDecoratedMesh.decoration.vbosOfBuffers[0] = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer();
-			
-			resultDecoratedMesh.decoration.vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer();
-			
-			VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vertexResourceWithMemoryDecoration = resultDecoratedMesh.decoration.vbosOfBuffers[0];
-			
-			////////
-			// create buffers and fill them
-			
-			/////
-			// for vertex information 
-			{
-				VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
-				createBufferArguments.size = /*vertex.sizeof*/16   * mesh.numberOfVertices;
-				createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-				createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-				vertexResourceWithMemoryDecoration.resource = vkDevFacade.createBuffer(createBufferArguments);
-			}
-			
-			resourceQueryAllocate(vertexResourceWithMemoryDecoration, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
-			
-			
-			
-			
-			// map and copy vertex
-			{ // scope to automatically unmap
-				void *hostPtr = vkDevFacade.map(
-					vertexResourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory,
-					vertexResourceWithMemoryDecoration.derivedInformation.value.offset,
-					vertexResourceWithMemoryDecoration.derivedInformation.value.allocatedSize,
-					0 /* flags */
-				);
-				scope(exit) vkDevFacade.unmap(vertexResourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory);
-				
-				float[4]* float4HostPtr = cast(float[4]*)hostPtr;
-				foreach( vertexI; 0..testMesh.numberOfVertices ) {
-					float4HostPtr[vertexI] = mesh.getFloat4AccessorByComponentIndex(0)[vertexI];
-				}
-			}
-			
-			vkDevFacade.bind(vertexResourceWithMemoryDecoration.resource.value, vertexResourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory, vertexResourceWithMemoryDecoration.derivedInformation.value.offset);
-			
-			
-			
-			
-			
-			VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = resultDecoratedMesh.decoration.vboIndexBufferResource;
-			
-			/////
-			// for index information
-			{
-				VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
-				createBufferArguments.size = uint32_t.sizeof * mesh.indexBufferMeshComponent.length;
-				createBufferArguments.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-				createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-				vboIndexBufferResource.resource = vkDevFacade.createBuffer(createBufferArguments);
-			}
-			
-			resourceQueryAllocate(vboIndexBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
-			
-			
-			// map and copy index buffer
-			{ // scope to automatically unmap
-				void *hostPtr = vkDevFacade.map(
-					vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory,
-					vboIndexBufferResource.derivedInformation.value.offset,
-					vboIndexBufferResource.derivedInformation.value.allocatedSize,
-					0 /* flags */
-				);
-				scope(exit) vkDevFacade.unmap(vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory);
-				
-				uint32_t* uint32HostPtr = cast(uint32_t*)hostPtr;
-				foreach( indexBufferI; 0..testMesh.indexBufferMeshComponent.length ) {
-					uint32HostPtr[indexBufferI] = testMesh.indexBufferMeshComponent.getUint32Accessor()[indexBufferI];
-				}
-			}
-			
-			vkDevFacade.bind(vboIndexBufferResource.resource.value, vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboIndexBufferResource.derivedInformation.value.offset);
-			
-			
-			return resultDecoratedMesh;
-		}
+		
 		
 		
 		
@@ -1244,6 +1157,105 @@ class GraphicsVulkan {
 		//TODO();
 		loop();
 	}
+	
+	
+	
+	protected final VulkanDecoratedMesh createDecoratedMesh(Mesh mesh) {
+		VulkanDecoratedMesh resultDecoratedMesh = new VulkanDecoratedMesh(mesh);
+		
+		resultDecoratedMesh.decoration = new VulkanMeshDecoration();
+		
+		resultDecoratedMesh.decoration.vbosOfBuffers.length = mesh.numberOfComponents;
+		
+		// create objects
+		foreach( componentIndex; 0..mesh.numberOfComponents ) {
+			resultDecoratedMesh.decoration.vbosOfBuffers[componentIndex] = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer();
+		}
+		resultDecoratedMesh.decoration.vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer();
+		
+		// create buffer & & map & fill & bind for components
+		foreach( componentIndex; 0..mesh.numberOfComponents ) {
+			VulkanResourceWithMemoryDecoration!TypesafeVkBuffer resourceWithMemoryDecoration = resultDecoratedMesh.decoration.vbosOfBuffers[componentIndex];
+			
+			/////
+			// create buffer and fill
+			VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
+			createBufferArguments.size = /*vertex.sizeof*/16   * mesh.numberOfVertices;
+			createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+			createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			resourceWithMemoryDecoration.resource = vkDevFacade.createBuffer(createBufferArguments);
+			
+			
+			resourceQueryAllocate(resultDecoratedMesh.decoration.vbosOfBuffers[componentIndex], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
+			
+			/////
+			// map & bind
+			
+			// map and copy vertex
+			{ // scope to automatically unmap
+				void *hostPtr = vkDevFacade.map(
+					resourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory,
+					resourceWithMemoryDecoration.derivedInformation.value.offset,
+					resourceWithMemoryDecoration.derivedInformation.value.allocatedSize,
+					0 /* flags */
+				);
+				scope(exit) vkDevFacade.unmap(resourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory);
+				
+				float[4]* float4HostPtr = cast(float[4]*)hostPtr;
+				foreach( vertexI; 0..mesh.numberOfVertices ) {
+					float4HostPtr[vertexI] = mesh.getFloat4AccessorByComponentIndex(0)[vertexI];
+				}
+			}
+			
+			vkDevFacade.bind(resourceWithMemoryDecoration.resource.value, resourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory, resourceWithMemoryDecoration.derivedInformation.value.offset);
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = resultDecoratedMesh.decoration.vboIndexBufferResource;
+		
+		/////
+		// create buffer & & map & fill & bind for index information
+		{
+			VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
+			createBufferArguments.size = uint32_t.sizeof * mesh.indexBufferMeshComponent.length;
+			createBufferArguments.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+			createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			vboIndexBufferResource.resource = vkDevFacade.createBuffer(createBufferArguments);
+		}
+		
+		resourceQueryAllocate(vboIndexBufferResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, "buffer");
+		
+		
+		// map and copy index buffer
+		{ // scope to automatically unmap
+			void *hostPtr = vkDevFacade.map(
+				vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory,
+				vboIndexBufferResource.derivedInformation.value.offset,
+				vboIndexBufferResource.derivedInformation.value.allocatedSize,
+				0 /* flags */
+			);
+			scope(exit) vkDevFacade.unmap(vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory);
+			
+			uint32_t* uint32HostPtr = cast(uint32_t*)hostPtr;
+			foreach( indexBufferI; 0..mesh.indexBufferMeshComponent.length ) {
+				uint32HostPtr[indexBufferI] = mesh.indexBufferMeshComponent.getUint32Accessor()[indexBufferI];
+			}
+		}
+		
+		vkDevFacade.bind(vboIndexBufferResource.resource.value, vboIndexBufferResource.derivedInformation.value.allocatorForResource.deviceMemory, vboIndexBufferResource.derivedInformation.value.offset);
+		
+		
+		return resultDecoratedMesh;
+	}
+	
+	
+	
 	
 	protected final void checkForReleasedResourcesAndRelease() {
 		// before destruction of vulkan resources we have to ensure that the decive idles
