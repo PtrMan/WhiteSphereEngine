@@ -1160,7 +1160,7 @@ class GraphicsVulkan {
 	
 	
 	
-	protected final VulkanDecoratedMesh createDecoratedMesh(Mesh mesh) {
+	public final VulkanDecoratedMesh createDecoratedMesh(Mesh mesh) {
 		VulkanDecoratedMesh resultDecoratedMesh = new VulkanDecoratedMesh(mesh);
 		
 		resultDecoratedMesh.decoration = new VulkanMeshDecoration();
