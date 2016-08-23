@@ -4,7 +4,7 @@ import common.Hashtable;
 
 class HashIdCollection(Type) {
 	protected static uint hashById(ulong id) {
-		return cast(uint)(value.id | (value.id >> 32));
+		return cast(uint)(id | (id >> 32));
 	}
 	
 	protected static uint hashFunction(Type value) {
@@ -34,6 +34,10 @@ class HashIdCollection(Type) {
 		if( !calleeSuccess ) {
 			throw new EngineError(false, true, "Object by id was not found but must be found!");
 		}
+	}
+	
+	final void addElement(Type element) {
+		hashtable.insert(element);
 	}
 	
 	protected const uint NUMBEROFHASHTABLEBUCKETS = 64;
