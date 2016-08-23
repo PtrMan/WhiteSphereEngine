@@ -10,8 +10,6 @@ private double calcTrueAnomaly(double eccentricity, double eccentricAnomaly) {
 	double rightSide = (1.0 + eccentricity)*powerByInteger!2(tan(eccentricAnomaly / 2.0));
 	double trueAnomaly = atan(sqrt(rightSide/(1.0 - eccentricity))) * 2.0;
 	
-	import std.stdio;
-	
 	{ // checking
 		double leftSideCheck = (1.0 - eccentricity)*powerByInteger!2(tan(trueAnomaly / 2.0));
 		double rightSideCheck = (1.0 + eccentricity)*powerByInteger!2(tan(eccentricAnomaly / 2.0));
