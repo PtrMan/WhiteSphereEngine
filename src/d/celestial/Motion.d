@@ -1,3 +1,5 @@
+module celestial.Motion;
+
 import std.math : sin, cos, tan, atan, PI, abs;
 
 import math.NewtonsMethod;
