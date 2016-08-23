@@ -7,18 +7,18 @@ class Sequence : Task {
 	public Task[] children;
 	
 	final @property bool infinite(bool newInfinite) {
-		privateInfinite = newInfinite;
+		return privateInfinite = newInfinite;
 	}
 	
-	final Task.EnumReturn run(EntityContext context, ref string errorMessage, ref uint rrrorDepth) {
-		if( childrens.length == 0 ) {
+	final Task.EnumReturn run(EntityContext context, ref string errorMessage, ref uint errorDepth) {
+		if( children.length == 0 ) {
 			errorMessage = "this.Childrens does have a length of 0!";
 			errorDepth = 0;
 			return Task.EnumReturn.ERROR;
 		}
 		
 		for(;;) {
-			if( currentIndex >= childrens.length ) {
+			if( currentIndex >= children.length ) {
 				currentIndex = 0;
 				
 				if( !privateInfinite ) {
@@ -63,7 +63,7 @@ class Sequence : Task {
 			clonedSequence.children ~= iterationChildren.clone();
 		}
 		
-		return ClonedSequence;
+		return clonedSequence;
 	}
 	
 	private uint currentIndex = 0;
