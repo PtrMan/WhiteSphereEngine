@@ -14,3 +14,14 @@ Type powerByInteger(uint power, Type)(Type number) {
   }
   return result;
 }
+
+import std.math : remainder;
+
+Type modNegative(Type)(Type a, Type b) {
+	if( a < 0.0 ) {
+		return b + remainder(a, b);
+	}
+	else {
+		return a % b;
+	}
+}
