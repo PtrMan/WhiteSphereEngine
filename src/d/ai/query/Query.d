@@ -128,7 +128,7 @@ class Query(TupleType) {
 import std.stdio : writeln;
 
  
-void main() {
+/+void main() {
 	/*
 	{
 		Query!(bool, float) ax = new Query!(bool, float)();
@@ -176,4 +176,4 @@ void main() {
 		
 	}*/
 }
-
++/
