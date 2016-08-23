@@ -19,7 +19,7 @@ interface Task {
 	 * \param ErrorDepth if an error happend this will give the depth in which the error happend
 	 * \return Status code of the execution
 	 */
-	EnumReturn run(EntityContext Context, ref string ErrorMessage, ref uint ErrorDepth);
+	EnumReturn run(EntityContext context, ref string errorMessage, ref uint errorDepth);
 	
 	/** \brief resets the variables to its defaults
 	 *
