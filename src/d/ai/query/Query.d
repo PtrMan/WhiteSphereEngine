@@ -115,7 +115,7 @@ class Query(TupleType) {
 		TupleType bestValue = result[0].content;
 		
 		foreach( iterationElement; result ) {
-			if( iterationElement[columnIndex] > iterationElement.content[columnIndex] ) {
+			if( iterationElement.content[columnIndex] > bestValue[columnIndex] ) {
 				bestValue = iterationElement.content;
 			}
 		}
