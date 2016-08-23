@@ -1,16 +1,24 @@
 module celestial.Motion;
 
-import std.math : sin, cos, tan, atan, PI, abs;
+import std.math;
 
 import math.NewtonsMethod;
+import math.Math : powerByInteger;
 
 private double calcTrueAnomaly(double eccentricity, double eccentricAnomaly) {
 	// see 3rd equation of https://en.wikipedia.org/wiki/Kepler%27s_laws_of_planetary_motion#Position_as_a_function_of_time
-	double rightSide = (1.0 + eccentricity)*tan(tan(eccentricAnomaly / 2.0));
-	double result = atan(atan(rightSide/(1.0 - eccentricity))) * 2.0;
-
-	assert(abs((1.0 - eccentricity)*tan(tan(result / 2.0)) - (1.0 + eccentricity)*tan(tan(eccentricAnomaly / 2.0))) < 0.000001);
-	return result;
+	double rightSide = (1.0 + eccentricity)*powerByInteger!2(tan(eccentricAnomaly / 2.0));
+	double trueAnomaly = atan(sqrt(rightSide/(1.0 - eccentricity))) * 2.0;
+	
+	import std.stdio;
+	
+	{ // checking
+		double leftSideCheck = (1.0 - eccentricity)*powerByInteger!2(tan(trueAnomaly / 2.0));
+		double rightSideCheck = (1.0 + eccentricity)*powerByInteger!2(tan(eccentricAnomaly / 2.0));
+		assert( abs(leftSideCheck - rightSideCheck) < 0.00001 );
+	}
+	
+	return trueAnomaly;
 }
 
 private double calcHelicentricDistance(double semiMajorAxis, double eccentricity, double trueAnomaly) {
@@ -60,11 +68,11 @@ body {
 
 void positionAfterTWithPrecisionByAphelion(double period, double t, double eccentricity, double semiMajorAxis, out double trueAnomaly, out double heliocentricDistance) 
 in {
-  assert(semiMajorAxis > 0.0);
+	assert(semiMajorAxis > 0.0);
 }
 body {
-  double accuracy = 1.0 / (semiMajorAxis * 0.5); // actually (1.0 / aphelionInMeter*2*PI) * 2*PI
-  positionAfterT(period, t, eccentricity, semiMajorAxis, trueAnomaly, heliocentricDistance, accuracy);
+	double accuracy = 1.0 / (semiMajorAxis * 0.5); // actually (1.0 / aphelionInMeter*2*PI) * 2*PI
+	positionAfterT(period, t, eccentricity, semiMajorAxis, trueAnomaly, heliocentricDistance, accuracy);
 }
 
 
