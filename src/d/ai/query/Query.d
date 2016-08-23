@@ -108,6 +108,20 @@ class Query(TupleType) {
 		
 		return resultQuery;
 	}
+	
+	final @property TupleType top(size_t columnIndex)() {
+		assert(result.length > 0, "Internal error, no top element");
+		
+		TupleType bestValue = result[0].content;
+		
+		foreach( iterationElement; result ) {
+			if( iterationElement[columnIndex] > iterationElement.content[columnIndex] ) {
+				bestValue = iterationElement.content;
+			}
+		}
+		
+		return bestValue;
+	}
 }
 
 
