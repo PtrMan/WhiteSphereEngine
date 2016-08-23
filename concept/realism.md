@@ -52,7 +52,15 @@ https://forums.spacebattles.com/threads/essay-on-realistic-space-combat-i-wrote.
 https://groups.yahoo.com/neo/groups/sfconsim-l/conversations/messages/99704
 	long range combat
 
+http://toughsf.blogspot.de/2016/04/lww-laser-weapon-web.html
+	laser, orbital laser, interplanetary laser
 
+
+
+mining
+---
+
+http://www.explainingthefuture.com/resources_from_space.html
 
 astronomy
 ----
