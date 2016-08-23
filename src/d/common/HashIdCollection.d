@@ -1,5 +1,6 @@
 module common.HashIdCollection;
 
+import Exceptions;
 import common.Hashtable;
 
 class HashIdCollection(Type) {
@@ -32,7 +33,7 @@ class HashIdCollection(Type) {
 		bool calleeSuccess;
 		Type result = getById(id, calleeSuccess);
 		if( !calleeSuccess ) {
-			throw new EngineError(false, true, "Object by id was not found but must be found!");
+			throw new EngineException(false, true, "Object by id was not found but must be found!");
 		}
 	}
 	
