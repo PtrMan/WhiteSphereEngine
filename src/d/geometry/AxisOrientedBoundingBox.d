@@ -18,9 +18,9 @@ import math.Range;
 
 bool boundingBoxIsInsidePositionInclusive(VectorType)(AxisOrientedBoundingBox!VectorType boundingBox, VectorType toCheckPosition) {
 	return
-		isInRangeInclusive(boundingBox.min.x, boundingBox.max.x, toCheckPosition.x) &&
-		isInRangeInclusive(boundingBox.min.y, boundingBox.max.y, toCheckPosition.y) &&
-		isInRangeInclusive(boundingBox.min.z, boundingBox.max.z, toCheckPosition.z);
+		isInRangeEnum!(EnumRangeType.INCLUSIVE)(boundingBox.min.x, boundingBox.max.x, toCheckPosition.x) &&
+		isInRangeEnum!(EnumRangeType.INCLUSIVE)(boundingBox.min.y, boundingBox.max.y, toCheckPosition.y) &&
+		isInRangeEnum!(EnumRangeType.INCLUSIVE)(boundingBox.min.z, boundingBox.max.z, toCheckPosition.z);
 }
 
 bool boundingBoxIsInsideInclusive(VectorType)(AxisOrientedBoundingBox!VectorType boundingBox, AxisOrientedBoundingBox!VectorType toCheckBoundingBox) {
@@ -30,15 +30,15 @@ bool boundingBoxIsInsideInclusive(VectorType)(AxisOrientedBoundingBox!VectorType
 }
 
 // implies the boundingBoxIsInside test
-bool boundingBoxDoesOverlapInclusive(VectorType)(AxisOrientedBoundingBox!VectorType boundingBox, AxisOrientedBoundingBox!VectorType toCheckBoundingBox) {
+bool boundingBoxDoesOverlap(EnumRangeType rangeType, VectorType)(AxisOrientedBoundingBox!VectorType boundingBox, AxisOrientedBoundingBox!VectorType toCheckBoundingBox) {
 	alias typeof(boundingBox.min.x) NumericType;
 	
 	bool overlapsOrInsideForOneDimension(NumericType aBegin, NumericType aEnd, NumericType bBegin, NumericType bEnd) {
 		return
-			isInRangeInclusive(aBegin, aEnd, bBegin) ||
-			isInRangeInclusive(aBegin, aEnd, bEnd) ||
-			isInRangeInclusive(bBegin, bEnd, aBegin) ||
-			isInRangeInclusive(bBegin, bEnd, aEnd);
+			isInRangeEnum!rangeType(aBegin, aEnd, bBegin) ||
+			isInRangeEnum!rangeType(aBegin, aEnd, bEnd) ||
+			isInRangeEnum!rangeType(bBegin, bEnd, aBegin) ||
+			isInRangeEnum!rangeType(bBegin, bEnd, aEnd);
 	}
 	
 	return
@@ -49,7 +49,7 @@ bool boundingBoxDoesOverlapInclusive(VectorType)(AxisOrientedBoundingBox!VectorT
 
 // creates a bounding box which includes both bounding boxes
 AxisOrientedBoundingBox!VectorType merge(VectorType)(AxisOrientedBoundingBox!VectorType a, AxisOrientedBoundingBox!VectorType b) {
-	alias typeof(boundingBox.min.x) NumericType;
+	alias typeof(a.min.x) NumericType;
 	
 	NumericType minX = min(a.min.x, b.min.x);
 	NumericType minY = min(a.min.y, b.min.y);
