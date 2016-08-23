@@ -82,3 +82,10 @@ http://listverse.com/2010/01/25/15-fascinating-planets-outside-our-solar-system/
 
 formulas for orbital mechanics
 http://www.braeunig.us/space/orbmech.htm
+
+comets/asteroids
+----
+
+pics
+http://www.esa.int/spaceinimages/Images/2016
+
