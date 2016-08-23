@@ -20,7 +20,7 @@ class HashIdCollection(Type) {
 	// lookup hashtable and return if found
 	final Type getById(ulong id, out bool found) {
 		uint hash = hashById(id);
-		Type[] hashResult = hashtable.get(id);
+		Type[] hashResult = hashtable.get(hashById(id));
 		assert(hashResult.length <= 1, "Multiple objects were associated with one id, this is invalid");
 		found = hashResult.length > 0;
 		if( !found ) {
@@ -35,6 +35,7 @@ class HashIdCollection(Type) {
 		if( !calleeSuccess ) {
 			throw new EngineException(false, true, "Object by id was not found but must be found!");
 		}
+		return result;
 	}
 	
 	final void addElement(Type element) {
