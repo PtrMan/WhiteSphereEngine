@@ -11,7 +11,7 @@ template NumericVector(uint Size, Type) {
 }
 
 private mixin template SpatialVectorMixin(bool isClass) {
-    final public ThisType opBinary(string op)(Type rhs) {
+    final public ThisType opBinary(string op)(Type rhs) const {
     	ThisType result;
     	static if( isClass ) {
     		result = new ThisType();
