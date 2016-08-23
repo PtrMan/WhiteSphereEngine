@@ -56,12 +56,12 @@ body {
 	heliocentricDistance = calcHelicentricDistance(semiMajorAxis, eccentricity, trueAnomaly);
 }
 
-void positionAfterTWithPrecisionByAphelion(double period, double t, double eccentricity, double semiMajorAxis, out double trueAnomaly, out double heliocentricDistance, double aphelionInMeter) 
+void positionAfterTWithPrecisionByAphelion(double period, double t, double eccentricity, double semiMajorAxis, out double trueAnomaly, out double heliocentricDistance) 
 in {
-  assert(aphelionInMeter > 0.0);
+  assert(semiMajorAxis > 0.0);
 }
 body {
-  double accuracy = 1.0 / aphelionInMeter; // actually (1.0 / aphelionInMeter*2*PI) * 2*PI
+  double accuracy = 1.0 / (semiMajorAxis * 0.5); // actually (1.0 / aphelionInMeter*2*PI) * 2*PI
   positionAfterT(period, t, eccentricity, semiMajorAxis, trueAnomaly, heliocentricDistance, accuracy);
 }
 
