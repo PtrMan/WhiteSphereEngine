@@ -1,6 +1,6 @@
 module physics.DynamicSimulator;
 
-import math.NumericSpatialVectors : SpatialVector, normalized, magnitude;
+import math.NumericSpatialVectors : SpatialVector, normalized, magnitude, scale;
 import math.RungeKutta4;
 import physics.DynamicObject;
 import world.World; // just because CelestialObjectWithPosition is in there, TODO< move again to own file >
@@ -39,13 +39,18 @@ public class DynamicEngine {
 	
 	protected final tickForSolarSystems(float deltaT) {
 		foreach( iterationSolarSystem; solarSystems ) {
-			tickForSolarSystem(iterationSolarSystem, deltaTime);
+			tickForSolarSystem(iterationSolarSystem, deltaT);
 		}
 	}
 	
 	protected final void tickForSolarSystem(SolarSystem solarsystem, float deltaT) {
 		solarsystem.nextFrame(); // flush
-		motionIntegrator.tick(solarsystem.allDynamicObjects, deltaTime);
+		motionIntegrator.tick(solarsystem.allDynamicObjects, deltaT);
+	}
+	
+	final @property public double universeTime(double universeTimeArgument) {
+		motionIntegrator.universeTime = universeTimeArgument; // give it to motion integrator, that it can recalculate the celestial position after the time
+		return universeTimeArgument;
 	}
 	
 	protected SolarSystem[] solarSystems;
@@ -64,7 +69,7 @@ protected class MotionIntegrator {
     	public double currentDynamicObjectInvMass;
     	public VectorType externalAcceleration;
     	public final VectorType calculateAcceleration(ref RungeKutta4State!VectorType state, float time) { 
-        	return externalAcceleration + DynamicSimulator.calculateAcceleration(state, time, currentDynamicObjectInvMass);
+        	return externalAcceleration + MotionIntegrator.calculateAcceleration(state, time, currentDynamicObjectInvMass);
         }
     }
     
@@ -91,6 +96,7 @@ protected class MotionIntegrator {
         rungeKutta4State.x = dynamicObject.currentInternalState.relativePosition;
         rungeKutta4State.v = dynamicObject.currentInternalState.velocity;
         
+        RungeKuttaAccelerationCalculator rungeKuttaAccelerationCalculator = cast(RungeKuttaAccelerationCalculator)rungeKutta4.acceleration;
         rungeKuttaAccelerationCalculator.externalAcceleration = externalAcceleration;
         rungeKuttaAccelerationCalculator.currentDynamicObjectInvMass = dynamicObject.invMass;
 
@@ -108,7 +114,7 @@ protected class MotionIntegrator {
     }
     
     protected static void transferCurrentStateToInternalStateForObject(DynamicObject localDynamicObjects) {
-    	iterationDynamicObject.currentInternalState = iterationDynamicObject.currentState;
+    	localDynamicObjects.currentInternalState = localDynamicObjects.currentState;
     }
     
     protected static void transferInternalStateToCurrentStateForObjects(DynamicObject[] localDynamicObjects) {
@@ -128,7 +134,7 @@ protected class MotionIntegrator {
     	VectorType forceSum = new VectorType(0.0, 0.0, 0.0);
 
     	foreach( iterationCelestialObjectWithPosition; celestialObjectsWithPosition ) {
-        	VectorType difference = iterationCelestialObjectWithPosition.position - position;
+        	VectorType difference = iterationCelestialObjectWithPosition.position(universeTime) - position;
         	VectorType direction = difference.normalized();
        		double distance = difference.magnitude();
 
@@ -144,9 +150,11 @@ protected class MotionIntegrator {
 	// TODO< replace with something which is stored in DynamicObject? >
 	public CelestialObjectWithPosition[] celestialObjectsWithPosition;
 	private RungeKutta4!VectorType rungeKutta4 = new RungeKutta4!VectorType;
+	public double universeTime; // in seconds
 }
 
 import physics.spatial.HashSpatialNestedGrid;
+import math.Range;
 import helpers.Unique : calcUnique;
 
 alias HashSpatialNestedGrid!(DynamicObject, VectorType) SpatialGridType;
@@ -193,14 +201,14 @@ protected class PredictiveMotionIntegrator {
 		// which checks for the overlap of the AABB's of the content
 		void checkForElementOverlapAndAddThemToTemporalArray(SpatialGridType.GridElementType gridElement) {
 			foreach( iOuter; 0..gridElement.decoratedContent.length ) {
-				auto outerContentWithBoundingBox = gridElement[iOuter];
+				auto outerContentWithBoundingBox = gridElement.decoratedContent[iOuter];
 				
 				bool outerElementAlreadyInTemporalArray = false;
 				
 				foreach( iInner; iOuter+1..gridElement.decoratedContent.length ) {
-					auto innerContentWithBoundingBox = gridElement[iInner];
+					auto innerContentWithBoundingBox = gridElement.decoratedContent[iInner];
 					
-					bool overlap = outerContentWithBoundingBox.boundingBox.boundingBoxDoesOverlapExclusive(innerContentWithBoundingBox.boundingBox);
+					bool overlap = outerContentWithBoundingBox.boundingBox.boundingBoxDoesOverlap!(EnumRangeType.EXCLUSIVE)(innerContentWithBoundingBox.boundingBox);
 					if( overlap ) {
 						if( !outerElementAlreadyInTemporalArray ) {
 							outerElementAlreadyInTemporalArray = true;
@@ -213,7 +221,7 @@ protected class PredictiveMotionIntegrator {
 			}
 		}
 		
-		solarSystem.predictiveMotionGrid.invokeDelegateForAllGridElementsRecursive(checkForElementOverlapAndAddThemToTemporalArray);
+		solarSystem.predictiveMotionGrid.invokeDelegateForAllGridElementsRecursive(&checkForElementOverlapAndAddThemToTemporalArray);
 		
 		// get only unique objects of temporalArray
 		SpatialGridType.GridElementType.ContentWithBoundingBox[] uniqueTemporaryArray = calcUnique(temporaryArray);
@@ -229,21 +237,21 @@ protected class PredictiveMotionIntegrator {
 	
 	
 	protected static AxisOrientedBoundingBox!VectorType simulateGravityAndDirectAccelerateOfForStepsAnReturnAAbb(DynamicObject dynamicObject, uint numberOfSteps, float deltaT) {
-		DynamicSimulator dynamicSimulator;
+		DynamicEngine dynamicEngine;
 		
 		// copy state
-		dynamicSImulator.transferCurrentStateToInternalStateForObject(dyanmicObject);
+		dynamicEngine.motionIntegrator.transferCurrentStateToInternalStateForObject(dynamicObject);
 		
 		AxisOrientedBoundingBox!VectorType agregateAabb = createAabb(dynamicObject.currentInternalState.relativePosition, dynamicObject.enclosingRadiusFromRelativePosition);
 		
 		void integrateMotionForDynamicObjectWithAccelerationAndAddToAabb(VectorType externalAcceleration) {
-			dynamicSimulator.integrateMotionForDynamicObject(dynamicObject, deltaTime, externalAcceleration);
+			dynamicEngine.motionIntegrator.integrateMotionForDynamicObject(dynamicObject, deltaT, externalAcceleration);
 			agregateAabb = merge(agregateAabb, agregateAabb = createAabb(dynamicObject.currentInternalState.relativePosition, dynamicObject.enclosingRadiusFromRelativePosition));
 		}
 		
 		void copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(VectorType force) {
 			// copy state
-			dynamicSImulator.transferCurrentStateToInternalStateForObject(dyanmicObject);
+			dynamicEngine.motionIntegrator.transferCurrentStateToInternalStateForObject(dynamicObject);
 			
 			foreach( i; 0..numberOfSteps ) {
 				integrateMotionForDynamicObjectWithAccelerationAndAddToAabb(force);
@@ -252,7 +260,7 @@ protected class PredictiveMotionIntegrator {
 			
 			
 			// copy state
-			dynamicSImulator.transferCurrentStateToInternalStateForObject(dyanmicObject);
+			dynamicEngine.motionIntegrator.transferCurrentStateToInternalStateForObject(dynamicObject);
 			
 			foreach( i; 0..numberOfSteps ) {
 				integrateMotionForDynamicObjectWithAccelerationAndAddToAabb(force.scale(-1.0));
@@ -260,11 +268,11 @@ protected class PredictiveMotionIntegrator {
 		}
 		
 		foreach( i; 0..numberOfSteps ) {
-			integrateMotionForDynamicObjectWithAccelerationAndAddToAabb(new Vector(0.0, 0.0, 0.0));
+			integrateMotionForDynamicObjectWithAccelerationAndAddToAabb(new VectorType(0.0, 0.0, 0.0));
 		}
 
 		// if it is controlled we have to merge all possible acceleration directions
-		if( DynamicSimulator.isControlled ) {
+		if( dynamicObject.isControlled ) {
 			float sumOfTime = cast(float)numberOfSteps * deltaT;
 			double minimalInvMassInTimeOfObject = dynamicObject.temporalChange.calcuateMinimalInvMassAfterTime(sumOfTime);
 			
@@ -272,15 +280,15 @@ protected class PredictiveMotionIntegrator {
 			double oldMassInverted = dynamicObject.invMass;
 			dynamicObject.invMass = minimalInvMassInTimeOfObject;
 			
-			copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(new Vector(dynamicObject.maximalForce, 0.0, 0.0));
-			copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(new Vector(0.0, dynamicObject.maximalForce, 0.0));
-			copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(new Vector(0.0, 0.0, dynamicObject.maximalForce));
+			copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(new VectorType(dynamicObject.maximalForce, 0.0, 0.0));
+			copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(new VectorType(0.0, dynamicObject.maximalForce, 0.0));
+			copyStateAndIntegrateMotionOverWholeTimeWithForceAndAntiforce(new VectorType(0.0, 0.0, dynamicObject.maximalForce));
 			
 			dynamicObject.invMass = oldMassInverted;
 		}
 		
 		// reset state by copying state
-		dynamicSImulator.transferCurrentStateToInternalStateForObject(dyanmicObject);
+		dynamicEngine.motionIntegrator.transferCurrentStateToInternalStateForObject(dynamicObject);
 		
 		return agregateAabb;
 	}

@@ -443,6 +443,8 @@ class NestedGrid(ContentType, VectorType) : GridElement!(ContentType, VectorType
 import std.algorithm.iteration : map, filter;
 import std.array : array;
 
+import math.Range;
+
 class HashSpatialNestedGrid(ContentType, VectorType) {
 	public final this(
 		VectorType minExtend,
@@ -485,7 +487,7 @@ class HashSpatialNestedGrid(ContentType, VectorType) {
 		
 		if( checkBoundingBox ) {
 			bool isContentWithBoundingBoxInsideBoundOrOverlaps(ContentWithBoundingBoxType contentWithBoundingBox) {
-				bool doesOverlapOrIsInside = boundingBoxDoesOverlapInclusive(contentWithBoundingBox.boundingBox, new AxisOrientedBoundingBox!VectorType(min, max));
+				bool doesOverlapOrIsInside = boundingBoxDoesOverlap!(EnumRangeType.INCLUSIVE)(contentWithBoundingBox.boundingBox, new AxisOrientedBoundingBox!VectorType(min, max));
 				return doesOverlapOrIsInside;
 			}
 			
