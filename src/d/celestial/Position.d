@@ -1,6 +1,6 @@
 module celestial.Position;
 
-import std.math : sin, cos;
+import std.math : sin, cos, PI;
 
 import math.NumericSpatialVectors;
 import math.VectorAlias;

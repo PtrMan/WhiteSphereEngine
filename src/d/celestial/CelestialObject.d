@@ -1,6 +1,7 @@
 module celestial.CelestialObject;
 
-import math.NumericSpatialVectors : SpatialVector;
+import math.NumericSpatialVectors;
+import math.VectorAlias;
 import physics.InvMassTemplate;
 
 /**
@@ -49,4 +50,17 @@ class CelestialObject {
     	
   		mass = 1.0; // set to one kilo to avoid numeric problems
   	}
+
+	// orbit properties
+	static struct OrbitProperties {
+	  	// orbit properties
+		double period; // in seconds
+		double eccentricity;
+		
+		double semiMajorAxis;
+		
+		Vector3p majorAxisDirection, semimajorAxisDirection; // normalized
+	}
+	
+	OrbitProperties orbitProperties;
 }
