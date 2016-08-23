@@ -29,12 +29,12 @@ private double calcEccentricAnomaly(double eccentricity, double meanAnomaly,  do
 		return 1.0 - eccentricity * cos(x);
 	}
 
-	const double eccentricAnomaly = newtonsMethod(&f, &fDerivative, accuracy, 50, PI);
+	const double eccentricAnomaly = newtonsMethod(&f, &fDerivative, accuracy, 300, PI);
 	return eccentricAnomaly;
 }
 
 // calculates the position (as radius and angle) of a celestial body
-void positionAfterT(double period, double t, double eccentricity, double semiMajorAxis, out double trueAnomaly, out double heliocentricDistance)
+void positionAfterT(double period, double t, double eccentricity, double semiMajorAxis, out double trueAnomaly, out double heliocentricDistance, const double accuracy = 1.0e-5)
 in {
 	assert(0.0 <= t && t <= period, "t must be between 0.0 and period");
 }
@@ -45,7 +45,6 @@ body {
 
 	//writeln("mean anomaly ", meanAnomaly);
 
-	const double accuracy = 1.0e-5;
 	const double eccentricAnomaly = calcEccentricAnomaly(eccentricity, meanAnomaly,  accuracy);
 
 	//writeln("eccentric anomaly ", eccentricAnomaly);
@@ -56,6 +55,16 @@ body {
 	
 	heliocentricDistance = calcHelicentricDistance(semiMajorAxis, eccentricity, trueAnomaly);
 }
+
+void positionAfterTWithPrecisionByAphelion(double period, double t, double eccentricity, double semiMajorAxis, out double trueAnomaly, out double heliocentricDistance, double aphelionInMeter) 
+in {
+  assert(aphelionInMeter > 0.0);
+}
+body {
+  double accuracy = 1.0 / aphelionInMeter; // actually (1.0 / aphelionInMeter*2*PI) * 2*PI
+  positionAfterT(period, t, eccentricity, semiMajorAxis, trueAnomaly, heliocentricDistance, accuracy);
+}
+
 
 /+
 void main() {
