@@ -1,6 +1,6 @@
 module celestial.Orbit;
 
-import std.math : PI, sqrt;
+import std.math : PI, sqrt, pow;
 
 static import celestial.Constants;
 import math.Math : exponentInteger;
