@@ -5,7 +5,7 @@ module ai.behaviorTree.EntityContext;
  */
 abstract class EntityContext {
 	protected final this(string type) {
-		this.type = type;
+		this.projectedType = type;
 	}
 	
 	pure final @property string type() {
