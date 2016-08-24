@@ -5,6 +5,45 @@ import std.typecons : Typedef;
 
 alias Typedef!(uint, uint.init, "elementId") ElementIdType;
 
+
+
+
+
+// general class
+class ResearchTreeElement {
+	ResearchTreeElement parents[]; // parents which enable it, used by AI to determine research queue
+	ResearchTreeElement children[]; // children which get enabled by it
+	
+	string humanName; // human readable name for the research
+	
+	// attributes
+	double baseResearchTime; // in seconds
+	
+	// for AI
+	bool isPseudo; // if this research is a pseudo research tree element, used only by AI to research for basic goals
+}
+
+// for AI
+class AiResearchRoot {
+	ResearchTreeElement[] researchForExpansion; // points at the research elements for expansion
+	ResearchTreeElement[] researchForOffensive; // points at the research elements for offensive
+}
+
+class AiActiveResearch {
+	final @property bool isCompleted() {
+		return expendedBaseTime > researchTreeElement.baseResearchTime;
+	}
+	
+	// multiplier can be either go from human brain power or AGI/ASI expense
+	final void doResearch(double multiplier, double deltaT) {
+		expendedBaseTime += (multiplier * deltaT);
+	}
+	
+	ResearchTreeElement researchTreeElement;
+	double expendedBaseTime; // in seconds
+}
+
+
 import std.typecons : Tuple;
 
 import ai.behaviorTree.Task : BehaviorTreeTask = Task;
@@ -25,16 +64,19 @@ class NpcRaceEntityContext : BehaviorTreeContext {
 	alias Tuple!(ElementIdType, "elementId", double, "requirementMass") NeedTableTupleType;
 	alias Query!NeedTableTupleType NeedTableQueryType;
 	
-	NeedTableQueryType needQueryTable;
+	NeedTableQueryType needQueryTable = new NeedTableQueryType;
+	
+	AiActiveResearch[] researchQueue;
+	ResearchTreeElement[] alreadyResearched;
 }
 
 
 /**
- * 
+ * Checks if the current research is done and puts a new research in line if its the case
  *
  *
  */
-class NpcRaceDecideResearchTask : BehaviorTreeTask {
+class NpcRaceCheckUpdateResearchTask : BehaviorTreeTask {
 	BehaviorTreeTask.EnumReturn run(BehaviorTreeContext contextParameter, ref string errorMessage, ref uint errorDepth) {
 		NpcRaceEntityContext context = cast(NpcRaceEntityContext)contextParameter;
 		
@@ -44,7 +86,7 @@ class NpcRaceDecideResearchTask : BehaviorTreeTask {
 		}
 		
 		NpcRaceEntityContext.NeedTableTupleType topRequirement = sumedQueryTableByRequirement.top!(NpcRaceEntityContext.MASSINDEX);
-		// TODO< decide research based on what already was researched >
+		// TODO< look if research queue is full, if not, decide the best research based on basic needs and required materials and energy >
 		
 		// NOTE< maybe we could use fuzzy logic in here to decide what to research >
 		
@@ -63,6 +105,6 @@ class NpcRaceDecideResearchTask : BehaviorTreeTask {
 	 * \return ...
 	 */
 	BehaviorTreeTask clone() {
-		return new NpcRaceDecideResearchTask;
+		return new NpcRaceCheckUpdateResearchTask;
 	}
 }
