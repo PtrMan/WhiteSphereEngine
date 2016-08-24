@@ -57,6 +57,37 @@ void main() {
 	
 	
 	
+	
+	
+	// setup processing fabric (at homeplanet)
+	BurnNodeState burnerNodeState = new BurnNodeState;
+	RoutingNode!RoutingMaterialOrEnergyPayload routingNodeBurner = new RoutingNode!RoutingMaterialOrEnergyPayload;
+	
+	// and put some material into it directly
+	RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload *payloadForCoal = new RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload;
+	ObjectMadeOfMaterialInShape coalObject = new ObjectMadeOfMaterialInShape();
+	coalObject.tags = [ObjectMadeOfMaterialInShape.EnumTag.BURNABLEASCOAL];
+	coalObject.overwriteMass = 5.0;
+	payloadForCoal.payload = RoutingMaterialOrEnergyPayload.makeObjectMadeOfMaterialInShape(coalObject);
+	
+	routingNodeBurner.queueIn ~= payloadForCoal;
+	
+	
+	RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload *payloadForOxygen = new RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload;
+	ObjectMadeOfMaterialInShape oxygenObject = new ObjectMadeOfMaterialInShape();
+	oxygenObject.tags = [ObjectMadeOfMaterialInShape.EnumTag.OXYGEN];
+	oxygenObject.overwriteMass = 5.0;
+	payloadForOxygen.payload = RoutingMaterialOrEnergyPayload.makeObjectMadeOfMaterialInShape(oxygenObject);
+	
+	routingNodeBurner.queueIn ~= payloadForOxygen;
+	
+	
+	
+	
+	
+	
+	
+	
 	// TODO< set to negative large value with enough precision
 	double time = 24.0;
 	
@@ -78,7 +109,15 @@ void main() {
 		
 			BehaviorTreeTask.EnumReturn behaviorTreeResult = homeworldAiTopTask.run(homeworldAiContext, errorMessage, errorDepth);
 		}
+		
+		// do Queue system tick
+		{
+			routingNodeBurner.step();
 			
+			
+			float[string] specificEnergies = ["coal":33e6f, "tnt":4.6e6f];
+			burnerProcess(routingNodeBurner, burnerNodeState, specificEnergies);
+		}
 		
 		
 		

@@ -4,7 +4,7 @@ module PrototypeQueueAndBurningSystem;
 
 import common.ArrayQueue;
 
-struct PayloadWithRoutingInfo(PayloadType) {
+struct RoutingInfoWithPayload(PayloadType) {
 	PayloadType payload;
 	size_t[] remainingRoute;
 
@@ -15,10 +15,10 @@ struct PayloadWithRoutingInfo(PayloadType) {
 }
 
 class RoutingNode(PayloadType) {
-	PayloadWithRoutingInfo!PayloadType*[] queueIn;
-	PayloadWithRoutingInfo!PayloadType*[] queueOut;
+	RoutingInfoWithPayload!PayloadType*[] queueIn;
+	RoutingInfoWithPayload!PayloadType*[] queueOut;
 
-	protected PayloadWithRoutingInfo!PayloadType*[] queuedForThisNode;
+	protected RoutingInfoWithPayload!PayloadType*[] queuedForThisNode;
 
 	
 	RoutingNode!PayloadType[] neightbors;
@@ -33,7 +33,7 @@ class RoutingNode(PayloadType) {
 	@safe final protected void routeNext() {
 		assert( queueIn.length > 0 );
 
-		PayloadWithRoutingInfo!PayloadType* payloadToRoute = queueIn.dequeue();
+		RoutingInfoWithPayload!PayloadType* payloadToRoute = queueIn.dequeue();
 
 		if( payloadToRoute.isForThisRoute ) {
 			queuedForThisNode.enqueue(payloadToRoute);
@@ -62,12 +62,15 @@ import math.NumericSpatialVectors;
 import math.VectorAlias;
 
 // all physical "things"
-class MaterialInShape {
+class ObjectMadeOfMaterialInShape {
 	double temperature; // in kelvin
 
 	MaterialPart[] isotopeFractions; // can be empty for special materials
 
 	final @property double mass() {
+		if( tags.length > 0 && tags[0] == EnumTag.BURNABLEASCOAL ) {
+			return overwriteMass;
+		}
 		return isotopeFractions.map!(a => a.mass).sum;
 	}
 
@@ -78,11 +81,12 @@ class MaterialInShape {
 	Vector3f shapeSize;
 	float shapeRadius;
 	EnumShape shape = EnumShape.SHAPELESS;
-
+	
+	double overwriteMass;
 
 	public enum EnumTag {
 		BURNABLEASCOAL, // can be burned in furnances
-		OXYGON,
+		OXYGEN,
 	}
 	EnumTag[] tags; // to store usage hints
 }
@@ -92,15 +96,33 @@ class EnergyPayload {
 }
 
 
-struct RoutingMaterialOrEnenergyPayload {
+struct RoutingMaterialOrEnergyPayload {
 	enum EnumType {
 		ENERGY,
-		MATERIALINSHAPE,
+		OBJECT,
 	}
-
+	
+	protected final this(EnumType type) {
+		this.type = type;
+	}
+	
+	static RoutingMaterialOrEnergyPayload makeObjectMadeOfMaterialInShape(ObjectMadeOfMaterialInShape objectMadeOfMaterialInShape) {
+		RoutingMaterialOrEnergyPayload result;
+		result.type = EnumType.OBJECT;
+		result.objectMadeOfMaterialInShape = objectMadeOfMaterialInShape;
+		return result;
+	}
+	
+	static RoutingMaterialOrEnergyPayload makeEnergy(EnergyPayload energyPayload) {
+		RoutingMaterialOrEnergyPayload result;
+		result.type = EnumType.ENERGY;
+		result.energyPayload = energyPayload;
+		return result;
+	}
+	
 	EnumType type;
 	EnergyPayload energyPayload;
-	MaterialInShape materialInShape;
+	ObjectMadeOfMaterialInShape objectMadeOfMaterialInShape;
 }
 
 // see https://en.wikipedia.org/wiki/Energy_density
@@ -116,7 +138,7 @@ class BurnNodeState {
 	// TODO< other burnable things >
 }
 
-void burnerProcess(RoutingNode!RoutingMaterialOrEnenergyPayload node, BurnNodeState state, float[string] specificEnergies) {
+void burnerProcess(RoutingNode!RoutingMaterialOrEnergyPayload node, BurnNodeState state, float[string] specificEnergies) {
 	double accumulatedMassOfOxygen = 0.0;
 	double accumulatedMassOfCoal = 0.0;
 
