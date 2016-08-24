@@ -9,4 +9,5 @@ void enqueue(Type)(Type[] arr, Type element) {
 Type dequeue(Type)(Type[] arr) {
 	Type result = arr[0];
 	arr.remove(0);
+	return result;
 }
