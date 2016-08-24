@@ -37,6 +37,7 @@ AI / physics (just together because we have the todo points together for now)
 - e 22.08.2016 d - : refactor basic AI from the AI fuzzy logic test to some reusable AI
 - e 22.08.2016 d - : refactor raycasting code from AI fuzzy logic test into physics engine
 
+- e 24.08.2016 d - : behavior tree : add more basic nodes, for for example switching and checking a condition
 
 GUI
 ---
@@ -62,7 +63,26 @@ atronomical
 - e 22.08.2016 d - : translate c++ code for astronomical simulation to D and integrate
 - e 22.08.2016 d - : pull in other C++ code from spacesimcore and translate to D
 - e 22.08.2016 d - : use Motion.d in this codebase to calculate celestial position and velocity
+                     (half done, position is calculated with it already, but not velocity)
 
+interaction
+---
+
+- e 23.08.2016 d - : begin basic crafting system for weapons and thruster engine
+                     one "effect modifier" is the implosion modifier, which is useful for building nuclear weapons
+
+                     components: generic material (can be made out of any metal at any mixture rate)
+                                                  (can be made with any microstructure damages, for example sand has extremly high microstructure damages)
+                                                  (is made out of basic 3d shapes, boxes, quaders, cylinders, cylinders with hole, etc)
+                                 neutron deflector
+                                 explosives
+                                 <special: implosion (for nuclear weapons)>
+                                 <special: barrelconstraint (for classical guns and that like)
+                                 <special: ignitor (for rocket engine)
+
+- e 24.08.2016 d - : basic resource producer/consumer/routing system
+
+- e 24.08.2016 d - : (related to crafting system) integrate into the physical interaction system heat transfer, and state of matter
 
 
 
