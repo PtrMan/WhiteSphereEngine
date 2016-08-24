@@ -1,0 +1,119 @@
+	Specific Heatcapacity	boilingpoint	meltingpoint	heat of fusion	heat of vaporisation
+Hydrogen	14300.J/(Kg K)[note]	-252.87 °C	-259.14°C	0.558 kJ/mol	0.452KJ/mol
+Helium	5193.1J/(Kg K)[note]	-268.93 °C	N/A[note]	0.02 kJ/mol	0.083KJ/mol
+Lithium	3570.J/(Kg K)[note]	1342 °C	180.54°C	3 kJ/mol	147.KJ/mol
+Beryllium	1820.J/(Kg K)[note]	2470 °C	1287.°C	7.95 kJ/mol	297.KJ/mol
+Boron	1030.J/(Kg K)[note]	4000 °C	2075.°C	50 kJ/mol	507.KJ/mol
+Carbon	710.J/(Kg K)[note]	4027 °C[note]	3550.°C[note]	105 kJ/mol	715.KJ/mol
+Nitrogen	1040.J/(Kg K)[note]	-195.79 °C	-210.1°C	0.36 kJ/mol	2.79KJ/mol
+Oxygen	919.J/(Kg K)[note]	-182.9 °C	-218.3°C	0.222 kJ/mol	3.41KJ/mol
+Fluorine	824.J/(Kg K)[note]	-188.12 °C	-219.6°C	0.26 kJ/mol	3.27KJ/mol
+Neon	1030.J/(Kg K)[note]	-246.08 °C	-248.59°C	0.34 kJ/mol	1.75KJ/mol
+Sodium	1230.J/(Kg K)[note]	883 °C	97.72°C	2.6 kJ/mol	97.7KJ/mol
+Magnesium	1020.J/(Kg K)[note]	1090 °C	650.°C	8.7 kJ/mol	128.KJ/mol
+Aluminum	904.J/(Kg K)[note]	2519 °C	660.32°C	10.7 kJ/mol	293.KJ/mol
+Silicon	710.J/(Kg K)[note]	2.9×103 °C	1414.°C	50.2 kJ/mol	359.KJ/mol
+Phosphorus	769.7J/(Kg K)[note]	280.5 °C[note]	44.2°C[note]	0.64 kJ/mol	12.4KJ/mol
+Sulfur	705.J/(Kg K)[note]	444.72 °C	115.21°C[note]	1.73 kJ/mol	9.8KJ/mol
+Chlorine	478.2J/(Kg K)[note]	-34.04 °C	-101.5°C	3.2 kJ/mol	10.2KJ/mol
+Argon	520.33J/(Kg K)[note]	-185.8 °C	-189.3°C	1.18 kJ/mol	6.5KJ/mol
+Potassium	757.J/(Kg K)[note]	759 °C	63.38°C	2.33 kJ/mol	76.9KJ/mol
+Calcium	631.J/(Kg K)[note]	1484 °C	842.°C	8.54 kJ/mol	155.KJ/mol
+Scandium	567.J/(Kg K)[note]	2830 °C	1541.°C	16 kJ/mol	318.KJ/mol
+Titanium	520.J/(Kg K)[note]	3287 °C	1668.°C	18.7 kJ/mol	425.KJ/mol
+Vanadium	489.J/(Kg K)[note]	3407 °C	1910.°C	22.8 kJ/mol	453.KJ/mol
+Chromium	448.J/(Kg K)[note]	2671 °C	1907.°C	20.5 kJ/mol	339.KJ/mol
+Manganese	479.J/(Kg K)[note]	2061 °C	1246.°C	13.2 kJ/mol	220.KJ/mol
+Iron	449.J/(Kg K)[note]	2861 °C	1538.°C	13.8 kJ/mol	347.KJ/mol
+Cobalt	421.J/(Kg K)[note]	2927 °C	1495.°C	16.2 kJ/mol	375.KJ/mol
+Nickel	445.J/(Kg K)[note]	2913 °C	1455.°C	17.2 kJ/mol	378.KJ/mol
+Copper	384.4J/(Kg K)[note]	2927 °C	1084.62°C	13.1 kJ/mol	300.KJ/mol
+Zinc	388.J/(Kg K)[note]	907 °C	419.53°C	7.35 kJ/mol	119.KJ/mol
+Gallium	371.J/(Kg K)[note]	2204 °C	29.76°C	5.59 kJ/mol	256.KJ/mol
+Germanium	321.4J/(Kg K)[note]	2820 °C	938.3°C	31.8 kJ/mol	334.KJ/mol
+Arsenic	328.J/(Kg K)[note]	614 °C[note]	817.°C	27.7 kJ/mol	32.4KJ/mol
+Selenium	321.2J/(Kg K)[note]	685 °C	221.°C[note]	5.4 kJ/mol	26.KJ/mol
+Bromine	947.3J/(Kg K)[note]	59 °C	-7.3°C	5.8 kJ/mol	14.8KJ/mol
+Krypton	248.05J/(Kg K)[note]	-153.22 °C	-157.36°C	1.64 kJ/mol	9.02KJ/mol
+Rubidium	364.J/(Kg K)[note]	688 °C	39.31°C	2.19 kJ/mol	72.KJ/mol
+Strontium	300.J/(Kg K)[note]	1382 °C	777.°C	8 kJ/mol	137.KJ/mol
+Yttrium	298.J/(Kg K)[note]	3345 °C	1526.°C	11.4 kJ/mol	380.KJ/mol
+Zirconium	278.J/(Kg K)[note]	4409 °C	1855.°C	21 kJ/mol	580.KJ/mol
+Niobium	265.J/(Kg K)[note]	4744 °C	2477.°C	26.8 kJ/mol	690.KJ/mol
+Molybdenum	251.J/(Kg K)[note]	4639 °C	2623.°C	36 kJ/mol	600.KJ/mol
+Technetium	63.J/(Kg K)[note]	4265 °C	2157.°C	23 kJ/mol	550.KJ/mol
+Ruthenium	238.J/(Kg K)[note]	4150 °C	2334.°C	25.7 kJ/mol	580.KJ/mol
+Rhodium	240.J/(Kg K)[note]	3695 °C	1964.°C	21.7 kJ/mol	495.KJ/mol
+Palladium	240.J/(Kg K)[note]	2963 °C	1554.9°C	16.7 kJ/mol	380.KJ/mol
+Silver	235.J/(Kg K)[note]	2162 °C	961.78°C	11.3 kJ/mol	255.KJ/mol
+Cadmium	230.J/(Kg K)[note]	767 °C	321.07°C	6.3 kJ/mol	100.KJ/mol
+Indium	233.J/(Kg K)[note]	2072 °C	156.6°C	3.26 kJ/mol	230.KJ/mol
+Tin	217.J/(Kg K)[note]	2602 °C	231.93°C	7 kJ/mol	290.KJ/mol
+Antimony	207.J/(Kg K)[note]	1587 °C	630.63°C	19.7 kJ/mol	68.KJ/mol
+Tellurium	201.J/(Kg K)[note]	988 °C	449.51°C	17.5 kJ/mol	48.KJ/mol
+Iodine	429.J/(Kg K)[note]	184.3 °C	113.7°C	7.76 kJ/mol	20.9KJ/mol
+Xenon	158.32J/(Kg K)[note]	-108 °C	-111.8°C	2.3 kJ/mol	12.64KJ/mol
+Cesium	242.J/(Kg K)[note]	671 °C	28.44°C	2.09 kJ/mol	65.KJ/mol
+Barium	205.J/(Kg K)[note]	1870 °C	727.°C	8 kJ/mol	140.KJ/mol
+Lanthanum	195.J/(Kg K)[note]	3464 °C	920.°C	6.2 kJ/mol	400.KJ/mol
+Cerium	192.J/(Kg K)[note]	3360 °C	798.°C	5.5 kJ/mol	350.KJ/mol
+Praseodymium	193.J/(Kg K)[note]	3290 °C	931.°C	6.9 kJ/mol	330.KJ/mol
+Neodymium	190.J/(Kg K)[note]	3.1×103 °C	1021.°C	7.1 kJ/mol	285.KJ/mol
+Promethium	N/A	3×103 °C	1.1×103°C	7.7 kJ/mol	290.KJ/mol
+Samarium	196.J/(Kg K)[note]	1803 °C	1072.°C	8.6 kJ/mol	175.KJ/mol
+Europium	182.J/(Kg K)[note]	1527 °C	822.°C	9.2 kJ/mol	175.KJ/mol
+Gadolinium	240.J/(Kg K)[note]	3250 °C	1313.°C	10 kJ/mol	305.KJ/mol
+Terbium	182.J/(Kg K)[note]	3230 °C	1356.°C	10.8 kJ/mol	295.KJ/mol
+Dysprosium	167.J/(Kg K)[note]	2567 °C	1412.°C	11.1 kJ/mol	280.KJ/mol
+Holmium	165.J/(Kg K)[note]	2700 °C	1474.°C	17 kJ/mol	265.KJ/mol
+Erbium	168.J/(Kg K)[note]	2868 °C	1497.°C	19.9 kJ/mol	285.KJ/mol
+Thulium	160.J/(Kg K)[note]	1950 °C	1545.°C	16.8 kJ/mol	250.KJ/mol
+Ytterbium	154.J/(Kg K)[note]	1196 °C	819.°C	7.7 kJ/mol	160.KJ/mol
+Lutetium	154.J/(Kg K)[note]	3402 °C	1663.°C	22 kJ/mol	415.KJ/mol
+Hafnium	144.J/(Kg K)[note]	4603 °C	2233.°C	25.5 kJ/mol	630.KJ/mol
+Tantalum	140.J/(Kg K)[note]	5458 °C	3017.°C	36 kJ/mol	735.KJ/mol
+Tungsten	132.J/(Kg K)[note]	5555 °C	3422.°C	35 kJ/mol	800.KJ/mol
+Rhenium	137.J/(Kg K)[note]	5596 °C	3186.°C	33 kJ/mol	705.KJ/mol
+Osmium	130.J/(Kg K)[note]	5012 °C	3033.°C	31 kJ/mol	630.KJ/mol
+Iridium	131.J/(Kg K)[note]	4428 °C	2466.°C	26 kJ/mol	560.KJ/mol
+Platinum	133.J/(Kg K)[note]	3825 °C	1768.3°C	20 kJ/mol	490.KJ/mol
+Gold	129.1J/(Kg K)[note]	2856 °C	1064.18°C	12.5 kJ/mol	330.KJ/mol
+Mercury	139.5J/(Kg K)[note]	356.73 °C	-38.83°C	2.29 kJ/mol	59.2KJ/mol
+Thallium	129.J/(Kg K)[note]	1473 °C	304.°C	4.2 kJ/mol	165.KJ/mol
+Lead	127.J/(Kg K)[note]	1749 °C	327.46°C	4.77 kJ/mol	178.KJ/mol
+Bismuth	122.J/(Kg K)[note]	1564 °C	271.3°C	10.9 kJ/mol	160.KJ/mol
+Polonium	N/A	962 °C	254.°C	13 kJ/mol	100.KJ/mol
+Astatine	N/A	N/A	302.°C	6 kJ/mol	40.KJ/mol
+Radon	93.65J/(Kg K)[note]	-61.7 °C	-71.°C	3 kJ/mol	17.KJ/mol
+Francium	N/A	N/A	N/A	2 kJ/mol	65.KJ/mol
+Radium	92.J/(Kg K)[note]	1737 °C	700.°C	8 kJ/mol	125.KJ/mol
+Actinium	120.J/(Kg K)[note]	3200 °C	1050.°C	14 kJ/mol	400.KJ/mol
+Thorium	118.J/(Kg K)[note]	4820 °C	1750.°C	16 kJ/mol	530.KJ/mol
+Protactinium	99.1J/(Kg K)[note]	4000 °C	1572.°C	15 kJ/mol	470.KJ/mol
+Uranium	116.J/(Kg K)[note]	3927 °C	1135.°C	14 kJ/mol	420.KJ/mol
+Neptunium	N/A	4×103 °C	644.°C	10 kJ/mol	335.KJ/mol
+Plutonium	N/A	3230 °C	640.°C	N/A	325.KJ/mol
+Americium	N/A	2011 °C	1176.°C	N/A	N/A
+Curium	N/A	3110 °C	1345.°C	N/A	N/A
+Berkelium	N/A	N/A	1050.°C[note]	N/A	N/A
+Californium	N/A	N/A	900.°C	N/A	N/A
+Einsteinium	N/A	N/A	860.°C	N/A	N/A
+Fermium	N/A	N/A	1527.°C	N/A	N/A
+Mendelevium	N/A	N/A	827.°C	N/A	N/A
+Nobelium	N/A	N/A	827.°C	N/A	N/A
+Lawrencium	N/A	N/A	1627.°C	N/A	N/A
+Rutherfordium	N/A	N/A	N/A	N/A	N/A
+Dubnium	N/A	N/A	N/A	N/A	N/A
+Seaborgium	N/A	N/A	N/A	N/A	N/A
+Bohrium	N/A	N/A	N/A	N/A	N/A
+Hassium	N/A	N/A	N/A	N/A	N/A
+Meitnerium	N/A	N/A	N/A	N/A	N/A
+Darmstadtium	N/A	N/A	N/A	N/A	N/A
+Roentgenium	N/A	N/A	N/A	N/A	N/A
+Ununbium	N/A	N/A	N/A	N/A	N/A
+Ununtrium	N/A	N/A	N/A	N/A	N/A
+Ununquadium	N/A	N/A	N/A	N/A	N/A
+Ununpentium	N/A	N/A	N/A	N/A	N/A
+Ununhexium	N/A	N/A	N/A	N/A	N/A
+Ununseptium	N/A	N/A	N/A	N/A	N/A
+Ununoctium	N/A	N/A	N/A	N/A	N/A
