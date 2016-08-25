@@ -169,6 +169,8 @@ void burnerProcess(RoutingNode!RoutingMaterialOrEnergyPayload node, BurnNodeStat
 		accumulatedMassOfCoal -= (1.0 * massOfBurnedCoal);
 
 		// create burn products and heat them
+		
+		// TODO< implement incomplete combustion (if it doesn't get enough oxygen) >
 
 		// specific heat capacity of water
 		// https://www.wolframalpha.com/input/?i=heat+capacity+water
