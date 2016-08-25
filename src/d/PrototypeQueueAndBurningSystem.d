@@ -46,34 +46,18 @@ class RoutingNode(PayloadType) {
 	}
 }
 
-import whiteSphereEngine.physics.nuclear.Nuclear;
-
-struct MaterialPart {
-	IsotopeInfo isotope;
-	double mass;
-}
 
 
 
-import std.algorithm.iteration : sum;
-import std.algorithm.iteration : map;
+import whiteSphereEngine.physics.material.Matter;
 
 import math.NumericSpatialVectors;
 import math.VectorAlias;
 
 // all physical "things"
 class ObjectMadeOfMaterialInShape {
-	double temperature; // in kelvin
-
-	MaterialPart[] isotopeFractions; // can be empty for special materials
-
-	final @property double mass() {
-		if( tags.length > 0 && tags[0] == EnumTag.BURNABLEASCOAL ) {
-			return overwriteMass;
-		}
-		return isotopeFractions.map!(a => a.mass).sum;
-	}
-
+	Matter matter;
+	
 	public enum EnumShape {
 		SHAPELESS,
 		BOX,
@@ -81,14 +65,6 @@ class ObjectMadeOfMaterialInShape {
 	Vector3f shapeSize;
 	float shapeRadius;
 	EnumShape shape = EnumShape.SHAPELESS;
-	
-	double overwriteMass;
-
-	public enum EnumTag {
-		BURNABLEASCOAL, // can be burned in furnances
-		OXYGEN,
-	}
-	EnumTag[] tags; // to store usage hints
 }
 
 class EnergyPayload {

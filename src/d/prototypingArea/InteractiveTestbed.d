@@ -10,6 +10,7 @@ import ai.behaviorTree.Sequence : BehaviorTreeSequence = Sequence;
 
 import world.SystemInstance;
 import celestial.CelestialObject;
+import whiteSphereEngine.physics.material.Matter;
 
 import std.stdio : writeln, readln;
 
@@ -66,8 +67,9 @@ void main() {
 	// and put some material into it directly
 	RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload *payloadForCoal = new RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload;
 	ObjectMadeOfMaterialInShape coalObject = new ObjectMadeOfMaterialInShape();
-	coalObject.tags = [ObjectMadeOfMaterialInShape.EnumTag.BURNABLEASCOAL];
-	coalObject.overwriteMass = 5.0;
+	coalObject.matter = new Matter;
+	coalObject.matter.tags = [Matter.EnumTag.BURNABLEASCOAL];
+	coalObject.matter.overwriteMass = 5.0;
 	payloadForCoal.payload = RoutingMaterialOrEnergyPayload.makeObjectMadeOfMaterialInShape(coalObject);
 	
 	routingNodeBurner.queueIn ~= payloadForCoal;
@@ -75,8 +77,9 @@ void main() {
 	
 	RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload *payloadForOxygen = new RoutingInfoWithPayload!RoutingMaterialOrEnergyPayload;
 	ObjectMadeOfMaterialInShape oxygenObject = new ObjectMadeOfMaterialInShape();
-	oxygenObject.tags = [ObjectMadeOfMaterialInShape.EnumTag.OXYGEN];
-	oxygenObject.overwriteMass = 5.0;
+	oxygenObject.matter = new Matter;
+	oxygenObject.matter.tags = [Matter.EnumTag.OXYGEN];
+	oxygenObject.matter.overwriteMass = 5.0;
 	payloadForOxygen.payload = RoutingMaterialOrEnergyPayload.makeObjectMadeOfMaterialInShape(oxygenObject);
 	
 	routingNodeBurner.queueIn ~= payloadForOxygen;
