@@ -1,3 +1,5 @@
+module whiteSphereEngine.serialization.csv.CsvHelper;
+
 import std.csv;
 import std.array : array;
 import std.conv : to;
