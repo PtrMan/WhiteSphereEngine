@@ -1,5 +1,4 @@
-module whiteSphereEngine.physics.thermodynamics.SecondLawLookup;
-
+module whiteSphereEngine.misc.LookupInterpolator;
 
 import whiteSphereEngine.serialization.csv.CsvHelper;
 
