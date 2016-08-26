@@ -1,3 +1,7 @@
+/*
+
+deleteme
+
 import whiteSphereEngine.physics.thermodynamics.SecondLawLookup;
 import whiteSphereEngine.physics.thermodynamics.SecondLaw;
 
@@ -7,9 +11,10 @@ void main() {
 	SecondLawLookupForWater secondLawLookup = new SecondLawLookupForWater();
 	secondLawLookup.parseTsvAndReadIntoLookupTableFromFile("resources/engine/physics/material/Saturated steam.tsv");
 
+	// example from http://www.engineeringtoolbox.com/saturated-steam-properties-d_101.html
 	float pressureInKpa = 101.33f; // atmospheric conditions 
 
-	float specificEnthalpyOfLiquidWaterBefore = 0.0f; // TODO< lookup by temperature and interpolated with 0 for the first entry
+	float specificEnthalpyOfLiquidWaterBefore = 0.0f; // we calculate with zero from the temperature
 	float specificEnthalpyOfLiquidWaterAfter = secondLawLookup.lookupAndInterpolateSpecificEnthalpyOfLiquidWater(pressureInKpa);
 
 	double temperatureBeforeInKelvin = 273.0;
@@ -21,3 +26,4 @@ void main() {
 	double changeInSpecificEntropy = calcSpecificEntropy(specificEnthalpyOfLiquidWaterBefore, temperatureBeforeInKelvin, specificEnthalpyOfLiquidWaterAfter, temperatureAfterInKelvin);
 	writeln(changeInSpecificEntropy);
 }
+*/
