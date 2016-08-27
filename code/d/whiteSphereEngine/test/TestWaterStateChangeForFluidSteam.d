@@ -4,77 +4,130 @@ import whiteSphereEngine.physics.material.SpecificHeatLookup;
 import std.stdio;
 
 void main() {
+	float absolutePressureInKpa = 101.33f;
+
 	WaterStateChangeForFluidSteam waterStateChangeForFluidSteam = new WaterStateChangeForFluidSteam;
 	waterStateChangeForFluidSteam.load();
 
 	SpecificHeatLookup specificHeatLookupForWaterSteam = new SpecificHeatLookup;
 	specificHeatLookupForWaterSteam.load("resources/engine/physics/material/Specific heat water vapor.tsv");
 
-	float absolutePressureInKpa = 101.33f;
 
-	float currentTemperatureInKelvin = 273.0f;
 
-	float stepEnergyInJoules = 500.0;
+	if(false) {
 
-	float energySumInJoules = 0.0f;
 
-	double remainingFluidMassInKg = 1.0;
+		float currentTemperatureInKelvin = 273.0f;
 
-	for(;;) {
-		// dump energy into it
-		float deltaTemperature;
-		bool isEvaporating;
+		float stepEnergyInJoules = 500.0;
 
-		writeln("currentTemperatureInKelvin = ", currentTemperatureInKelvin);
+		float energySumInJoules = 0.0f;
 
-		float remaingEnergyInJoules = stepEnergyInJoules;
+		double remainingFluidMassInKg = 1.0;
 
-		waterStateChangeForFluidSteam.calcDeltaTemperatureOfFluid(absolutePressureInKpa, currentTemperatureInKelvin, remaingEnergyInJoules, /*out*/deltaTemperature, /*out*/isEvaporating);
-		
-		const float heatCapacity = waterStateChangeForFluidSteam.calcHeatCapacity(absolutePressureInKpa);
-		const float consumedEnergyForHeatingOfFluid = heatCapacity*deltaTemperature;
-		remaingEnergyInJoules -= consumedEnergyForHeatingOfFluid;
-		energySumInJoules += consumedEnergyForHeatingOfFluid;
-		currentTemperatureInKelvin += deltaTemperature;
+		for(;;) {
+			// dump energy into it
+			float deltaTemperature;
+			bool isEvaporating;
 
-		writeln("delta temperature = ", deltaTemperature);
-		writeln("is evaporating = ", isEvaporating);
+			writeln("currentTemperatureInKelvin = ", currentTemperatureInKelvin);
 
-		if( isEvaporating ) {
-			// TODO< try to evaporate from remaining heat >
-			double deltaFluidMassInKg;
-			float energyRequiredForEvaporation;
-			bool isCompletlyEvaporated;
-			waterStateChangeForFluidSteam.calcEvaporationOfFluid(absolutePressureInKpa, remaingEnergyInJoules, remainingFluidMassInKg, /*out*/deltaFluidMassInKg, /*out*/energyRequiredForEvaporation, /*out*/isCompletlyEvaporated);
+			float remaingEnergyInJoules = stepEnergyInJoules;
 
-			remainingFluidMassInKg += deltaFluidMassInKg;
-			remaingEnergyInJoules -= energyRequiredForEvaporation;
-			energySumInJoules += energyRequiredForEvaporation;
+			waterStateChangeForFluidSteam.calcDeltaTemperatureOfFluid(absolutePressureInKpa, currentTemperatureInKelvin, remaingEnergyInJoules, /*out*/deltaTemperature, /*out*/isEvaporating);
+			
+			const float heatCapacity = waterStateChangeForFluidSteam.calcHeatCapacity(absolutePressureInKpa);
+			const float consumedEnergyForHeatingOfFluid = heatCapacity*deltaTemperature;
+			remaingEnergyInJoules -= consumedEnergyForHeatingOfFluid;
+			energySumInJoules += consumedEnergyForHeatingOfFluid;
+			currentTemperatureInKelvin += deltaTemperature;
 
-			writeln("remainingFluidMassInKg ", remainingFluidMassInKg);
+			writeln("delta temperature = ", deltaTemperature);
+			writeln("is evaporating = ", isEvaporating);
 
-			if( isCompletlyEvaporated ) {
-				writeln("energySumInJoules = ", energySumInJoules);
+			if( isEvaporating ) {
+				double deltaFluidMassInKg, deltaSteamMassInKg;
+				float deltaEnergyInJoules;
+				
+				WaterStateChangeForFluidSteam.CalcEvaporationOfFluidParameters parameters;
+				parameters.absolutePressureInKpa = absolutePressureInKpa;
+				parameters.energyDeltaInJoule = remaingEnergyInJoules;
+				parameters.remainingFluidMassInKg = remainingFluidMassInKg;
+				parameters.remainingSteamMassInKg = 0.0; // not checked here
 
-				// todo< heat steam for testing >
-				// in the real usage we calculate with material masses in specific states
+				WaterStateChangeForFluidSteam.EnumEvaporationCondensationState evaporationCondensationState;
 
-				for(;;) {
-					writeln("heating steam");
+				waterStateChangeForFluidSteam.calcEvaporationOfFluid(
+					parameters,
+					/*out*/deltaFluidMassInKg, 
+					/*out*/deltaSteamMassInKg,
+					/*out*/deltaEnergyInJoules,
+					/*out*/evaporationCondensationState
+				);
 
-					double steamMassInKg = 1.0;
-					deltaTemperature = specificHeatLookupForWaterSteam.calcDeltaTemperature(currentTemperatureInKelvin, steamMassInKg, stepEnergyInJoules);
-					currentTemperatureInKelvin += deltaTemperature;
+				bool isCompletlyEvaporated = evaporationCondensationState == WaterStateChangeForFluidSteam.EnumEvaporationCondensationState.COMPLETLYEVAPORATED;
 
-					writeln("currentTemperatureInKelvin = ", currentTemperatureInKelvin);
+
+				remainingFluidMassInKg += deltaFluidMassInKg;
+				remaingEnergyInJoules -= deltaEnergyInJoules;
+				energySumInJoules += deltaEnergyInJoules;
+
+				writeln("remainingFluidMassInKg ", remainingFluidMassInKg);
+
+				if( isCompletlyEvaporated ) {
+					writeln("completly evaporated!");
+					return;
+
+					writeln("energySumInJoules = ", energySumInJoules);
+
+					// todo< heat steam for testing >
+					// in the real usage we calculate with material masses in specific states
+
+					for(;;) {
+						writeln("heating steam");
+
+						double steamMassInKg = 1.0;
+						deltaTemperature = specificHeatLookupForWaterSteam.calcDeltaTemperature(currentTemperatureInKelvin, steamMassInKg, stepEnergyInJoules);
+						currentTemperatureInKelvin += deltaTemperature;
+
+						writeln("currentTemperatureInKelvin = ", currentTemperatureInKelvin);
+					}
+
+					break;
 				}
-
-				break;
 			}
+
+			writeln("energySumInJoules = ", energySumInJoules);
 		}
 
-		writeln("energySumInJoules = ", energySumInJoules);
 	}
+	else {
+		double deltaFluidMassInKg, deltaSteamMassInKg;
+		float deltaEnergyInJoules;
+			
 
+		WaterStateChangeForFluidSteam.CalcEvaporationOfFluidParameters parameters;
+		parameters.absolutePressureInKpa = absolutePressureInKpa;
+		parameters.energyDeltaInJoule = -2257.0f;
+		parameters.remainingFluidMassInKg = 0.0;
+		parameters.remainingSteamMassInKg = 1.0;
 
+		WaterStateChangeForFluidSteam.EnumEvaporationCondensationState evaporationCondensationState;
+
+		waterStateChangeForFluidSteam.calcEvaporationOfFluid(
+			parameters,
+			/*out*/deltaFluidMassInKg, 
+			/*out*/deltaSteamMassInKg,
+			/*out*/deltaEnergyInJoules,
+			/*out*/evaporationCondensationState
+		);
+
+		bool isCompletlyCondensated = evaporationCondensationState == WaterStateChangeForFluidSteam.EnumEvaporationCondensationState.COMPLETLYCONDENSATED;
+
+		import std.stdio;
+		writeln("deltaFluidMassInKg = ", deltaFluidMassInKg);
+		writeln("deltaSteamMassInKg = ", deltaSteamMassInKg);
+		writeln("deltaEnergyInJoules = ", deltaEnergyInJoules);
+
+	}
 }

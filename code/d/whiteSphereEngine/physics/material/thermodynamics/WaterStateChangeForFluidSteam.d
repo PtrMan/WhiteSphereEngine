@@ -46,26 +46,88 @@ class WaterStateChangeForFluidSteam {
 		}
 	}
 
+	enum EnumEvaporationCondensationState {
+		NONSPECIAL,
+		COMPLETLYEVAPORATED,
+		COMPLETLYCONDENSATED,
+	}
+
 	// TODO< add steam mass and steam delta mass to calculate condensation too >
 	// liquid --> steam transition
-	final void calcEvaporationOfFluid(float absolutePressureInKpa, float energyDeltaInJoule, double remainingFluidMassInKg, out double deltaFluidMassInKg, out float energyRequiredForEvaporation, out bool isCompletlyEvaporated) {
-		const float specificEnthalpyInJoules = lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(absolutePressureInKpa, EnumEnthalpyColumn.EVAPORATION);
 
-		const double evaporatedFluidMassInKg = energyDeltaInJoule/specificEnthalpyInJoules;
+	static struct CalcEvaporationOfFluidParameters {
+		float absolutePressureInKpa;
+		float energyDeltaInJoule;
+		double remainingFluidMassInKg;
+		double remainingSteamMassInKg;
+	}
 
-		isCompletlyEvaporated = evaporatedFluidMassInKg > remainingFluidMassInKg;
-		
-		// set evaporated fluid mass
-		deltaFluidMassInKg = isCompletlyEvaporated ? -remainingFluidMassInKg : -evaporatedFluidMassInKg;
-
-		// calculate how much energy was required for evaporation
-		if( isCompletlyEvaporated ) {
-			// calculate the energy required to convert everything to steam
-			energyRequiredForEvaporation = remainingFluidMassInKg*specificEnthalpyInJoules;
+	// \param deltaEnergyInJoules is either the used energy for the evaporation or the retrived energy for the condensation
+	final void calcEvaporationOfFluid(
+		CalcEvaporationOfFluidParameters parameters,
+		out double deltaFluidMassInKg,
+		out double deltaSteamMassInKg,
+		out float deltaEnergyInJoules,
+		out EnumEvaporationCondensationState evaporationCondensationState
+	) {
+		enum EnumEvaporationType {
+			EVAPORATION,
+			CONDENSATION,
 		}
-		else {
-			energyRequiredForEvaporation = energyDeltaInJoule;
+
+		with( EnumEvaporationCondensationState ) {
+			with( parameters ) {
+				evaporationCondensationState = NONSPECIAL;
+
+				const float specificEnthalpyInJoules = lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(absolutePressureInKpa, EnumEnthalpyColumn.EVAPORATION);
+				const double evaporatedOrCondensatedFluidMassInKg = -energyDeltaInJoule/specificEnthalpyInJoules;
+
+				const EnumEvaporationType evaporationType = energyDeltaInJoule > 0.0f ? EnumEvaporationType.EVAPORATION : EnumEvaporationType.CONDENSATION;
+				
+				if( evaporationType == EnumEvaporationType.EVAPORATION ) {
+					if( -evaporatedOrCondensatedFluidMassInKg > remainingFluidMassInKg ) {
+						evaporationCondensationState = COMPLETLYEVAPORATED;
+					}
+
+					const bool isCompletlyEvaporated = evaporationCondensationState == COMPLETLYEVAPORATED;
+
+					// set evaporated fluid mass
+					deltaFluidMassInKg = isCompletlyEvaporated ? remainingFluidMassInKg : evaporatedOrCondensatedFluidMassInKg;
+					assert(deltaFluidMassInKg <= 0.0);
+
+					// calculate how much energy was required for evaporation
+					if( isCompletlyEvaporated ) {
+						// calculate the energy required to convert everything to steam
+						deltaEnergyInJoules = remainingFluidMassInKg*specificEnthalpyInJoules;
+					}
+					else {
+						deltaEnergyInJoules = energyDeltaInJoule;
+					}
+				}
+				else { // EnumEvaporationType.evaporationType == CONDENSATION
+					if( evaporatedOrCondensatedFluidMassInKg > remainingSteamMassInKg ) {
+						evaporationCondensationState = COMPLETLYCONDENSATED;
+					}
+
+					const bool isCompletlyCondensated = evaporationCondensationState == COMPLETLYCONDENSATED;
+
+					// set condensatedFluidMass
+					deltaFluidMassInKg = isCompletlyCondensated ? remainingSteamMassInKg : evaporatedOrCondensatedFluidMassInKg;
+					assert(deltaFluidMassInKg >= 0.0);
+
+					// calculate how much energy was retrived from condensation
+					if( isCompletlyCondensated ) {
+						deltaEnergyInJoules = remainingSteamMassInKg*specificEnthalpyInJoules;
+					}
+					else {
+						deltaEnergyInJoules = energyDeltaInJoule;
+					}
+				}
+
+				deltaSteamMassInKg = -deltaFluidMassInKg;
+			}
 		}
+
 	}
 
 	// heating of steam is not handled here
