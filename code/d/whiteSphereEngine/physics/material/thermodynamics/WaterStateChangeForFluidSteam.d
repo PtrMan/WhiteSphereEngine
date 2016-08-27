@@ -25,7 +25,7 @@ double convertKelvinToCelsius(double temperatureInKelvin) {
 class WaterStateChangeForFluidSteam {
 	final void load() {
 		lookupInterpolator = new LookupInterpolator();
-		lookupInterpolator.parseTsvAndReadIntoLookupTableFromFile("resources/engine/physics/material/Saturated steam.tsv");
+		lookupInterpolator.parseTsvAndReadIntoLookupTableFromFile("resources/engine/physics/material/Saturated steam.tsv", 8);
 	}
 
 	// tries to pump energy into the fluid and checks if evaporation is taking place

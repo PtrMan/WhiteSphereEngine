@@ -67,7 +67,7 @@ class LookupInterpolator {
 		return lookupEntries.length-1;
 	}
 
-	private final void parseTsvAndReadIntoLookupTable(string tsvTable) {
+	private final void parseTsvAndReadIntoLookupTableFor8Columns(string tsvTable) {
 		import std.typecons : Tuple;
 		alias Tuple!(float, float, float, float, float, float, float, float) RowType;
 
@@ -88,10 +88,31 @@ class LookupInterpolator {
 		}
 	}
 
-	final void parseTsvAndReadIntoLookupTableFromFile(string path) {
+	private final void parseTsvAndReadIntoLookupTableFor2Columns(string tsvTable) {
+		import std.typecons : Tuple;
+		alias Tuple!(float, float) RowType;
+
+		RowType[] rows = jumpOverHeaderLinesAndReadCsv!RowType(tsvTable, 1, "\t");
+
+		foreach( iterationRow; rows ) {
+			LookupEntry createdLookupEntry;
+			createdLookupEntry.values.length = 2;
+			createdLookupEntry.values[0] = iterationRow[0];
+			createdLookupEntry.values[1] = iterationRow[1];
+			lookupEntries ~= createdLookupEntry;
+		}
+	}
+
+
+	final void parseTsvAndReadIntoLookupTableFromFile(string path, size_t numberOfColumns) {
 		import std.file : read;
 		string str = cast(string)read(path);
-		parseTsvAndReadIntoLookupTable(str);
+		if( numberOfColumns == 2 ) {
+			parseTsvAndReadIntoLookupTableFor2Columns(str);
+		}
+		else if( numberOfColumns == 8 ) {
+			parseTsvAndReadIntoLookupTableFor8Columns(str);
+		}
 	}
 
 	private LookupEntry[] lookupEntries;
