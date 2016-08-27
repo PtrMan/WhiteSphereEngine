@@ -31,10 +31,10 @@ class LookupInterpolator {
 		}
 		// else we are here
 
-		float queriedValueNext = lookupEntries[indexOfEntryWhereValueEqualOrLarger].values[queryIndex];
-		float valueNext = lookupEntries[indexOfEntryWhereValueEqualOrLarger].values[indexOfValue];
+		float queriedValueNext = lookupEntries[indexOfEntryWhereValueEqualOrLarger+1].values[queryIndex];
+		float valueNext = lookupEntries[indexOfEntryWhereValueEqualOrLarger+1].values[indexOfValue];
 
-		return interpolate(queriedValueWhereValueEqualOrLarger, queriedValueNext, value, valueWhereValueEqualOrLarger, valueNext);
+		return interpolate(valueWhereValueEqualOrLarger, valueNext, value, queriedValueWhereValueEqualOrLarger, queriedValueNext);
 	}
 
 	// interpolate for c between a and b
@@ -76,9 +76,14 @@ class LookupInterpolator {
 		foreach( iterationRow; rows ) {
 			LookupEntry createdLookupEntry;
 			createdLookupEntry.values.length = 8;
-			foreach( i; 0..8 ) {
-				createdLookupEntry.values[i] = iterationRow[i];
-			}
+			createdLookupEntry.values[0] = iterationRow[0];
+			createdLookupEntry.values[1] = iterationRow[1];
+			createdLookupEntry.values[2] = iterationRow[2];
+			createdLookupEntry.values[3] = iterationRow[3];
+			createdLookupEntry.values[4] = iterationRow[4];
+			createdLookupEntry.values[5] = iterationRow[5];
+			createdLookupEntry.values[6] = iterationRow[6];
+			createdLookupEntry.values[7] = iterationRow[7];
 			lookupEntries ~= createdLookupEntry;
 		}
 	}
