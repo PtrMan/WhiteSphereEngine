@@ -1,10 +1,14 @@
 import whiteSphereEngine.physics.material.thermodynamics.WaterStateChangeForFluidSteam;
+import whiteSphereEngine.physics.material.SpecificHeatLookup;
 
 import std.stdio;
 
 void main() {
 	WaterStateChangeForFluidSteam waterStateChangeForFluidSteam = new WaterStateChangeForFluidSteam;
 	waterStateChangeForFluidSteam.load();
+
+	SpecificHeatLookup specificHeatLookupForWaterSteam = new SpecificHeatLookup;
+	specificHeatLookupForWaterSteam.load("resources/engine/physics/material/Specific heat water vapor.tsv");
 
 	float absolutePressureInKpa = 101.33f;
 
@@ -51,6 +55,19 @@ void main() {
 
 			if( isCompletlyEvaporated ) {
 				writeln("energySumInJoules = ", energySumInJoules);
+
+				// todo< heat steam for testing >
+				// in the real usage we calculate with material masses in specific states
+
+				for(;;) {
+					writeln("heating steam");
+
+					double steamMassInKg = 1.0;
+					deltaTemperature = specificHeatLookupForWaterSteam.calcDeltaTemperature(currentTemperatureInKelvin, steamMassInKg, stepEnergyInJoules);
+					currentTemperatureInKelvin += deltaTemperature;
+
+					writeln("currentTemperatureInKelvin = ", currentTemperatureInKelvin);
+				}
 
 				break;
 			}
