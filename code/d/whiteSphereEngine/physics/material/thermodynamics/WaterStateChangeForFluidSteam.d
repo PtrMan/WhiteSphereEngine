@@ -49,7 +49,7 @@ class WaterStateChangeForFluidSteam {
 	// TODO< add steam mass and steam delta mass to calculate condensation too >
 	// liquid --> steam transition
 	final void calcEvaporationOfFluid(float absolutePressureInKpa, float energyDeltaInJoule, double remainingFluidMassInKg, out double deltaFluidMassInKg, out float energyRequiredForEvaporation, out bool isCompletlyEvaporated) {
-		const float specificEnthalpyInJoules = lookupSpecificEnthalpyOfEvaporationByAbsolutePressureInJoules(absolutePressureInKpa);
+		const float specificEnthalpyInJoules = lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(absolutePressureInKpa, EnumEnthalpyColumn.EVAPORATION);
 
 		const double evaporatedFluidMassInKg = energyDeltaInJoule/specificEnthalpyInJoules;
 
@@ -68,17 +68,15 @@ class WaterStateChangeForFluidSteam {
 		}
 	}
 
-	// TODO< heating steam >
-
-
+	// heating of steam is not handled here
 
 
 	final float calcHeatCapacity(float absolutePressureInKpa) {
-		float specificEnthalpyInJoules = lookupSpecificEnthalpyOfLiquidByAbsolutePressureInJoules(absolutePressureInKpa);
+		float specificEnthalpyInJoules = lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(absolutePressureInKpa, EnumEnthalpyColumn.LIQUID);
 
 		// this works fine for water, the author made this up because its consistent with the heat apacity of water at atmospheric pressure
-		float heatCapacityInKiloKelvin = specificEnthalpyInJoules / convertKelvinToCelsius(lookupBoilingTemperatureByAbsolutePressureInKelvin(absolutePressureInKpa));
-		return heatCapacityInKiloKelvin;
+		float heatCapacityInKelvin = specificEnthalpyInJoules / convertKelvinToCelsius(lookupBoilingTemperatureByAbsolutePressureInKelvin(absolutePressureInKpa));
+		return heatCapacityInKelvin;
 	}
 
 	private static float calcHeatChange(float heatCapacity, float energyDeltaInJoule) {
@@ -90,6 +88,12 @@ class WaterStateChangeForFluidSteam {
 		return convertCelsiusToKelvin(lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, 1));
 	}
 
+	enum EnumEnthalpyColumn {
+		LIQUID = 4,
+		EVAPORATION = 5,
+		STEAM = 6,
+	}
+	/*
 	private final float lookupSpecificEnthalpyOfLiquidByAbsolutePressureInJoules(float absolutePressureInKpa) {
 		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, 4);
 		return enthalpyInKiloJoules * 1000.0f;
@@ -102,6 +106,11 @@ class WaterStateChangeForFluidSteam {
 
 	private final float lookupSpecificEnthalpyOfSteamByAbsolutePressureInJoules(float absolutePressureInKpa) {
 		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, 6);
+		return enthalpyInKiloJoules * 1000.0f;
+	}*/
+
+	private final float lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(float absolutePressureInKpa, EnumEnthalpyColumn enthalpyColumn) {
+		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, cast(uint)enthalpyColumn);
 		return enthalpyInKiloJoules * 1000.0f;
 	}
 
