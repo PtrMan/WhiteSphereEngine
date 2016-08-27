@@ -14,6 +14,9 @@ class LookupInterpolator {
 	body {
 		size_t indexOfEntryWhereValueEqualOrLarger = getIndexOfEntryWhereValueIsEqualOrLarger(value, indexOfValue);
 
+		import std.stdio;
+		writeln(indexOfEntryWhereValueEqualOrLarger);
+
 		bool isFirst = indexOfEntryWhereValueEqualOrLarger == 0;
 		bool isLast = indexOfEntryWhereValueEqualOrLarger == lookupEntries.length-1;
 
@@ -57,8 +60,8 @@ class LookupInterpolator {
 	}
 	body {
 		// TODO< use binary search from d standard library >
-		foreach( i; 0..lookupEntries.length ) {
-			if( lookupEntries[i].values[indexOfValue] >= value ) {
+		foreach( i; 0..lookupEntries.length-1 ) {
+			if( lookupEntries[i+1].values[indexOfValue] > value ) {
 				return i;
 			}
 		}
@@ -67,11 +70,11 @@ class LookupInterpolator {
 		return lookupEntries.length-1;
 	}
 
-	private final void parseTsvAndReadIntoLookupTableFor8Columns(string tsvTable) {
+	private final void parseTsvAndReadIntoLookupTableFor8Columns(string tsvTable, uint numberOfSkipedRows) {
 		import std.typecons : Tuple;
 		alias Tuple!(float, float, float, float, float, float, float, float) RowType;
 
-		RowType[] rows = jumpOverHeaderLinesAndReadCsv!RowType(tsvTable, 1, "\t");
+		RowType[] rows = jumpOverHeaderLinesAndReadCsv!RowType(tsvTable, numberOfSkipedRows, "\t");
 
 		foreach( iterationRow; rows ) {
 			LookupEntry createdLookupEntry;
@@ -88,11 +91,11 @@ class LookupInterpolator {
 		}
 	}
 
-	private final void parseTsvAndReadIntoLookupTableFor2Columns(string tsvTable) {
+	private final void parseTsvAndReadIntoLookupTableFor2Columns(string tsvTable, uint numberOfSkipedRows) {
 		import std.typecons : Tuple;
 		alias Tuple!(float, float) RowType;
 
-		RowType[] rows = jumpOverHeaderLinesAndReadCsv!RowType(tsvTable, 1, "\t");
+		RowType[] rows = jumpOverHeaderLinesAndReadCsv!RowType(tsvTable, numberOfSkipedRows, "\t");
 
 		foreach( iterationRow; rows ) {
 			LookupEntry createdLookupEntry;
@@ -104,14 +107,14 @@ class LookupInterpolator {
 	}
 
 
-	final void parseTsvAndReadIntoLookupTableFromFile(string path, size_t numberOfColumns) {
+	final void parseTsvAndReadIntoLookupTableFromFile(string path, size_t numberOfColumns, uint numberOfSkipedRows) {
 		import std.file : read;
 		string str = cast(string)read(path);
 		if( numberOfColumns == 2 ) {
-			parseTsvAndReadIntoLookupTableFor2Columns(str);
+			parseTsvAndReadIntoLookupTableFor2Columns(str, numberOfSkipedRows);
 		}
 		else if( numberOfColumns == 8 ) {
-			parseTsvAndReadIntoLookupTableFor8Columns(str);
+			parseTsvAndReadIntoLookupTableFor8Columns(str, numberOfSkipedRows);
 		}
 	}
 
