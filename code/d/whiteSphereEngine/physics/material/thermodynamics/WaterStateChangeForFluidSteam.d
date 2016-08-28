@@ -22,39 +22,58 @@ double convertKelvinToCelsius(double temperatureInKelvin) {
 // matter from the smelting temperature.
 // see http://www.engineeringtoolbox.com/saturated-steam-properties-d_101.html for the calculation basics
 
+// doesn't handle heating of steam or freezing and cooling of ice!
 class WaterStateChangeForFluidSteam {
 	final void load() {
 		lookupInterpolator = new LookupInterpolator();
 		lookupInterpolator.parseTsvAndReadIntoLookupTableFromFile("resources/engine/physics/material/Saturated steam.tsv", 8, 1);
 	}
 
-	// tries to pump energy into the fluid and checks if evaporation is taking place
+	// tries to pump energy into the fluid or takes it away and checks if evaporation or freezing is taking place
 	// the delta temperature is just till evaporation is taking place
-	final void calcDeltaTemperatureOfFluid(float absolutePressureInKpa, float startTemperatureInKelvin, float energyDeltaInJoule, out float deltaTemperature, out bool isEvaporating) {
+	// startTemperatureInKelvin must be equal or above freezingTemperatureInKelvin
+	final void calcDeltaTemperatureOfFluid(float absolutePressureInKpa, float startTemperatureInKelvin, float energyDeltaInJoule, float freezingTemperatureInKelvin, out float deltaTemperature, out EnumStateChange stateChange)
+	in {
+		assert(absolutePressureInKpa >= 0.0f);
+		assert(startTemperatureInKelvin >= freezingTemperatureInKelvin);
+	}
+	body {
+		stateChange = EnumStateChange.NONSPECIAL;
 
 		const float heatCapacity = calcHeatCapacity(absolutePressureInKpa);
 
 		const float boilingTemperatureByAbsolutePressureInKelvin = lookupBoilingTemperatureByAbsolutePressureInKelvin(absolutePressureInKpa);
+		assert(startTemperatureInKelvin <= boilingTemperatureByAbsolutePressureInKelvin, "a starttemperature above the boiling temperature of the liquid is invalid!");
 
 		deltaTemperature = calcHeatChange(heatCapacity, energyDeltaInJoule);
 
-		assert(startTemperatureInKelvin <= boilingTemperatureByAbsolutePressureInKelvin, "a starttemperature above the boiling temperature of the liquid is invalid!");
-		isEvaporating = deltaTemperature + startTemperatureInKelvin > boilingTemperatureByAbsolutePressureInKelvin;
+		const bool isEvaporating = deltaTemperature + startTemperatureInKelvin > boilingTemperatureByAbsolutePressureInKelvin;
+		const bool isFreezing = deltaTemperature + startTemperatureInKelvin < freezingTemperatureInKelvin;
+		if( isEvaporating ) {
+			stateChange = EnumStateChange.EVAPORATING;
+		}
+		else if( isFreezing ) {
+			stateChange = EnumStateChange.FREEZING;
+		}
+
 		if( isEvaporating ) {
 			// if it is evaporating we can just put in as much remaining temperature as its possible till it evaporates
 			deltaTemperature = boilingTemperatureByAbsolutePressureInKelvin - startTemperatureInKelvin;
 		}
+		else if( isFreezing ) {
+			deltaTemperature = startTemperatureInKelvin - freezingTemperatureInKelvin;
+		}
 	}
 
-	enum EnumEvaporationCondensationState {
+	enum EnumStateChange {
 		NONSPECIAL,
 		COMPLETLYEVAPORATED,
 		COMPLETLYCONDENSATED,
+		EVAPORATING,
+		FREEZING,
 	}
 
-	// TODO< add steam mass and steam delta mass to calculate condensation too >
-	// liquid --> steam transition
-
+	
 	static struct CalcEvaporationOfFluidParameters {
 		float absolutePressureInKpa;
 		float energyDeltaInJoule;
@@ -62,20 +81,21 @@ class WaterStateChangeForFluidSteam {
 		double remainingSteamMassInKg;
 	}
 
+	// liquid <-> steam transition
 	// \param deltaEnergyInJoules is either the used energy for the evaporation or the retrived energy for the condensation
 	final void calcEvaporationOfFluid(
 		CalcEvaporationOfFluidParameters parameters,
 		out double deltaFluidMassInKg,
 		out double deltaSteamMassInKg,
 		out float deltaEnergyInJoules,
-		out EnumEvaporationCondensationState evaporationCondensationState
+		out EnumStateChange evaporationCondensationState
 	) {
 		enum EnumEvaporationType {
 			EVAPORATION,
 			CONDENSATION,
 		}
 
-		with( EnumEvaporationCondensationState ) {
+		with( EnumStateChange ) {
 			with( parameters ) {
 				evaporationCondensationState = NONSPECIAL;
 
@@ -127,10 +147,7 @@ class WaterStateChangeForFluidSteam {
 				deltaSteamMassInKg = -deltaFluidMassInKg;
 			}
 		}
-
 	}
-
-	// heating of steam is not handled here
 
 
 	final float calcHeatCapacity(float absolutePressureInKpa) {
@@ -155,21 +172,6 @@ class WaterStateChangeForFluidSteam {
 		EVAPORATION = 5,
 		STEAM = 6,
 	}
-	/*
-	private final float lookupSpecificEnthalpyOfLiquidByAbsolutePressureInJoules(float absolutePressureInKpa) {
-		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, 4);
-		return enthalpyInKiloJoules * 1000.0f;
-	}
-
-	private final float lookupSpecificEnthalpyOfEvaporationByAbsolutePressureInJoules(float absolutePressureInKpa) {
-		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, 5);
-		return enthalpyInKiloJoules * 1000.0f;
-	}
-
-	private final float lookupSpecificEnthalpyOfSteamByAbsolutePressureInJoules(float absolutePressureInKpa) {
-		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, 6);
-		return enthalpyInKiloJoules * 1000.0f;
-	}*/
 
 	private final float lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(float absolutePressureInKpa, EnumEnthalpyColumn enthalpyColumn) {
 		float enthalpyInKiloJoules = lookupInterpolator.lookupAndInterpolate(absolutePressureInKpa, 0, cast(uint)enthalpyColumn);

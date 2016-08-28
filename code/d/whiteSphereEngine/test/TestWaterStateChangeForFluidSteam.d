@@ -27,15 +27,27 @@ void main() {
 
 		for(;;) {
 			// dump energy into it
-			float deltaTemperature;
-			bool isEvaporating;
+
 
 			writeln("currentTemperatureInKelvin = ", currentTemperatureInKelvin);
 
 			float remaingEnergyInJoules = stepEnergyInJoules;
 
-			waterStateChangeForFluidSteam.calcDeltaTemperatureOfFluid(absolutePressureInKpa, currentTemperatureInKelvin, remaingEnergyInJoules, /*out*/deltaTemperature, /*out*/isEvaporating);
-			
+			WaterStateChangeForFluidSteam.EnumStateChange stateChange;  // result
+			float deltaTemperature; // result
+			float freezingTemperatureInKelvin = 273.0f;
+			float energyDeltaInJoule = remaingEnergyInJoules;
+
+			waterStateChangeForFluidSteam.calcDeltaTemperatureOfFluid(absolutePressureInKpa, currentTemperatureInKelvin, energyDeltaInJoule, freezingTemperatureInKelvin, deltaTemperature, /*out*/ stateChange);
+
+			/+
+			waterStateChangeForFluidSteam.calcDeltaTemperatureOfFluid(
+				absolutePressureInKpa,
+				currentTemperatureInKelvin,
+				remaingEnergyInJoules, /*out*/deltaTemperature, /*out*/isEvaporating);
+			+/
+
+
 			const float heatCapacity = waterStateChangeForFluidSteam.calcHeatCapacity(absolutePressureInKpa);
 			const float consumedEnergyForHeatingOfFluid = heatCapacity*deltaTemperature;
 			remaingEnergyInJoules -= consumedEnergyForHeatingOfFluid;
@@ -43,6 +55,9 @@ void main() {
 			currentTemperatureInKelvin += deltaTemperature;
 
 			writeln("delta temperature = ", deltaTemperature);
+			
+			bool isEvaporating = stateChange == WaterStateChangeForFluidSteam.EnumStateChange.EVAPORATING;
+
 			writeln("is evaporating = ", isEvaporating);
 
 			if( isEvaporating ) {
@@ -55,7 +70,7 @@ void main() {
 				parameters.remainingFluidMassInKg = remainingFluidMassInKg;
 				parameters.remainingSteamMassInKg = 0.0; // not checked here
 
-				WaterStateChangeForFluidSteam.EnumEvaporationCondensationState evaporationCondensationState;
+				WaterStateChangeForFluidSteam.EnumStateChange evaporationCondensationState;
 
 				waterStateChangeForFluidSteam.calcEvaporationOfFluid(
 					parameters,
@@ -65,7 +80,7 @@ void main() {
 					/*out*/evaporationCondensationState
 				);
 
-				bool isCompletlyEvaporated = evaporationCondensationState == WaterStateChangeForFluidSteam.EnumEvaporationCondensationState.COMPLETLYEVAPORATED;
+				bool isCompletlyEvaporated = evaporationCondensationState == WaterStateChangeForFluidSteam.EnumStateChange.COMPLETLYEVAPORATED;
 
 
 				remainingFluidMassInKg += deltaFluidMassInKg;
@@ -101,7 +116,7 @@ void main() {
 		}
 
 	}
-	else {
+	else if(false){
 		double deltaFluidMassInKg, deltaSteamMassInKg;
 		float deltaEnergyInJoules;
 			
@@ -112,7 +127,7 @@ void main() {
 		parameters.remainingFluidMassInKg = 0.0;
 		parameters.remainingSteamMassInKg = 1.0;
 
-		WaterStateChangeForFluidSteam.EnumEvaporationCondensationState evaporationCondensationState;
+		WaterStateChangeForFluidSteam.EnumStateChange evaporationCondensationState;
 
 		waterStateChangeForFluidSteam.calcEvaporationOfFluid(
 			parameters,
@@ -122,12 +137,31 @@ void main() {
 			/*out*/evaporationCondensationState
 		);
 
-		bool isCompletlyCondensated = evaporationCondensationState == WaterStateChangeForFluidSteam.EnumEvaporationCondensationState.COMPLETLYCONDENSATED;
+		bool isCompletlyCondensated = evaporationCondensationState == WaterStateChangeForFluidSteam.EnumStateChange.COMPLETLYCONDENSATED;
 
 		import std.stdio;
 		writeln("deltaFluidMassInKg = ", deltaFluidMassInKg);
 		writeln("deltaSteamMassInKg = ", deltaSteamMassInKg);
 		writeln("deltaEnergyInJoules = ", deltaEnergyInJoules);
+
+	}
+	else if(true) {
+		// TODO TODO TODO
+
+		// check if cooling down of fluid till it reaches the meltingpoint works fine by iterating two times above the melting point
+
+		WaterStateChangeForFluidSteam.EnumStateChange stateChange;  // result
+		float deltaTemperature; // result
+
+		float freezingTemperatureInKelvin = 273.0f;
+		float energyDeltaInJoule = -10000.0f;
+		float startTemperatureInKelvin = 273.1f; // short above freezing
+
+		waterStateChangeForFluidSteam.calcDeltaTemperatureOfFluid(absolutePressureInKpa, startTemperatureInKelvin, energyDeltaInJoule, freezingTemperatureInKelvin, /*out*/deltaTemperature, /*out*/ stateChange);
+
+		writeln("stateChange == EnumStateChange.NONSPECIAL = ", stateChange == WaterStateChangeForFluidSteam.EnumStateChange.NONSPECIAL);
+		writeln("stateChange == EnumStateChange.FREEZING = ", stateChange == WaterStateChangeForFluidSteam.EnumStateChange.FREEZING);
+		writeln("deltaTemperature = ", deltaTemperature);
 
 	}
 }
