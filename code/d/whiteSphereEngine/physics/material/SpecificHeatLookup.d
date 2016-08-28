@@ -16,9 +16,14 @@ class SpecificHeatLookup {
 		lookupInterpolator.parseTsvAndReadIntoLookupTableFromFile(path, numberOfColumns, numberOfSkipedRows);
 	}
 
-	final float calcDeltaTemperature(float steamTemperatureInKelvin, float massInKg, float deltaEnergyInJoules) {
+	final float lookupSpecificHeatInJoules(float temperatureInKelvin) {
 		const float specificHeatInKiloJoulesPerKilogramPerKelvin = lookupInterpolator.lookupAndInterpolate(steamTemperatureInKelvin, indexOfValue, queryIndex);
 		const float specificHeatInJoulesPerKilogramPerKelvin = specificHeatInKiloJoulesPerKilogramPerKelvin * 1000.0f;
+		return specificHeatInJoulesPerKilogramPerKelvin;
+	}
+
+	final float calcDeltaTemperature(float steamTemperatureInKelvin, float massInKg, float deltaEnergyInJoules) {
+		const float specificHeatInJoulesPerKilogramPerKelvin = lookupSpecificHeatInJoules(steamTemperatureInKelvin);
 		return deltaEnergyInJoules / (specificHeatInJoulesPerKilogramPerKelvin*massInKg); // see http://hyperphysics.phy-astr.gsu.edu/hbase/thermo/spht.html
 	}
 
