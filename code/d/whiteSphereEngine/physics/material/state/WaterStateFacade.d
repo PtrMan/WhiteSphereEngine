@@ -38,7 +38,7 @@ class WaterStateFacade {
 		out double deltaFluidMassInKg,
 		out double deltaSteamMassInKg,
 		out float deltaEnergyInJoules,
-		out WaterStateChangeForFluidSteamEnumStateChange evaporationCondensationState
+		out WaterStateChangeForFluidSteam.EnumStateChange evaporationCondensationState
 	) {
 		waterStateChangeForFluidSteam.calcEvaporationOfFluid(parameters, deltaFluidMassInKg, deltaSteamMassInKg, deltaEnergyInJoules, evaporationCondensationState);
 	}
