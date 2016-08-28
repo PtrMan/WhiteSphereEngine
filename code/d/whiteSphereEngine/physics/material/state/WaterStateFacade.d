@@ -1,4 +1,4 @@
-module whiteSphereEngine.physics.material.WaterStateFacade;
+module whiteSphereEngine.physics.material.state.WaterStateFacade;
 
 import whiteSphereEngine.physics.material.thermodynamics.WaterStateChangeForFluidSteam;
 import whiteSphereEngine.physics.material.SpecificHeatLookup;
