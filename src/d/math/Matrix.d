@@ -20,6 +20,24 @@ template Matrix(DataType, uint width, uint height) if (width > 1 && height > 1) 
 		public final DataType opIndex(size_t row, size_t column) {
 			return data.data[row*width + column];
 		}
+
+		final DataType opIndexOpAssign(string op)(DataType rhs, size_t row, size_t column) {
+			static if (op == "+") {
+				return data.data[row*width + column] += rhs;
+			}
+			else static if (op == "-") {
+				return data.data[row*width + column] -= rhs;
+			}
+			else static if (op == "*") {
+				return data.data[row*width + column] *= rhs;
+			}
+			else static if (op == "/") {
+				return data.data[row*width + column] /= rhs;
+			}
+			else {
+				static assert(0, "Operator "~op~" not implemented");
+			}
+		}
 		
 		final public @property Type* ptr() {
 			return data.ptr;
