@@ -1,28 +1,37 @@
 module whiteSphereEngine.control.RocketTrajectorySolver;
 
-import math.NumericSpatialVectors;
-
 import std.math : sqrt;
+
+import math.NumericSpatialVectors;
 
 /** \brief Solver for controlling the rocket to hit a moving target
  *
- * This solver implements the algorithm described on stackexchange gamedev with the title "Implementing a homing missile" http://gamedev.stackexchange.com/questions/52988/implementing-a-homing-missile
- * (see there for a better description)
+ * This solver is inspired by the algorithm described on stackexchange gamedev with the title 
+ * "Implementing a homing missile" http://gamedev.stackexchange.com/questions/52988/implementing-a-homing-missile
  */
 void solve(VectorType)(VectorType rocketPosition, VectorType rocketVelocity, VectorType targetPosition, VectorType targetVelocity, double acceleration, ref VectorType accelerationDirection) {
 	alias typeof(rocketPosition.x) ComponentType;
 
-	VectorType vs = targetVelocity - rocketVelocity;
-	VectorType normalizedTarget = (targetPosition - rocketPosition).normalized;
+	VectorType localPosition = targetPosition - rocketPosition;
+	VectorType localVelocity = targetVelocity - rocketVelocity;
 
-	ComponentType vc = vs.scale(cast(ComponentType)-1.0).dot(normalizedTarget);
+	ComponentType distance = localPosition.magnitude;
 
-	ComponentType distance = (rocketPosition - targetPosition).magnitude;
+	// normalize the difference to the target to get the direction where we have to go
+	VectorType directionToTarget = localPosition.normalized;
 
-	// estimate time to arival
-	ComponentType eta = -vc / cast(ComponentType)acceleration + cast(ComponentType)sqrt((vc*vc) / (cast(ComponentType)acceleration*cast(ComponentType)acceleration) + (cast(ComponentType)2.0*distance)/cast(ComponentType)acceleration);
+	// calculate how fast we are moving to the target with the component of the velocity to the target
+	ComponentType directionToTargetDotVelocity;
+	ComponentType scalarClosingSpeed = directionToTargetDotVelocity = directionToTarget.scale(-1.0f).dot(localVelocity);
 
-	VectorType laterTargetPosition = targetPosition + targetVelocity.scale(eta);
+	// estimate time to arival if we accelerate just in the direction of the component
+	ComponentType eta = -scalarClosingSpeed / cast(ComponentType)acceleration + cast(ComponentType)sqrt((scalarClosingSpeed*scalarClosingSpeed) / (cast(ComponentType)acceleration*cast(ComponentType)acceleration) + (cast(ComponentType)2.0*distance)/cast(ComponentType)acceleration);
 
-	accelerationDirection = (laterTargetPosition - rocketPosition).normalized;
+	// calculate the extrapolated target 
+	VectorType extrapolatedLocalTargetPosition = localPosition + localVelocity.scale(eta);
+
+	VectorType extrapolatedLocalPositionWithoutAcceleration = localVelocity.scale(eta);
+
+	// the direction of thrust is to the extrapolated position to close the gap
+	accelerationDirection = extrapolatedLocalTargetPosition.normalized;
 }
