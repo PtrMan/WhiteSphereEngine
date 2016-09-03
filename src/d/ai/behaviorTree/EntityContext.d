@@ -14,3 +14,9 @@ abstract class EntityContext {
 	
 	private string projectedType;
 }
+
+import whiteSphereEngine.common.Blackboard;
+
+abstract class EntityContextWithBlackboard : EntityContext {
+	Blackboard blackboard = new Blackboard;
+}
