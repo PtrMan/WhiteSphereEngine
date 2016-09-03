@@ -193,7 +193,9 @@ template SpatialVector(uint Size, Type, bool Scalable = true) {
             }
         }
 
-        
+        static ThisType make(Type[Size] parameter ...) {
+        	return new ThisType(parameter);
+        }
 
 
         final SpatialVector!(Size, Type, Scalable) clone() {
@@ -231,6 +233,14 @@ template SpatialVectorStruct(uint Size, Type, bool Scalable = true) {
 
             foreach( i; 0..Size ) {
                 result[i] = this[i];
+            }
+            return result;
+        }
+
+        static ThisType make(Type[Size] parameter ...) {
+        	ThisType result;
+            foreach( size_t i; 0..Size ) {
+                result[i] = parameter[i];
             }
             return result;
         }
