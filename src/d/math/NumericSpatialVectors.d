@@ -67,7 +67,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
     final typeof(this) opOpAssign(string op)(typeof(this) rhs) {
         static if (op == "+") {
         	static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]+=rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/4 ) {
+        		foreach( i; 0..this.vectorArray.length ) {
         			this.vectorArray[i]+=rhs.vectorArray[i];
         		}
         	}
@@ -79,7 +79,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
         }
         else static if (op == "-") {
             static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]-=rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/4 ) {
+        		foreach( i; 0..this.vectorArray.length ) {
         			this.vectorArray[i]-=rhs.vectorArray[i];
         		}
         	}
@@ -104,7 +104,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
 
         static if (op == "+") {
         	static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]+rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/4 ) {
+        		foreach( i; 0..this.vectorArray.length ) {
         			result.vectorArray[i] = this.vectorArray[i]+rhs.vectorArray[i];
         		}
         	}
@@ -118,7 +118,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
         }
         else static if (op == "-") {
             static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]-rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/4 ) {
+        		foreach( i; 0..this.vectorArray.length ) {
         			result.vectorArray[i] = this.vectorArray[i]-rhs.vectorArray[i];
         		}
         	}
