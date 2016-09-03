@@ -293,8 +293,9 @@ unittest {
     }
 }
 
-SpatialVector!(Size, Type) componentDivision(uint Size, Type)(SpatialVector!(Size, Type) vector, SpatialVector!(Size, Type) divisorVector) {
-	return new SpatialVector!(Size, Type)(vector.x / divisorVector.x, vector.y / divisorVector.y, vector.z / divisorVector.z);
+// TODO< generalize to more and put it into the mixin to optimize >
+SpatialVector!(3, Type) componentDivision(Type)(SpatialVector!(3, Type) vector, SpatialVector!(3, Type) divisorVector) {
+	return new SpatialVector!(3, Type)(vector.x / divisorVector.x, vector.y / divisorVector.y, vector.z / divisorVector.z);
 }
 
 
@@ -315,7 +316,7 @@ Type magnitude(Type, uint Size, bool Scalable)(SpatialVectorStruct!(Size, Type, 
     return cast(Type)sqrt(vector.magnitudeSquared());
 }
 
-// TODO< implement for general case >
+
 
 Type magnitudeSquared(Type)(SpatialVector!(Size, Type, Scalable) vector) {
 	return dot(vector, vector);
@@ -338,20 +339,10 @@ SpatialVectorStruct!(Size, Type) normalized(uint Size, Type)(SpatialVectorStruct
 Type dot(uint Size, Type, bool Scalable)(SpatialVector!(Size, Type, Scalable) a, SpatialVector!(Size, Type, Scalable) b) {
     Type result = cast(Type)0;
 
-    // NOTE< compiler is as of v2.063 too stupid to optimize this
-    /*foreach( Index; 0..2 )
-    {
-        result = result + a.data[Index]*Other.data[Index];
-    }*/
-
-    result = result + a.data[0]*b.data[0];
-    result = result + a.data[1]*b.data[1];
-
-    static if( Size >= 3 ) {
-        result = result + a.data[2]*b.data[2];
+    // NOTE< dmd compiler is as of v2.063 was too stupid to optimize this, doesn't matter much because ldc should produce better code >
+    foreach( index; 0..Size ) {
+        result = result + a[index]*b[index];
     }
-
-    // TODO< size bigger than 3
 
     return result;
 }
@@ -359,22 +350,45 @@ Type dot(uint Size, Type, bool Scalable)(SpatialVector!(Size, Type, Scalable) a,
 Type dot(uint Size, Type, bool Scalable)(SpatialVectorStruct!(Size, Type, Scalable) a, SpatialVectorStruct!(Size, Type, Scalable) b) {
     Type result = cast(Type)0;
 
-    // NOTE< compiler is as of v2.063 too stupid to optimize this
-    /*foreach( Index; 0..2 )
-    {
-        result = result + a.data[Index]*Other.data[Index];
-    }*/
-
-    result = result + a.data[0]*b.data[0];
-    result = result + a.data[1]*b.data[1];
-
-    static if( Size >= 3 ) {
-        result = result + a.data[2]*b.data[2];
+    // NOTE< dmd compiler is as of v2.063 was too stupid to optimize this, doesn't matter much because ldc should produce better code >
+    foreach( index; 0..Size ) {
+        result = result + a[index]*b[index];
     }
 
-    // TODO< size bigger than 3
-
     return result;
+}
+
+unittest {
+	alias SpatialVector!(4, float) VectorType;
+
+	VectorType vecA, vecB;
+    vecA = new VectorType();
+    vecB = new VectorType();
+    vecA[0] = 1.0f;
+    vecB[0] = 2.0f;
+    vecA[1] = 2.0f;
+    vecB[1] = 4.0f;
+    vecA[2] = 4.0f;
+    vecB[2] = 8.0f;
+    vecA[3] = 8.0f;
+    vecB[3] = 16.0f;
+
+    assert( dot(vecA, vecB) == 170.0f);
+}
+
+unittest {
+	alias SpatialVectorStruct!(4, float) VectorType;
+
+	VectorType vecA, vecB;
+    vecA[0] = 1.0f;
+    vecB[0] = 2.0f;
+    vecA[1] = 2.0f;
+    vecB[1] = 4.0f;
+    vecA[2] = 4.0f;
+    vecB[2] = 8.0f;
+    vecA[3] = 8.0f;
+    vecB[3] = 16.0f;
+    assert( dot(vecA, vecB) == 170.0f);
 }
 
 SpatialVector!(3, Type, Scalable) crossProduct(Type, Scalable)(SpatialVector!(3, Type, Scalable) a, SpatialVector!(3, Type, Scalable) b) {
