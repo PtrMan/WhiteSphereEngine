@@ -27,17 +27,10 @@ class Sequence : Task {
 			}
 			
 			Task.EnumReturn calleeReturn = children[currentIndex].run(context, errorMessage, errorDepth);
-			
-			if( calleeReturn == Task.EnumReturn.SUCCESS ) {
-				// was already commented, dunno why
-				//return Task.EnumReturn.SUCCESS;
-			}
-			else if( calleeReturn == Task.EnumReturn.FAILURE ) {
-				// uncommented because its old code, and we want to still have the information errorDepth++;
-				return Task.EnumReturn.FAILURE;
-			}
-			else {// Task.EnumReturn.RUNNING
-				return Task.EnumReturn.RUNNING;
+			final switch(calleeReturn) with(Task.EnumReturn) {
+				case SUCCESS: break;
+				case FAILURE: return FAILURE;
+				case RUNNING: return RUNNING;
 			}
 			
 			currentIndex++;
@@ -53,9 +46,7 @@ class Sequence : Task {
 	}
 	
 	final Task clone() {
-		Sequence clonedSequence;
-		
-		clonedSequence = new Sequence();
+		Sequence clonedSequence = new Sequence;
 		clonedSequence.currentIndex = currentIndex;
 		clonedSequence.privateInfinite = privateInfinite;
 		
