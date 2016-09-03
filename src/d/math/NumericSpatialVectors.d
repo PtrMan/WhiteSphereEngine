@@ -25,7 +25,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
 	// accessors for value access
 	final Type opIndexAssign(Type value, size_t index) {
 		static if( ISSIMDARRAY ) {
-			return vectorArray[index/ALIGNMENTSIZE].array[index%ALIGNMENTSIZE] = value;
+			return vectorArray[index/4].array[index%4] = value;
 		}
 		else {
 			return array[index] = value;
@@ -34,7 +34,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
 		
 	final Type opIndex(size_t index) const {
 		static if( ISSIMDARRAY ) {
-			return vectorArray[index/ALIGNMENTSIZE].array[index%ALIGNMENTSIZE];
+			return vectorArray[index/4].array[index%4];
 		}
 		else {
 			return array[index];
@@ -67,7 +67,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
     final typeof(this) opOpAssign(string op)(typeof(this) rhs) {
         static if (op == "+") {
         	static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]+=rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/ALIGNMENTSIZE ) {
+        		foreach( i; 0..Size/4 ) {
         			this.vectorArray[i]+=rhs.vectorArray[i];
         		}
         	}
@@ -79,7 +79,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
         }
         else static if (op == "-") {
             static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]-=rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/ALIGNMENTSIZE ) {
+        		foreach( i; 0..Size/4 ) {
         			this.vectorArray[i]-=rhs.vectorArray[i];
         		}
         	}
@@ -104,7 +104,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
 
         static if (op == "+") {
         	static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]+rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/ALIGNMENTSIZE ) {
+        		foreach( i; 0..Size/4 ) {
         			result.vectorArray[i] = this.vectorArray[i]+rhs.vectorArray[i];
         		}
         	}
@@ -118,7 +118,7 @@ private mixin template SpatialVectorMixin(bool isClass) {
         }
         else static if (op == "-") {
             static if( ISSIMDARRAY && __traits(compiles, this.vectorArray[0]-rhs.vectorArray[0]) ) {
-        		foreach( i; 0..Size/ALIGNMENTSIZE ) {
+        		foreach( i; 0..Size/4 ) {
         			result.vectorArray[i] = this.vectorArray[i]-rhs.vectorArray[i];
         		}
         	}
@@ -317,11 +317,11 @@ Type magnitude(Type, uint Size, bool Scalable)(SpatialVectorStruct!(Size, Type, 
 
 // TODO< implement for general case >
 
-Type magnitudeSquared(Type)(SpatialVector!(3, Type) vector) {
-	return vector.x*vector.x + vector.y*vector.y + vector.z*vector.z;
+Type magnitudeSquared(Type)(SpatialVector!(Size, Type, Scalable) vector) {
+	return dot(vector, vector);
 }
-Type magnitudeSquared(Type)(SpatialVectorStruct!(3, Type) vector) {
-    return vector.x*vector.x + vector.y*vector.y + vector.z*vector.z;
+Type magnitudeSquared(Type)(SpatialVectorStruct!(Size, Type, Scalable) vector) {
+    return dot(vector, vector);
 }
 
 
