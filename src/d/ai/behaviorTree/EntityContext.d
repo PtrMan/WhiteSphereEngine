@@ -18,5 +18,9 @@ abstract class EntityContext {
 import whiteSphereEngine.common.Blackboard;
 
 abstract class EntityContextWithBlackboard : EntityContext {
+	protected final this(string type) {
+		super(type);
+	}
+
 	Blackboard blackboard = new Blackboard;
 }

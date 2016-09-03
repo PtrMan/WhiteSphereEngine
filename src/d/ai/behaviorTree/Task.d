@@ -7,19 +7,17 @@ import ai.behaviorTree.EntityContext;
  */
 interface Task {
 	enum EnumReturn {
-		FINISHED,
-		ERROR, // task ended with error, see ErrorMessage
+		SUCCESS,
+		FAILURE,
 		RUNNING, // should be called the next tick again
 	}
 	
 	/** \brief is called from outer code and it executes the task
 	 *
 	 * \param Context the Context of the entity
-	 * \param ErrorMessage if an error happened this will contain the error message
-	 * \param ErrorDepth if an error happend this will give the depth in which the error happend
 	 * \return Status code of the execution
 	 */
-	EnumReturn run(EntityContext context, ref string errorMessage, ref uint errorDepth);
+	EnumReturn run(EntityContext context);
 	
 	/** \brief resets the variables to its defaults
 	 *
