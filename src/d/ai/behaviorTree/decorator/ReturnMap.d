@@ -6,14 +6,14 @@ class ReturnMap : Task {
 	Task children;
 
 	Task.EnumReturn mapSuccess;
-	Task.EnumReturn mapError;
+	Task.EnumReturn mapFailure;
 	Task.EnumReturn mapRunning;
 
-	Task.EnumReturn run(EntityContext context, ref string errorMessage, ref uint errorDepth) {
+	Task.EnumReturn run(EntityContext context) {
 		Task.EnumReturn calleeReturn = children.run(context, errorMessage, errorDepth);
 		final switch( calleeReturn ) with (Task.EnumReturn) {
 			case SUCCESS: return mapSuccess;
-			case ERROR: return mapError;
+			case FAILURE: return mapFailure;
 			case RUNNING: return mapRunning;
 		}
 	}
@@ -25,7 +25,7 @@ class ReturnMap : Task {
 		ReturnMap clone = new ReturnMap;
 		clone.children = children.clone();
 		clone.mapSuccess = mapSuccess;
-		clone.mapError = mapError;
+		clone.mapFailure = mapFailure;
 		clone.mapRunning = mapRunning;
 		return clone;
 	}
@@ -36,7 +36,7 @@ class ReturnMap : Task {
 		result.children = children;
 		with (Task.EnumReturn) {
 			result.mapSuccess = SUCCESS;
-			result.mapError = SUCCESS;
+			result.mapFailure = SUCCESS;
 			result.mapRunning = RUNNING;
 		}
 		return result;
@@ -47,8 +47,8 @@ class ReturnMap : Task {
 		ReturnMap result = new ReturnMap;
 		result.children = children;
 		with (Task.EnumReturn) {
-			result.mapSuccess = ERROR;
-			result.mapError = SUCCESS;
+			result.mapSuccess = FAILURE;
+			result.mapFailure = SUCCESS;
 			result.mapRunning = RUNNING;
 		}
 		return result;

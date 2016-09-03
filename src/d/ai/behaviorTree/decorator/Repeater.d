@@ -12,11 +12,11 @@ class Repeater : Task {
 	int remainingCounter = 0;
 	bool repeatUntilFail = false;
 
-	Task.EnumReturn run(EntityContext context, ref string errorMessage, ref uint errorDepth) {
+	Task.EnumReturn run(EntityContext context) {
 		Task.EnumReturn calleeReturn = children.run(context, errorMessage, errorDepth);
 
 		with( Task.EnumReturn ) {
-			if( calleeReturn == ERROR && repeatUntilFail ) {
+			if( calleeReturn == FAILURE && repeatUntilFail ) {
 				return Task.EnumReturn.SUCCESS;
 			}
 

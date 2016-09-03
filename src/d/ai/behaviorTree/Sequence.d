@@ -10,11 +10,11 @@ class Sequence : Task {
 		return privateInfinite = newInfinite;
 	}
 	
-	final Task.EnumReturn run(EntityContext context, ref string errorMessage, ref uint errorDepth) {
+	final Task.EnumReturn run(EntityContext context) {
 		if( children.length == 0 ) {
-			errorMessage = "this.Childrens does have a length of 0!";
-			errorDepth = 0;
-			return Task.EnumReturn.ERROR;
+			// uncommented because its old code, and we want to still have the information errorMessage = "this.Childrens does have a length of 0!";
+			// uncommented because its old code, and we want to still have the information errorDepth = 0;
+			return Task.EnumReturn.FAILURE;
 		}
 		
 		for(;;) {
@@ -22,19 +22,19 @@ class Sequence : Task {
 				currentIndex = 0;
 				
 				if( !privateInfinite ) {
-					return Task.EnumReturn.FINISHED;
+					return Task.EnumReturn.SUCCESS;
 				}
 			}
 			
 			Task.EnumReturn calleeReturn = children[currentIndex].run(context, errorMessage, errorDepth);
 			
-			if( calleeReturn == Task.EnumReturn.FINISHED ) {
+			if( calleeReturn == Task.EnumReturn.SUCCESS ) {
 				// was already commented, dunno why
-				//return Task.EnumReturn.FINISHED;
+				//return Task.EnumReturn.SUCCESS;
 			}
-			else if( calleeReturn == Task.EnumReturn.ERROR ) {
-				errorDepth++;
-				return Task.EnumReturn.ERROR;
+			else if( calleeReturn == Task.EnumReturn.FAILURE ) {
+				// uncommented because its old code, and we want to still have the information errorDepth++;
+				return Task.EnumReturn.FAILURE;
 			}
 			else {// Task.EnumReturn.RUNNING
 				return Task.EnumReturn.RUNNING;
