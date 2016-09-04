@@ -246,6 +246,11 @@ body {
 
 		bool computed = false;
 		if( numer0 < denom0 && numer1 < denom1 ) {
+			// GUESS< PtrMan thinks that ey0 and ey1 are the products, not sure, could be a typo in the pdf >
+			const Real
+				ey0 = e0*y0,
+				ey1 = e1*y1;
+
 			const Real
 				xde0 = ey0/denom0,
 				xde1 = ey1/denom1,
