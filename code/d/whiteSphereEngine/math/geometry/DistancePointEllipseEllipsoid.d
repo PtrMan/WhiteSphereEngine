@@ -219,28 +219,53 @@ body {
 					distance = 0;
 				}
 			}
-			else {
-				x0 = y0;
-				x1 = y1;
-				x2 = y2;
-				distance = 0;
+			else {  // y0 == 0
+				x0 = 0;
+				distance = distancePointEllipse(e1, e2, y1, y2, x1, x2);
 			}
 		}
-		else { // y0 == 0
-			x0 = 0;
-			distance = distancePointEllipse(e1, e2, y1, y2, x1, x2);
+		else { // y1 == 0
+			if( y0 > 0 ) {
+				x1 = 0;
+				distance = distancePointEllipse(e0, e2, y0, y2, x0, x2);
+			}
+			else { // y0 == 0
+				x0 = 0;
+				x1 = 0;
+				x2 = e2;
+				distance = abs(y2-e2);
+			}
 		}
 	}
-	else { // y1 == 0
-		if( y0 > 0 ) {
-			x1 = 0;
-			distance = distancePointEllipse(e0, e2, y0, y2, x0, x2);
+	else { // y2 == 0
+		const Real
+			denom0 = e0*e0 - e2*e2,
+			denom1 = e1*e1 - e2*e2,
+			numer0 = e0*y0,
+			numer1 = e1*y1;
+
+		bool computed = false;
+		if( numer0 < denom0 && numer1 < denom1 ) {
+			const Real
+				xde0 = ey0/denom0,
+				xde1 = ey1/denom1,
+				xde0sqr = sqr(xde0),
+				xde1sqr = sqr(xde1),
+				discr = 1 - xde0sqr - xde1sqr;
+
+			if( discr > 0 ) {
+				x0 = e0*xde0;
+				x1 = e1*xde1;
+				x2 = e2*sqrt(discr);
+				distance = sqrt(sqr(x0-y0)+sqr(x1-y1)+sqr(x2));
+				computed = true;
+			}
 		}
-		else { // y0 == 0
-			x0 = 0;
-			x1 = 0;
-			x2 = e2;
-			distance = abs(y2-e2);
+
+		if( !computed ) {
+			x2 = 0;
+			// NOTE< other variables are missing for this case, fix this! >
+			distance = distancePointEllipse(e0, e1, y0, y1, x0, x1);
 		}
 	}
 	return distance;
