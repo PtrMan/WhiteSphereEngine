@@ -89,3 +89,35 @@ comets/asteroids
 pics
 http://www.esa.int/spaceinimages/Images/2016
 
+mirrors for observation and laser attack/focus
+---
+
+https://en.wikipedia.org/wiki/Liquid_mirror_space_telescope
+can be extremly large
+
+
+bases
+---
+
+moon
+----
+
+https://www.youtube.com/watch?v=2zaIy1TARPE
+
+trajectory
+---
+
+interplanetary superhighway
+----
+
+http://everything2.com/title/interplanetary+superhighway
+
+brachistochrone transfer
+----
+
+http://www.projectrho.com/public_html/rocket/torchships.php#id--Brachistochrone_Equations
+
+hohmann transfer
+----
+
+http://ocw.mit.edu/courses/aeronautics-and-astronautics/16-07-dynamics-fall-2009/lecture-notes/MIT16_07F09_Lec17.pdf

@@ -38,6 +38,10 @@ AI / physics (just together because we have the todo points together for now)
 - e 22.08.2016 d - : refactor raycasting code from AI fuzzy logic test into physics engine
 
 - e 24.08.2016 d - : behavior tree : add more basic nodes, for for example switching and checking a condition
+                     http://www.gamasutra.com/blogs/ChrisSimpson/20140717/221339/Behavior_trees_for_AI_How_they_work.php
+
+                     implement more decorators
+                     http://aigamedev.com/open/article/decorator/
 
 GUI
 ---
@@ -65,6 +69,27 @@ atronomical
 - e 22.08.2016 d - : use Motion.d in this codebase to calculate celestial position and velocity
                      (half done, position is calculated with it already, but not velocity)
 
+planets
+----
+
+- e 05.09.2016 d - : planet material system
+                     * ice/rocky/iron/silicon/etc rich planets
+                     all modelled realistically  
+                     Mass-Radius Relationships for solid exoplanets:
+                     http://arxiv.org/abs/0707.2895
+
+                     * heat from sun(s)
+                     * heat melts/freeezes surface
+                     * material system has influence to magnetic field (see magnetic system)
+-e 05.09.2016 d - : weather system based on cellular automata
+                    main properties
+                    * heat
+                    * pressure
+                    * wind velocity
+                    (have already a prototype of the CA rule/framework in toIntegrate folder)
+
+
+
 interaction
 ---
 
@@ -85,6 +110,18 @@ interaction
 - e 24.08.2016 d - : (related to crafting system) integrate into the physical interaction system heat transfer, and state of matter
 
 
+- e 27.08.2016 d - : implement fluid dynamics https://www.khanacademy.org/science/physics/fluids/fluid-dynamics/v/fluids-part-7
+
+- e 28.08.2016 d - : implement monte carlo integrator to calculate parameters of section of fluid
+                     http://csg.sph.umich.edu/abecasis/class/2006/615.22.pdf
+
+                     we will use this to calculate the parameters of the cut plane of a fluid that the fluid has roughtly the target volume
+
+
+signal
+----
+
+- e 30.08.2016 d - : implement signal/event system for sending/receiving light and other types of radiation
 
 
 DONE

@@ -41,3 +41,23 @@ tektites,
 gas dwarf
 
 
+
+wormholes
+---
+
+normal (known visited) point to point wormhole connection
+
+https://youtu.be/LNwhe_ztaGw?t=35m19s
+	* random wormhole, open destination position is not predetermined
+
+
+
+---
+structures
+
+kugelblitz
+
+dyson swarm
+
+matroska brain
+
