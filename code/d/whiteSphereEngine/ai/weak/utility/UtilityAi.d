@@ -17,27 +17,11 @@ float pow(float base, uint exponent) {
 }
 
 
-private void pow2(float* result, float* arr, size_t length) {
+private void pow(uint Power)(float* result, float* arr, size_t length) {
   align(64) float *arrAligned = arr;
   
   foreach( i; 0..length ) {
-    result[i] = pow(arrAligned[i], 2);
-  }
-}
-
-private void pow3(float* result, float* arr, size_t length) {
-  align(64) float *arrAligned = arr;
-  
-  foreach( i; 0..length ) {
-    result[i] = pow(arrAligned[i], 3);
-  }
-}
-
-private void pow4(float* result, float* arr, size_t length) {
-  align(64) float *arrAligned = arr;
-  
-  foreach( i; 0..length ) {
-    result[i] = pow(arrAligned[i], 4);
+    result[i] = pow(arrAligned[i], Power);
   }
 }
 
@@ -76,10 +60,12 @@ private void pow075(float* result, float* arr, size_t length) {
 // described in https://alastaira.wordpress.com/2013/01/25/at-a-glance-functions-for-modelling-utility-based-game-ai/
 
 enum EnumUtilityFunction {
-	POW2,
+	POW2 = 0, // must be 0 because we use it as index
 	POW3,
 	POW4,
 
+	POW025,
+	POW05,
 	POW075,
 }
 
@@ -100,36 +86,32 @@ struct UtilityDescriptor {
 
 struct UtilityAi {
 	final void utility(UtilityDescriptor[] utilityDescriptors, float[] x) {
-		size_t numberOfUsedElementsInArrayPow2 = 0;
-		size_t numberOfUsedElementsInArrayPow3 = 0;
-		size_t numberOfUsedElementsInArrayPow4 = 0;
-		size_t numberOfUsedElementsInArrayPow075 = 0;
+		alias void function(float *arguments, float *result, size_t length) EvaluationFunctionType;
+
+		static const EvaluationFunctionType[] evaluationFunctions = [
+			&pow!2,
+			&pow!3,
+			&pow!4,
+			&pow025,
+			&pow05,
+			&pow075,
+		];
+
+
+		size_t[evaluationFunctions.length] arrayOfNumberOfUsedElementsInArray;
+
+		foreach( i; 0..arrayOfNumberOfUsedElementsInArray.length ) {
+			arrayOfNumberOfUsedElementsInArray[i] = 0;
+		}
 
 		// first we check in the debug version if we have enough space
-		version(debug) {
+		/*version(debug) {
 			foreach( iterationDescriptorI, iterationUtilityDescriptor; utilityDescriptors ) {
 				foreach( iterationUtilityAction; iterationUtilityDescriptor.utilityActions ) {
-					final switch(iterationUtilityAction.function_) with (EnumUtilityFunction) {
-						case POW2:
-						numberOfUsedElementsInArrayPow2++;
-						break;
-
-						case POW3:
-						numberOfUsedElementsInArrayPow3++;
-						break;
-
-						case POW4:
-						numberOfUsedElementsInArrayPow4++;
-						break;
-
-
-						case POW075:
-						numberOfUsedElementsInArrayPow075++;
-						break;
-					}
+					arrayOfNumberOfUsedElementsInArray[cast(size_t)iterationUtilityAction.function_]++;
 				}
 			}	
-		}
+		}*/
 
 		// TODO
 		//assert( numberOfUsedElementsInArrayPow2 <= TODO< number of allocated elements in pow2 );
@@ -138,58 +120,37 @@ struct UtilityAi {
 
 		//assert( numberOfUsedElementsInArrayPow075 <= TODO< number of allocated elements in pow075 );
 
-
-		numberOfUsedElementsInArrayPow2 = 0;
-		numberOfUsedElementsInArrayPow3 = 0;
-		numberOfUsedElementsInArrayPow4 = 0;
-
-		numberOfUsedElementsInArrayPow075 = 0;
+		foreach( i; 0..arrayOfNumberOfUsedElementsInArray.length ) {
+			arrayOfNumberOfUsedElementsInArray[i] = 0;
+		}
 
 		// we now put the arguments into the SOA for the vectorized code from all UtilityDescriptors
 		foreach( iterationDescriptorI, iterationUtilityDescriptor; utilityDescriptors ) {
 			foreach( iterationUtilityAction; iterationUtilityDescriptor.utilityActions ) {
-				final switch(iterationUtilityAction.function_) with (EnumUtilityFunction) {
-					case POW2:
-					arrayPow2Arguments[numberOfUsedElementsInArrayPow2] = x[iterationDescriptorI];
-					numberOfUsedElementsInArrayPow2++;
-					break;
-
-					case POW3:
-					arrayPow3Arguments[numberOfUsedElementsInArrayPow3] = x[iterationDescriptorI];
-					numberOfUsedElementsInArrayPow3++;
-					break;
-
-					case POW4:
-					arrayPow4Arguments[numberOfUsedElementsInArrayPow4] = x[iterationDescriptorI];
-					numberOfUsedElementsInArrayPow4++;
-					break;
-
-
-					case POW075:
-					arrayPow075Arguments[numberOfUsedElementsInArrayPow075] = x[iterationDescriptorI];
-					numberOfUsedElementsInArrayPow075++;
-					break;
-
-				}
+				// get the # of used elements in the array for the arguments for the function
+				size_t numberOfUsedElementsInArray = arrayOfNumberOfUsedElementsInArray[cast(size_t)iterationUtilityAction.function_];
+				// add the argument
+				arrayArguments[cast(size_t)iterationUtilityAction.function_][numberOfUsedElementsInArray] = x[iterationDescriptorI];
+				// increment the counter
+				arrayOfNumberOfUsedElementsInArray[cast(size_t)iterationUtilityAction.function_]++;
 			}
 		}
 
 		// calculate all SOA's
-		pow2(arrayPow2Arguments, arrayPow2Results, numberOfUsedElementsInArrayPow2);
-		pow3(arrayPow3Arguments, arrayPow3Results, numberOfUsedElementsInArrayPow3);
-		pow4(arrayPow4Arguments, arrayPow4Results, numberOfUsedElementsInArrayPow4);
-
-		pow075(arrayPow075Arguments, arrayPow075Results, numberOfUsedElementsInArrayPow075);
+		foreach( i; 0..evaluationFunctions.length ) {
+			evaluationFunctions[i](arrayArguments[i], arrayResults[i], arrayOfNumberOfUsedElementsInArray[i]);
+		}
 
 		// we actually have to unpack all SOA's into the coresponding UtilityDescriptor, we skip this, instead
 		// we now decide the highest utility function
 
 		// indices at the current values we point at in the results
-		size_t currentIndexInArrayPow2 = 0;
-		size_t currentIndexInArrayPow3 = 0;
-		size_t currentIndexInArrayPow4 = 0;
+		size_t[evaluationFunctions.length] arrayOfCurrentIndexInArray;
 
-		size_t currentIndexInArrayPow075 = 0;
+		foreach( i; 0..arrayOfNumberOfUsedElementsInArray.length ) {
+			arrayOfCurrentIndexInArray[i] = 0;
+		}
+
 
 		foreach( iterationDescriptorI, iterationUtilityDescriptor; utilityDescriptors ) {
 			iterationUtilityDescriptor.actionWithHighestUtility = -1;
@@ -200,29 +161,7 @@ struct UtilityAi {
 			foreach( iterationUtilityActionIndex, ref iterationUtilityAction; iterationUtilityDescriptor.utilityActions ) {
 				float currentUtility;
 
-				final switch(iterationUtilityAction.function_) with (EnumUtilityFunction) {
-					case POW2:
-					currentUtility = arrayPow2Results[currentIndexInArrayPow2];
-					currentIndexInArrayPow2++;
-					break;
-
-					case POW3:
-					currentUtility = arrayPow3Results[currentIndexInArrayPow3];
-					currentIndexInArrayPow3++;
-					break;
-
-					case POW4:
-					currentUtility = arrayPow4Results[currentIndexInArrayPow4];
-					currentIndexInArrayPow4++;
-					break;
-
-
-					case POW075:
-					currentUtility = arrayPow075Results[currentIndexInArrayPow075];
-					currentIndexInArrayPow075++;
-					break;
-
-				}
+				currentUtility = arrayResults[cast(size_t)iterationUtilityAction.function_][arrayOfCurrentIndexInArray[cast(size_t)iterationUtilityAction.function_]++];
 
 				currentUtility *= iterationUtilityAction.multiplier;
 
@@ -236,18 +175,7 @@ struct UtilityAi {
 	}
 
 	private {
-		float *arrayPow2Arguments; // aligned to 64 byte boundary
-		float *arrayPow2Results; // aligned to 64 byte boundary
-
-		float *arrayPow3Arguments; // aligned to 64 byte boundary
-		float *arrayPow3Results; // aligned to 64 byte boundary
-
-		float *arrayPow4Arguments; // aligned to 64 byte boundary
-		float *arrayPow4Results; // aligned to 64 byte boundary
-
-
-		float *arrayPow075Arguments; // aligned to 64 byte boundary
-		float *arrayPow075Results; // aligned to 64 byte boundary
+		float *[] arrayArguments;
+		float *[] arrayResults;
 	}
 }
-
