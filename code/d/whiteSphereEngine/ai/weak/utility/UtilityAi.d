@@ -17,7 +17,28 @@ float pow(float base, uint exponent) {
 }
 
 
-private void pow(uint Power)(float* result, float* arr, size_t length) {
+private void conditionGreater(float* result, float* arr, float* parameterA, float* parameterB, size_t length) {
+  align(64) float *arrAligned = arr;
+  align(64) float *parameterAAligned = parameterA;
+  align(64) float *resultAligned = result;
+  
+  foreach( i; 0..length ) {
+    resultAligned[i] = cast(float)(arrAligned[i] > parameterAAligned[i]);
+  }
+}
+
+private void conditionSmaller(float* result, float* arr, float* parameterA, float* parameterB, size_t length) {
+  align(64) float *arrAligned = arr;
+  align(64) float *parameterAAligned = parameterA;
+  align(64) float *resultAligned = result;
+  
+  foreach( i; 0..length ) {
+    resultAligned[i] = cast(float)(arrAligned[i] < parameterAAligned[i]);
+  }
+}
+
+
+private void pow(uint Power)(float* result, float* arr, float* parameterA, float* parameterB, size_t length) {
   align(64) float *arrAligned = arr;
   
   foreach( i; 0..length ) {
@@ -28,7 +49,7 @@ private void pow(uint Power)(float* result, float* arr, size_t length) {
 import std.math : sqrt;
 
 // x^0.5 which is just sqrt
-private void pow05(float* result, float* arr, size_t length) {
+private void pow05(float* result, float* arr, float* parameterA, float* parameterB, size_t length) {
   align(64) float *arrAligned = arr;
   
   foreach( i; 0..length ) {
@@ -37,7 +58,7 @@ private void pow05(float* result, float* arr, size_t length) {
 }
 
 // x^0.25
-private void pow025(float* result, float* arr, size_t length) {
+private void pow025(float* result, float* arr, float* parameterA, float* parameterB, size_t length) {
   align(64) float *arrAligned = arr;
   
   foreach( i; 0..length ) {
@@ -46,7 +67,7 @@ private void pow025(float* result, float* arr, size_t length) {
 }
 
 // fast x^0.75
-private void pow075(float* result, float* arr, size_t length) {
+private void pow075(float* result, float* arr, float* parameterA, float* parameterB, size_t length) {
   align(64) float *arrAligned = arr;
   
   foreach( i; 0..length ) {
@@ -67,12 +88,17 @@ enum EnumUtilityFunction {
 	POW025,
 	POW05,
 	POW075,
+
+	CONDITIONSMALLER,
+	CONDITIONGREATER,
 }
 
  // TODO< with parameters for each curve of the action
 struct ActionDescriptor {
 	EnumUtilityFunction function_;
 	float multiplier = 1.0f; // gets applied after the function
+
+	float parameterA, parameterB;
 }
 
 struct UtilityDescriptor {
@@ -86,7 +112,7 @@ struct UtilityDescriptor {
 
 struct UtilityAi {
 	final void utility(UtilityDescriptor[] utilityDescriptors, float[] x) {
-		alias void function(float *arguments, float *result, size_t length) EvaluationFunctionType;
+		alias void function(float *arguments, float *result, float* parameterA, float* parameterB, size_t length) EvaluationFunctionType;
 
 		static const EvaluationFunctionType[] evaluationFunctions = [
 			&pow!2,
@@ -95,6 +121,8 @@ struct UtilityAi {
 			&pow025,
 			&pow05,
 			&pow075,
+			&conditionSmaller,
+			&conditionGreater,
 		];
 
 
@@ -131,6 +159,9 @@ struct UtilityAi {
 				size_t numberOfUsedElementsInArray = arrayOfNumberOfUsedElementsInArray[cast(size_t)iterationUtilityAction.function_];
 				// add the argument
 				arrayArguments[cast(size_t)iterationUtilityAction.function_][numberOfUsedElementsInArray] = x[iterationDescriptorI];
+				arrayParameterA[cast(size_t)iterationUtilityAction.function_][numberOfUsedElementsInArray] = iterationUtilityAction.parameterA;
+				arrayParameterB[cast(size_t)iterationUtilityAction.function_][numberOfUsedElementsInArray] = iterationUtilityAction.parameterB;
+				
 				// increment the counter
 				arrayOfNumberOfUsedElementsInArray[cast(size_t)iterationUtilityAction.function_]++;
 			}
@@ -138,7 +169,7 @@ struct UtilityAi {
 
 		// calculate all SOA's
 		foreach( i; 0..evaluationFunctions.length ) {
-			evaluationFunctions[i](arrayArguments[i], arrayResults[i], arrayOfNumberOfUsedElementsInArray[i]);
+			evaluationFunctions[i](arrayArguments[i], arrayResults[i], arrayParameterA[i], arrayParameterB[i], arrayOfNumberOfUsedElementsInArray[i]);
 		}
 
 		// we actually have to unpack all SOA's into the coresponding UtilityDescriptor, we skip this, instead
@@ -176,6 +207,8 @@ struct UtilityAi {
 
 	private {
 		float *[] arrayArguments;
+		float *[] arrayParameterA;
+		float *[] arrayParameterB;
 		float *[] arrayResults;
 	}
 }
