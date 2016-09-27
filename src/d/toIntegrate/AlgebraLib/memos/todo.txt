@@ -1,6 +1,0 @@
-
-// TODO
-// - inverse
-// - multiplication
-// - transposition
-
