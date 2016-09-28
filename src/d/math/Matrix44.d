@@ -1,6 +1,6 @@
 module math.Matrix44;
 
-import math.Matrix;
+import linopterixed.linear.Matrix;
 
 public Matrix!(NumericType, 4, 4) createIdentity(NumericType)() {
 	NumericType one = cast(NumericType)1.0;

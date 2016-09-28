@@ -7,7 +7,7 @@ import Exceptions;
 import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
 import graphics.vulkan.VulkanTypesAndEnums;
-import math.NumericSpatialVectors;
+import linopterixed.linear.Vector;
 
 
 // Facade for vulkan functionality qhich odesnt need the device

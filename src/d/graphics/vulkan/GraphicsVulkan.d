@@ -25,8 +25,8 @@ import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 import graphics;
 
 import math.Matrix44;
-import math.Matrix;
-import math.NumericSpatialVectors;
+import linopterixed.linear.Matrix;
+import linopterixed.linear.Vector;
 
 alias Matrix!(float, 4, 4) Matrix44Type;
 

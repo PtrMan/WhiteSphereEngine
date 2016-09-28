@@ -3,7 +3,7 @@ module graphics.ImmutableMeshComponent;
 import core.stdc.stdint;
 
 import graphics.AbstractMeshComponent;
-import math.NumericSpatialVectors;
+import linopterixed.linear.Vector;
 
 
 

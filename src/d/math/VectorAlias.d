@@ -1,9 +1,9 @@
 module math.VectorAlias;
 
-import math.NumericSpatialVectors;
+import linopterixed.linear.Vector;
 
-alias SpatialVector!(3, float) Vector3f;
-alias SpatialVector!(3, double) Vector3p; // p stands for precise
+alias SpatialVectorStruct!(3, float) Vector3f;
+alias SpatialVectorStruct!(3, double) Vector3p; // p stands for precise
 
-alias SpatialVector!(2, float) Vector2f;
+alias SpatialVectorStruct!(2, float) Vector2f;
 

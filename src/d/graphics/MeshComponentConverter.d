@@ -1,6 +1,6 @@
 module graphics.MeshComponentConverter;
 
-import math.NumericSpatialVectors;
+import linopterixed.linear.Vector;
 import graphics.ImmutableMeshComponent;
 
 ImmutableMeshComponent toImmutableMeshComponent(SpatialVector!(4, float)[] vectors) {

@@ -1,6 +1,6 @@
 module graphics.GraphicsObject;
 
-import math.NumericSpatialVectors;
+import linopterixed.linear.Vector;
 import math.VectorAlias;
 import graphics.AbstractDecoratedMesh;
 import graphics;
