@@ -552,7 +552,11 @@ class GraphicsVulkan {
 				assert(vertexBuffersToBind.length == offsets.length);
 				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr);
 				
-				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
+				float[16] mvpArray;
+				import math.ConvertMatrix;
+				mvpMatrix.translateToArray!(float, 4, 4)(mvpArray);
+
+				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
 				
 				if( currentDecoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
 					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBufferForRendering, cast(VkBuffer)currentDecoratedMeshToRender.decoration.vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);

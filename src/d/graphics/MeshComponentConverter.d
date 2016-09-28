@@ -8,7 +8,7 @@ ImmutableMeshComponent toImmutableMeshComponent(SpatialVector!(4, float)[] vecto
 	translatedVectors.length = vectors.length;
 	foreach( i; 0..translatedVectors.length ) {
 		foreach( j; 0..4 ) {
-			translatedVectors[j][i] = vectors[i].data[j];
+			translatedVectors[j][i] = vectors[i][j];
 		}
 	}
 	return ImmutableMeshComponent.makeFloat4(translatedVectors);
