@@ -27,6 +27,8 @@ import graphics;
 import math.Matrix44;
 import linopterixed.linear.Matrix;
 import linopterixed.linear.Vector;
+import linopterixed.linear.MatrixCommonOperations;
+import whiteSphereEngine.graphics.vulkan.Projection;
 
 alias Matrix!(float, 4, 4) Matrix44Type;
 
@@ -58,6 +60,8 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
+		Matrix44Type projectionMatrix = new Matrix44Type();
+
 		
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
@@ -78,6 +82,18 @@ class GraphicsVulkan {
 		TypesafeVkCommandBuffer setupCommandBuffer; // used for setup of images and such
 		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
 		
+
+		// calculate projection matrix
+		{
+			float near = 0.1f;
+			float far = 5000.0f;
+			float r = 1.0f;
+			float t = 1.0f;
+			projectionMatrix = .projectionMatrix!float(near, far, r, t);
+		}
+
+
+
 		
 		// just for testing in here
 		Mesh testMesh;
@@ -861,11 +877,13 @@ class GraphicsVulkan {
 				
 				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
 				
-				mvpMatrix = createIdentity!float();
-				
-				
+				Matrix44Type modelMatrix = createIdentity!float();
+
 				// a testloop to draw two times
 				foreach( iteration; 0..2) {
+					mvpMatrix = new Matrix44Type;
+					mul(modelMatrix, projectionMatrix, mvpMatrix);
+
 					refillCommandBufferForTransform(mvpMatrix);
 					
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
@@ -883,7 +901,7 @@ class GraphicsVulkan {
 					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
 				
 					// we do it here so the transformation for the 2nd draw should be different
-					mvpMatrix = createRotationZ!float(0.2f);
+					modelMatrix = createRotationZ!float(0.2f);
 				}
 
 				
