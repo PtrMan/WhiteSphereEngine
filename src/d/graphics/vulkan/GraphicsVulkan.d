@@ -570,7 +570,7 @@ class GraphicsVulkan {
 				
 				float[16] mvpArray;
 				import math.ConvertMatrix;
-				mvpMatrix.translateToArray!(float, 4, 4)(mvpArray);
+				mvpMatrix.translateToArrayColumRow!(float, 4, 4)(mvpArray);
 
 				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
 				
@@ -877,12 +877,12 @@ class GraphicsVulkan {
 				
 				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
 				
-				Matrix44Type modelMatrix = createIdentity!float();
+				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -1.5f);//uncommented because we want to test projection  createIdentity!float();
 
 				// a testloop to draw two times
 				foreach( iteration; 0..2) {
 					mvpMatrix = new Matrix44Type;
-					mul(modelMatrix, projectionMatrix, mvpMatrix);
+					mul(projectionMatrix, modelMatrix, mvpMatrix);
 
 					refillCommandBufferForTransform(mvpMatrix);
 					
@@ -901,7 +901,7 @@ class GraphicsVulkan {
 					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
 				
 					// we do it here so the transformation for the 2nd draw should be different
-					modelMatrix = createRotationZ!float(0.2f);
+					// uncommented to seperate effects modelMatrix = createRotationZ!float(0.2f);
 				}
 
 				
