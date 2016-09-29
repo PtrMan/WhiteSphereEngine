@@ -83,6 +83,9 @@ class GraphicsVulkan {
 		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
 		
 
+		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
+		TypesafeVkImageView depthBufferImageView;
+
 		// calculate projection matrix
 		{
 			float near = 0.1f;
@@ -138,6 +141,13 @@ class GraphicsVulkan {
 
 
 		void createDepthResources() {
+			VkExtent3D depthImageExtent = {300, 300, 1};
+
+			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
+			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
+			
+			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
+
 			VkFormatFeatureFlagBits requiredDepthImageFormatFeatures =
 				VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			VkImageUsageFlagBits usageFlags =
@@ -147,8 +157,41 @@ class GraphicsVulkan {
 			//       TODO< investigate and test for cases where it has chosen the formats with stencil > >
 
 			// search best format
-			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredDepthImageFormatFeatures, "Depthbuffer");
+			VkFormat depthImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredDepthImageFormatFeatures, "Depthbuffer");
 			
+			VulkanDeviceFacade.CreateImageArguments createImageArguments;
+			createImageArguments.format = depthImageFormat;
+			createImageArguments.extent = depthImageExtent;
+			createImageArguments.usage = usageFlags;
+			createImageArguments.queueFamilyIndexCount = 2;
+			createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
+			
+			depthbufferImageResource.resource = vkDevFacade.createImage(createImageArguments);
+
+			/////
+			// allocate and bind memory
+			resourceQueryAllocateBind(depthbufferImageResource, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "image");
+			
+			////////////////////
+			// transition layout
+				
+
+
+
+
+
+			VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments = VulkanDeviceFacade.CreateImageViewArguments.make();
+			with(createImageViewArguments) {
+				flags = 0;
+				image = depthbufferImageResource.resource.value;
+				viewType = VK_IMAGE_VIEW_TYPE_2D;
+				subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				format = depthImageFormat;
+			}
+
+			depthBufferImageView = vkDevFacade.createImageView(createImageViewArguments);
+
+
 
 		}
 
@@ -222,7 +265,7 @@ class GraphicsVulkan {
 				createImageArguments.usage = usageFlags;
 				createImageArguments.queueFamilyIndexCount = 2;
 				createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
-				
+
 				framebufferImageResource.resource = vkDevFacade.createImage(createImageArguments);
 				
 				/////
