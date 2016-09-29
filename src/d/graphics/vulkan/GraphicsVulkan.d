@@ -54,6 +54,11 @@ class GraphicsVulkan {
 	
 	protected ResourceDag resourceDag;
 	protected VulkanContext vulkanContext;
+
+	private {
+		TypesafeVkCommandBuffer setupCommandBuffer; // used for setup of images and such
+		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
+	}
 	
 	public final void initialisationEntry() {
 		vulkanSetupRendering();
@@ -79,8 +84,7 @@ class GraphicsVulkan {
 		TypesafeVkCommandBuffer commandBufferForRendering;
 		TypesafeVkCommandBuffer commandBufferForClear;
 		
-		TypesafeVkCommandBuffer setupCommandBuffer; // used for setup of images and such
-		TypesafeVkFence setupCommandBufferFence; // fence to secure setupCommandBuffer
+		
 		
 
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
@@ -174,8 +178,8 @@ class GraphicsVulkan {
 			
 			////////////////////
 			// transition layout
-				
-
+			
+			assert(false, "TODO TODO TODO");
 
 
 
@@ -274,48 +278,7 @@ class GraphicsVulkan {
 				
 				////////////////////
 				// transition layout
-				
-				{ // scope for beginCommandBuffer/end
-					VkCommandBufferBeginInfo beginInfo = {};
-					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-					vkBeginCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, &beginInfo);
-					scope(success) vkEndCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer);
-					
-					setImageLayout(
-					    cast(VkCommandBuffer)setupCommandBuffer, // cmdBuffer
-					    cast(VkImage)framebufferImageResource.resource.value, // image
-					    VK_IMAGE_ASPECT_COLOR_BIT, // aspectMask
-					    VK_IMAGE_LAYOUT_UNDEFINED, // oldImageLayout
-					    VK_IMAGE_LAYOUT_GENERAL // newImageLayout
-					);
-				}
-				
-				
-				VkPipelineStageFlags[] waitStageMask = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
-				VkSubmitInfo submitInfo = {};
-				with(submitInfo) {
-					sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-					waitSemaphoreCount = 0;
-					pWaitSemaphores = null;
-					pWaitDstStageMask = cast(immutable(uint)*)waitStageMask.ptr;
-					commandBufferCount = 1;
-					pCommandBuffers = cast(immutable(VkCommandBuffer)*)&setupCommandBuffer;
-					signalSemaphoreCount = 0;
-					pSignalSemaphores = null;
-				}
-				vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, cast(VkFence)setupCommandBufferFence);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Queue submit failed [vkQueueSubmit]!");
-				}
-				
-				vkDevFacade.fenceWaitAndReset(setupCommandBufferFence);
-				
-				vulkanResult = vkResetCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, 0);
-				if( !vulkanSuccess(vulkanResult) ) {
-					throw new EngineException(true, true, "Reset command buffer failed! [vkResetCommandBuffer]");
-				}
-				
+				transitionImageLayout(framebufferImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 			}
 			
 			
@@ -1322,6 +1285,62 @@ class GraphicsVulkan {
 		
 		// TODO< invoke resourceDag >
 	}
+
+
+
+
+
+
+	// inspired by https://vulkan-tutorial.com/Texture_mapping#page_Layout_transitions
+	final private void transitionImageLayout(TypesafeVkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldLayout, VkImageLayout newLayout) {
+		VkResult vulkanResult;
+
+		VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
+
+		{ // scope for beginCommandBuffer/end
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			vkBeginCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, &beginInfo);
+			scope(success) vkEndCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer);
+			
+			setImageLayout(
+				cast(VkCommandBuffer)setupCommandBuffer, // cmdBuffer
+				cast(VkImage)image, // image
+				aspectMask, // aspectMask
+				oldLayout, // oldImageLayout
+				newLayout // newImageLayout
+			);
+		}
+
+
+		VkPipelineStageFlags[] waitStageMask = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
+		VkSubmitInfo submitInfo = {};
+		with(submitInfo) {
+			sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			waitSemaphoreCount = 0;
+			pWaitSemaphores = null;
+			pWaitDstStageMask = cast(immutable(uint)*)waitStageMask.ptr;
+			commandBufferCount = 1;
+			pCommandBuffers = cast(immutable(VkCommandBuffer)*)&setupCommandBuffer;
+			signalSemaphoreCount = 0;
+			pSignalSemaphores = null;
+		}
+		vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, cast(VkFence)setupCommandBufferFence);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Queue submit failed [vkQueueSubmit]!");
+		}
+		
+		vkDevFacade.fenceWaitAndReset(setupCommandBufferFence);
+		
+		vulkanResult = vkResetCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, 0);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Reset command buffer failed! [vkResetCommandBuffer]");
+		}
+	}
+
+
+
 	
 	
 	protected final VulkanMemoryAllocator.AllocatorConfiguration getDefaultAllocatorConfigurationByTypeIndexAndUsage(uint32_t typeIndex, string usage) {
