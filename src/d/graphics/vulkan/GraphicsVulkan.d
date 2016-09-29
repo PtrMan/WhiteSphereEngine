@@ -136,6 +136,23 @@ class GraphicsVulkan {
 
 
 
+
+		void createDepthResources() {
+			VkFormatFeatureFlagBits requiredDepthImageFormatFeatures =
+				VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			VkImageUsageFlagBits usageFlags =
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			
+			// TODO< we have to handle things differently for formats with stencil
+			//       TODO< investigate and test for cases where it has chosen the formats with stencil > >
+
+			// search best format
+			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredFramebufferImageFormatFeatures, "Depthbuffer");
+			
+			
+		}
+
+
 		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode) {
 			VkResult vulkanResult;
 			
