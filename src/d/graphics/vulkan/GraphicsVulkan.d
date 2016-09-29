@@ -178,10 +178,7 @@ class GraphicsVulkan {
 			
 			////////////////////
 			// transition layout
-			
-			assert(false, "TODO TODO TODO");
-
-
+			transitionImageLayout(depthbufferImageResource.resource.value, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 
 			VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments = VulkanDeviceFacade.CreateImageViewArguments.make();
@@ -194,9 +191,12 @@ class GraphicsVulkan {
 			}
 
 			depthBufferImageView = vkDevFacade.createImageView(createImageViewArguments);
+		}
 
+		void releaseDepthResources() {
+			vkDevFacade.destroyImageView(depthBufferImageView);
 
-
+			// TODO< release memory of depthbufferImageResource and destroy image >
 		}
 
 
@@ -989,6 +989,15 @@ class GraphicsVulkan {
 		scope (exit) {
 			vkDevFacade.destroyFence(setupCommandBufferFence);
 		}
+
+
+
+
+		//////////////////
+		// create depth resources
+		//////////////////
+		createDepthResources();
+		scope(exit) releaseDepthResources();
 		
 		
 		
