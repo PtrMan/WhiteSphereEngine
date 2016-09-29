@@ -147,9 +147,9 @@ class GraphicsVulkan {
 			//       TODO< investigate and test for cases where it has chosen the formats with stencil > >
 
 			// search best format
-			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredFramebufferImageFormatFeatures, "Depthbuffer");
+			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredDepthImageFormatFeatures, "Depthbuffer");
 			
-			
+
 		}
 
 
@@ -215,41 +215,15 @@ class GraphicsVulkan {
 				// TODO< vkGetPhysicalDeviceImageFormatProperties >
 				
 				// create image (as a "render target")
+
+				VulkanDeviceFacade.CreateImageArguments createImageArguments;
+				createImageArguments.format = framebufferImageFormat;
+				createImageArguments.extent = framebufferImageExtent;
+				createImageArguments.usage = usageFlags;
+				createImageArguments.queueFamilyIndexCount = 2;
+				createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
 				
-				
-				VkImageCreateInfo imageCreateInfo;
-				initImageCreateInfo(&imageCreateInfo);
-				with(imageCreateInfo) {
-					flags = 0; // mydefault
-					imageType = VK_IMAGE_TYPE_2D; // mydefault
-					format = framebufferImageFormat;
-					extent = framebufferImageExtent;
-					mipLevels = 1; // mydefault
-					arrayLayers = 1; // mydefault
-					samples = VK_SAMPLE_COUNT_1_BIT; // mydefault
-					tiling = VK_IMAGE_TILING_OPTIMAL; // mydefault, is fine
-					usage = usageFlags;
-					sharingMode = 0; // mydefault
-					queueFamilyIndexCount = 2;
-					pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
-					initialLayout =  VK_IMAGE_LAYOUT_UNDEFINED; // mydefault, should be hardcoded this way
-				}
-				
-				// TODO< refactor this into own method >
-				{ // scope the variable imageResult
-					VkImage imageResult;
-					vulkanResult = vkCreateImage(
-						vulkanContext.chosenDevice.logicalDevice,
-						&imageCreateInfo,
-						null,
-						&imageResult
-					);
-					framebufferImageResource.resource = cast(TypesafeVkImage)imageResult;
-					if( !vulkanSuccess(vulkanResult) ) {
-						throw new EngineException(true, true, "Couldn't create image for framebuffer [vkCreateImage]!");
-					}
-					
-				}
+				framebufferImageResource.resource = vkDevFacade.createImage(createImageArguments);
 				
 				/////
 				// allocate and bind memory

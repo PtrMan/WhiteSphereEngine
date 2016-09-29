@@ -115,6 +115,55 @@ class VulkanDeviceFacade {
 	
 	
 	// TODO< create image >
+
+	public static struct CreateImageArguments {
+		VkImageCreateFlags flags = 0;
+		VkImageType imageType = VK_IMAGE_TYPE_2D;
+		VkFormat format;
+		VkExtent3D extent;
+		uint32_t mipLevels = 1;
+		uint32_t arrayLayers = 1;
+		VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+		VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+		VkImageUsageFlags usage;
+		VkSharingMode sharingMode = 0;
+		uint32_t queueFamilyIndexCount;
+		immutable(uint32_t)* pQueueFamilyIndices;
+		VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+
+	final TypesafeVkImage createImage(CreateImageArguments arguments, const VkAllocationCallbacks* allocator = null) {
+		VkImage rawImage;
+
+		VkImageCreateInfo imageCreateInfo;
+		initImageCreateInfo(&imageCreateInfo);
+		with(imageCreateInfo) {
+			flags = arguments.flags;
+			imageType = arguments.imageType;
+			format = arguments.format;
+			extent = arguments.extent;
+			mipLevels = arguments.mipLevels;
+			arrayLayers = arguments.arrayLayers;
+			samples = arguments.samples;
+			tiling = arguments.tiling;
+			usage = arguments.usage;
+			sharingMode = arguments.sharingMode;
+			queueFamilyIndexCount = arguments.queueFamilyIndexCount;
+			pQueueFamilyIndices = arguments.pQueueFamilyIndices;
+			initialLayout = arguments.initialLayout;
+		}
+
+		VkResult result = vkCreateImage(
+			device,
+			&imageCreateInfo,
+			allocator,
+			&rawImage
+		);
+		if( !result.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create image [vkCreateImage]!");
+		}
+		return cast(TypesafeVkImage)rawImage;
+	}
 	
 	public final void destroyImage(TypesafeVkImage image, const VkAllocationCallbacks* allocator = null) {
 		TypesafeVkImage[1] images = [image];
