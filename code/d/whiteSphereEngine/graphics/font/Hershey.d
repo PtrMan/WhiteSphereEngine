@@ -43,6 +43,8 @@ void hersheyInterpreter(DriverType)(string commands, DriverType driver) {
 	float leftHandPosition = readAndTranslate(8);
 	float rightHandPosition = readAndTranslate(9);
 
+	driver.setPositions(leftHandPosition, rightHandPosition);
+
 	EnumType commandType = EnumType.MOVE;
 
 	for(uint i = 0;; i++ ) {
@@ -77,5 +79,9 @@ struct DebugDriver {
 
 	final void command(EnumType commandType, float x, float y) {
 		writeln("command ", commandType, " x=", x, " y=", y);
+	}
+
+	final void setPositions(float left, float right) {
+		writeln("positions left=", left, " right=", right);
 	}
 }
