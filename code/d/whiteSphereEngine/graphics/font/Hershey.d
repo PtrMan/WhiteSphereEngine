@@ -5,18 +5,6 @@ enum EnumType : bool {
 	DRAW,
 }
 
-import std.stdio;
-
-struct DebugDriver {
-	final void raise() {
-		writeln("raise");
-	}
-
-	final void command(EnumType commandType, float x, float y) {
-		writeln("command ", commandType, " x=", x, " y=", y);
-	}
-}
-
 // interpreter for hershey fonts
 // see http://paulbourke.net/dataformats/hershey/
 // sends commands to an driver which can do the drawing
@@ -78,8 +66,16 @@ void hersheyInterpreter(DriverType)(string commands, DriverType driver) {
 	}
 }
 
-// just for testing
-void main() {
-	DebugDriver driver;
-	hersheyInterpreter("    8  9MWOMOV RUMUV ROQUQ", driver);
+
+
+import std.stdio;
+
+struct DebugDriver {
+	final void raise() {
+		writeln("raise");
+	}
+
+	final void command(EnumType commandType, float x, float y) {
+		writeln("command ", commandType, " x=", x, " y=", y);
+	}
 }
