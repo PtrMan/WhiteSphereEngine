@@ -1,9 +1,9 @@
-module Map2d;
+module whiteSphereEngine.common.Map2d;
 
-import IMap2d : IMap2d;
-import NumericSpatialVectors;
+import whiteSphereEngine.common.IMap2d : IMap2d;
+import linopterixed.linear.Vector;
 
-class Map2d(Type) : IMap2d!Type {
+class Map2d(Type, bool checkRange) : IMap2d!Type {
     public final this(uint width, uint height) {
         privateWidth = width;
         privateHeight = height;
@@ -11,19 +11,31 @@ class Map2d(Type) : IMap2d!Type {
         array = new Type[width*height];
     }
 
-    public final void setAt(SpatialVector!(2,int) position, Type value) {
+    public final void setAt(SpatialVectorStruct!(2,int) position, Type value) {
+        static if( checkRange ) {
+            if( position.x < 0 || position.x >= privateWidth || position.y < 0 || position.y >= privateHeight ) {
+                return;
+            }
+        }
+
         array[position.x + position.y * width] = value;
     }
 
-    public final Type getAt(SpatialVector!(2,int) position) {
+    public final Type getAt(SpatialVectorStruct!(2,int) position) pure const {
+        static if( checkRange ) {
+            if( position.x < 0 || position.x >= privateWidth || position.y < 0 || position.y >= privateHeight ) {
+                return Type.init;
+            }
+        }
+
         return array[position.x + position.y * width];
     }
 
-    public final @property uint width() {
+    public final @property uint width() pure const {
         return privateWidth;
     }
 
-    public final @property uint height() {
+    public final @property uint height() pure const {
         return privateHeight;
     }
 

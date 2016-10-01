@@ -1,11 +1,11 @@
-module IMap2d;
+module whiteSphereEngine.common.IMap2d;
 
-import NumericSpatialVectors;
+import linopterixed.linear.Vector;
 
 interface IMap2d(Type) {
-    void setAt(SpatialVector!(2,int) position, Type value);
-    Type getAt(SpatialVector!(2,int) position);
+    void setAt(SpatialVectorStruct!(2,int) position, Type value);
+    Type getAt(SpatialVectorStruct!(2,int) position) pure const;
 
-    @property uint width();
-    @property uint height();
+    @property uint width() pure const;
+    @property uint height() pure const;
 }
