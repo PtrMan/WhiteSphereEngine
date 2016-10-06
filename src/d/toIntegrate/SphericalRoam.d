@@ -1,3 +1,5 @@
+import std.stdint;
+
 ///#pragma once
 
 ///#include <cmath>
@@ -153,7 +155,7 @@ class SphericalRoam(NumericType, VectorType) {
 	/*virtual*/ ~this() {
 	}
 
-    protected static NumericType getSigned(const NumericType &value, const bool sign) {
+    protected static NumericType getSigned(const NumericType value, const bool sign) {
 		return sign ? -value : value;
 	}
 	
@@ -294,9 +296,9 @@ class SphericalRoam(NumericType, VectorType) {
 				continue;
 			}
 
-            for (size_t edgeI; 0..3 ) {
-                const uint32 pointIndexA = getWrapAroundIndexPositive(edgeI, 0, 3);
-                const uint32 pointIndexB = getWrapAroundIndexPositive(edgeI, 1, 3);
+            foreach( size_t edgeI; 0..3 ) {
+                const uint pointIndexA = getWrapAroundIndexPositive(edgeI, 0, 3);
+                const uint pointIndexB = getWrapAroundIndexPositive(edgeI, 1, 3);
 
                 PointType iterationPointA = rootTriangles[outerI].points[pointIndexA];
                 PointType iterationPointB = rootTriangles[outerI].points[pointIndexB];
@@ -348,16 +350,16 @@ class SphericalRoam(NumericType, VectorType) {
 	}
 
 	private final void transferTrianglesToRootTriangles() {
-        uint32 rootTrianglesI = 0;
+        uint rootTrianglesI = 0;
 		
-        for(TriangleType *iterationTriangle : triangles) {
+        foreach( TriangleType *iterationTriangle; triangles ) {
 			rootTriangles[rootTrianglesI] = iterationTriangle;
 			rootTrianglesI++;
 		}
 	}
 
 	private final void transferTrianglesToSplitqueue() {
-        for (TriangleType *iterationTriangle : triangles) {
+        foreach( TriangleType *iterationTriangle; triangles ) {
             eventlikeCreatedTopTriangle(iterationTriangle);
 		}
 	}
@@ -366,15 +368,15 @@ class SphericalRoam(NumericType, VectorType) {
     // as described in http://www.gamasutra.com/view/feature/131596/realtime_dynamic_level_of_detail_.php?page=2
     // doesn't use recursion because we have to keep track of the "callstack"
     protected final void tryForceSplitRecursive(TriangleType triangle) {
-        TArray<TriangleType*> triangleStack;
+        TriangleType*[] triangleStack;
         triangleStack.Push(triangle);
 
         for(;;) {
-            if( triangleStack.Num() == 0 ) {
+            if( triangleStack.length == 0 ) {
                 break;
             }
 
-            TriangleType topTriangle = triangleStack.Pop(false);
+            TriangleType topTriangle = triangleStack.pop(false);
 
             if( topTriangle.isDiamond ) {
                 UE_LOG(YourLog,Log,TEXT("SphericalRoam<>::::tryForceSplitRecursive() splitDiamond"));
@@ -390,7 +392,7 @@ class SphericalRoam(NumericType, VectorType) {
 
                 // force split the base neightbor
 
-                triangleStack.Push(topTriangle.edgeNeightbors[2]);
+                triangleStack.push(topTriangle.edgeNeightbors[2]);
             }
         }
     }
@@ -500,11 +502,11 @@ class SphericalRoam(NumericType, VectorType) {
 
 		// check invariants
         verify(leftBottomChildEdge21.isPartOfDiamondAnticlockwise());
-        verify(leftBottomChildEdge21.isPartOfDiamondClockwise())
+        verify(leftBottomChildEdge21.isPartOfDiamondClockwise());
 	}
 
     protected final void recalcVariancesOfAllTriangles() {
-        for( TriangleType *iterationTriangle : triangles ) {
+        foreach( TriangleType *iterationTriangle; triangles ) {
             recalculateVarianceOfEdgesOfTriangle(iterationTriangle);
         }
     }
@@ -550,7 +552,7 @@ class SphericalRoam(NumericType, VectorType) {
     protected final void eventlikeRemovedTopTriangle(TriangleType triangle) {
         for(size_t currentHeapIndex = 0; currentHeapIndex < splitQueue.Num(); currentHeapIndex++) {
             if( splitQueue[currentHeapIndex].triangle == triangle ) {
-                splitQueue.HeapRemoveAt(currentHeapIndex, SplitQueueElementPredicate<NumericType, VectorType>());
+                splitQueueRemoveAt(currentHeapIndex);
                 return;
             }
         }
@@ -563,21 +565,27 @@ class SphericalRoam(NumericType, VectorType) {
 	private SplitQueueElement!(NumericType, VectorType) splitQueue;
 
 	// queue helpers
-	protected void splitQueueAdd(ref const SplitQueueElement!(NumericType, VectorType) element) {
+    protected final void splitQueueRemoveAt(size_t index) {
+        assert(false, "TODO TODO");
+        // TODO< do equalvalent as in 
+        // splitQueue.HeapRemoveAt(currentHeapIndex, SplitQueueElementPredicate<NumericType, VectorType>());
+    }
+
+	protected final void splitQueueAdd(ref const SplitQueueElement!(NumericType, VectorType) element) {
 		// assert(false, "TODO TODO TODO TODO - sorted enqueue")
 
         //splitQueue.enqueue(element, SplitQueueElementPredicate<NumericType, VectorType>());
 	}
 
-	protected SplitQueueElement!(NumericType, VectorType) splitQueuePop() {
+	protected final SplitQueueElement!(NumericType, VectorType) splitQueuePop() {
 		return splitQueue.dequeue();
 	}
 
-	protected size_t splitQueueSize() {
+	protected final size_t splitQueueSize() {
         return splitQueue.length;
 	}
 
-	protected SplitQueueElement<NumericType, VectorType> splitQueueTop() {
+	protected final SplitQueueElement!(NumericType, VectorType) splitQueueTop() {
         return splitQueue[0]; // TODO< top >
 	}
 }
