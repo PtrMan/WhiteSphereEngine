@@ -37,24 +37,10 @@ PropabilityType forward(PropabilityType)(uint[] v, ValueMatrix!PropabilityType e
 		}
 	}
 
-	foreach( t2; 0..n ) {
-		import std.stdio;
-
-		foreach( q; 0..numberOfStatesInQ ) {
-			write(T[t2, q], " ");
-		}
-
-		writeln();
-	}
-
 	// calculate the propability of the sequence
 	{
-		import std.stdio;
-
-
 		PropabilityType result = 0;
 		foreach( q; 0..numberOfStatesInQ ) {
-			writeln((exitPropability[q]*T[n-1, q]));
 			result += (exitPropability[q]*T[n-1, q]);
 		}
 		return result;
