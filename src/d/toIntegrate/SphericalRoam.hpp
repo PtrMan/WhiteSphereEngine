@@ -1,8 +1,8 @@
-#pragma once
+///#pragma once
 
-#include <cmath>
+///#include <cmath>
 
-#include "TemplateHelper.hpp"
+///#include "TemplateHelper.hpp"
 
 interface IHeightCalculationCallback(NumericType, VectorType) {
     NumericType calculateHeightForNormalizedDirection(VectorType direction);
@@ -13,15 +13,15 @@ class Point(NumericType, VectorType) {
     NumericType cachedHeight = 0.0;
     VectorType direction;
 
-    public final this(VectorType direction_, NumericType cachedHeight_) {
+    final this(VectorType direction_, NumericType cachedHeight_) {
         direction = direction_;
         cachedHeight = cachedHeight_;
     }
 
-    public final this() /*: direction(VectorType(1.0, 0.0, 0.0))*/ {
+    final this() /*: direction(VectorType(1.0, 0.0, 0.0))*/ {
     }
 
-    public final VectorType calcPosition() {
+    final VectorType calcPosition() {
         return direction*cachedHeight;
     }
 }
@@ -60,22 +60,22 @@ class Triangle(NumericType, VectorType) {
 	// is the triangle on the top (and is of no oter triangle a parent)
 	bool top = true;
 
-	public final this() {
+	final this() {
 	}
 
-    public final @property bool isDiamond() pure {
+    final @property bool isDiamond() pure {
 		return this.edgeNeightbors[2].edgeNeightbors[2] is this;
 	}
 
-	public final @property bool isPartOfDiamondAnticlockwise() pure {
+	final @property bool isPartOfDiamondAnticlockwise() pure {
         return this.edgeNeightbors[0].edgeNeightbors[0].edgeNeightbors[0].edgeNeightbors[0] is this;
 	}
 
-	public final @property bool isPartOfDiamondClockwise() pure {
+	final @property bool isPartOfDiamondClockwise() pure {
         return this.edgeNeightbors[1].edgeNeightbors[1].edgeNeightbors[1].edgeNeightbors[1] is this;
 	}
 
-    public final NumericType getMaxCachedEdgeVariance() pure {
+    final NumericType getMaxCachedEdgeVariance() pure {
         return max(max(cachedEdgeCenterVariance[0], cachedEdgeCenterVariance[1]), cachedEdgeCenterVariance[2]);
     }
 };
@@ -91,7 +91,7 @@ class TemporaryQuad {
 	 *
 	 * 1   2
 	 */
-    public final this(uint32_t pointIndices0, uint32_t pointIndices1, uint32_t pointIndices2, uint32_t pointIndices3, bool shift_) {
+    final this(uint32_t pointIndices0, uint32_t pointIndices1, uint32_t pointIndices2, uint32_t pointIndices3, bool shift_) {
 		pointIndices[0] = pointIndices0;
 		pointIndices[1] = pointIndices1;
 		pointIndices[2] = pointIndices2;
@@ -111,23 +111,25 @@ class TemporaryQuad {
 struct SplitQueueElement(NumericType, VectorType) {
 	Triangle!(NumericType, VectorType) triangle;
 
-    public final float getPriority() {
+    final float getPriority() {
         const NumericType scaleVariance = 1.0;
         const NumericType scaleCoarseLevel = 1.0;
 
         //UE_LOG(YourLog,Log,TEXT("SplitQueueElement<>::getPriority() max edge variance %f"), triangle.getMaxCachedEdgeVariance());
 
 
-        return (float)(triangle.getMaxCachedEdgeVariance()*scaleVariance - scaleCoarseLevel*(triangle.coarseLevel));
+        return cast(float)(triangle.getMaxCachedEdgeVariance()*scaleVariance - scaleCoarseLevel*(triangle.coarseLevel));
 	}
 }
 
+/***
 struct SplitQueueElementPredicate(NumericType, VectorType) {
 	bool operator()(const SplitQueueElement<NumericType, VectorType> &a, const SplitQueueElement<NumericType, VectorType> &b) const {
 		// Inverted compared to std::priority_queue - higher priorities float to the top
         return a.getPriority() < b.getPriority();
 	}
 }
+*/
 
 // algorithm is described in http://www.gamasutra.com/view/feature/131451/a_realtime_procedural_universe_.php
 // based on ROAM algorithm https://graphics.llnl.gov/ROAM/roam.pdf
@@ -146,16 +148,16 @@ class SphericalRoam(NumericType, VectorType) {
     private PointType[8] startPoints;
 
 
-    public IHeightCalculationCallback!(NumericType, VectorType) heightCalculation;
+    IHeightCalculationCallback!(NumericType, VectorType) heightCalculation;
 
-	public virtual ~this() {
+	/*virtual*/ ~this() {
 	}
 
     protected static NumericType getSigned(const NumericType &value, const bool sign) {
 		return sign ? -value : value;
 	}
 	
-    public /*virtual*/ void setupBaseMesh() {
+    /*virtual*/ void setupBaseMesh() {
         // 1.0/sqrt(1^2 + 1^2 + 1^2)
         const NumericType ONEDIVSQRT3 = 0.5773502691896257645091487805019574556476017512701268;
 
@@ -210,7 +212,7 @@ class SphericalRoam(NumericType, VectorType) {
 		determineNeightborTrianglesOfRootTriangles();
 	}
 
-    public final TriangleType[] getTopTriangles() {
+    final TriangleType[] getTopTriangles() {
         TriangleType[] resultTriangles;
 
         foreach( iterationTriangle; triangles) {
@@ -222,7 +224,7 @@ class SphericalRoam(NumericType, VectorType) {
         return resultTriangles;
     }
 
-    public final void heightmapFunctionChanged() {
+    final void heightmapFunctionChanged() {
         // TODO< call to method which recalculate all heights of all points >
 
 
@@ -231,7 +233,7 @@ class SphericalRoam(NumericType, VectorType) {
         // TODO< reorder priority queue of the splitQueue because the variance changed >
     }
 
-    public struct CheckForRequiredUpdatesParameters {
+    static struct CheckForRequiredUpdatesParameters {
         uint limitMeshOperations = -1;
     };
 
@@ -240,7 +242,7 @@ class SphericalRoam(NumericType, VectorType) {
      *
      *
      */
-    public final void checkForRequiredUpdates(CheckForRequiredUpdatesParameters parameters, out bool meshChanged) {
+    final void checkForRequiredUpdates(CheckForRequiredUpdatesParameters parameters, out bool meshChanged) {
         meshChanged = false;
 
         uint meshOperationsCounter = 0;
@@ -252,7 +254,7 @@ class SphericalRoam(NumericType, VectorType) {
 
             assert(splitQueueSize() > 0);
 
-            SplitQueueElement<NumericType, VectorType> splitQueueTopElement = splitQueueTop();
+            SplitQueueElement!(NumericType, VectorType) splitQueueTopElement = splitQueueTop();
 
             // TODO< log >
             //UE_LOG(YourLog,Log,TEXT("SphericalRoam<>::::checkForRequiredUpdates() top priority %f"), splitQueueTopElement.getPriority());
@@ -270,7 +272,7 @@ class SphericalRoam(NumericType, VectorType) {
     }
 
 	protected final void determineNeightborTrianglesOfRootTriangles() {
-        for (uint outerI = 0; outerI < size(rootTriangles); outerI++) {
+        for (uint outerI = 0; outerI < rootTriangles.length; outerI++) {
             for (uint edgeI = 0; edgeI < 3; edgeI++) {
                 const uint pointIndexA = getWrapAroundIndexPositive(edgeI, 0, 3);
                 const uint pointIndexB = getWrapAroundIndexPositive(edgeI, 1, 3);
@@ -292,7 +294,7 @@ class SphericalRoam(NumericType, VectorType) {
 				continue;
 			}
 
-            for (size_t edgeI = 0; edgeI < 3; edgeI++) {
+            for (size_t edgeI; 0..3 ) {
                 const uint32 pointIndexA = getWrapAroundIndexPositive(edgeI, 0, 3);
                 const uint32 pointIndexB = getWrapAroundIndexPositive(edgeI, 1, 3);
 
@@ -533,7 +535,7 @@ class SphericalRoam(NumericType, VectorType) {
         triangle.cachedEdgeCenterVariance[2] = abs(interpolatedHeightOfMiddleOfEdge2-heightOfMiddleOfEdge2);
     }
 
-    protected static VectorType calcMiddle(const VectorType &a, const VectorType &b) {
+    protected static VectorType calcMiddle(ref const VectorType a, ref const VectorType b) {
         return (a+b) * 0.5;
     }
 
@@ -558,25 +560,24 @@ class SphericalRoam(NumericType, VectorType) {
 
     // invariants: only top polygons are in the splitqueue
     //             we need to add remove elements (which point at the polygons) on the fly
-    // unreal engine - priority queue see https://answers.unrealengine.com/questions/180188/analogue-of-priority-queue.html
-	private: TArray<SplitQueueElement<NumericType, VectorType>> splitQueue;
+	private SplitQueueElement!(NumericType, VectorType) splitQueue;
 
 	// queue helpers
-	protected: void splitQueueAdd(const SplitQueueElement<NumericType, VectorType> &element) {
-		splitQueue.HeapPush(element, SplitQueueElementPredicate<NumericType, VectorType>());
+	protected void splitQueueAdd(ref const SplitQueueElement!(NumericType, VectorType) element) {
+		// assert(false, "TODO TODO TODO TODO - sorted enqueue")
+
+        //splitQueue.enqueue(element, SplitQueueElementPredicate<NumericType, VectorType>());
 	}
 
-	protected: SplitQueueElement<NumericType, VectorType> splitQueuePop() {
-		SplitQueueElement<NumericType, VectorType> result;
-		splitQueue.HeapPop(result);
-		return result;
+	protected SplitQueueElement!(NumericType, VectorType) splitQueuePop() {
+		return splitQueue.dequeue();
 	}
 
-	protected: unsigned int splitQueueSize() {
-        return splitQueue.Num();
+	protected size_t splitQueueSize() {
+        return splitQueue.length;
 	}
 
-	protected: SplitQueueElement<NumericType, VectorType> splitQueueTop() {
-        return splitQueue.HeapTop();
+	protected SplitQueueElement<NumericType, VectorType> splitQueueTop() {
+        return splitQueue[0]; // TODO< top >
 	}
-};
+}
