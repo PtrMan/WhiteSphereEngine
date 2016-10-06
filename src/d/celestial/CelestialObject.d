@@ -12,7 +12,7 @@ class CelestialObject {
   		NOTSET,
   		STAR,
   		
-  		GENETICCELESTIALBODY
+  		GENETICCELESTIALBODY,
   		// Planet
   		// Asteroid
   		// RoundMoon
