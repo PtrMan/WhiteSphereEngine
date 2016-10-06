@@ -1,5 +1,8 @@
 import sectorGenerators.ISectorGenerator;
-#include "CelestialObject.h"
+
+import std.stdint;
+
+import celestial.CelestialObject; //#include "CelestialObject.h"
 #include "Math/EnumeratedDistribution.h"
 
 class DefaultSectorGenerator : ISectorGenerator {
@@ -85,15 +88,15 @@ class DefaultSectorGenerator : ISectorGenerator {
 		// TODO<take set and calculate the ideal orbits of 2 or 3 body systems>
 
 		if( numberOfCelestials == 1 ) {
-			TArray<int32> randomNumberGeneratorCoordinatesForCurrentCelestial = randomNumberGeneratorCoordinatesForCenter;
-			randomNumberGeneratorCoordinatesForCurrentCelestial.Add(0); // first object in the center
+			int32_t[] randomNumberGeneratorCoordinatesForCurrentCelestial = randomNumberGeneratorCoordinatesForCenter;
+			randomNumberGeneratorCoordinatesForCurrentCelestial ~= 0; // first object in the center
 			
 			FCelestialCluster resultCluster;
 			resultCluster.leafCelestialObject = generateCelestialCenterObjectWithoutConstraints(random, randomNumberGeneratorCoordinatesForCurrentCelestial);
 			
-			UE_LOG(YourLog,Log,TEXT("DefaultSectorGenerator::calculateCelestialClustersForCenterObjects() called for 1 celestial"));
+			///UE_LOG(YourLog,Log,TEXT("DefaultSectorGenerator::calculateCelestialClustersForCenterObjects() called for 1 celestial"));
 			
-			resultClusters.Add(resultCluster);
+			resultClusters ~= resultCluster;
 		}
   
 		
@@ -103,14 +106,14 @@ class DefaultSectorGenerator : ISectorGenerator {
 		// TODO< three body system >
 		else {
 			// shouldn't happen
-			UE_LOG(YourLog,Fatal,TEXT("DefaultSectorGenerator::calculateCelestialClustersForCenterObjects() called for unhandled number of Celestial bodies!"));
+			///UE_LOG(YourLog,Fatal,TEXT("DefaultSectorGenerator::calculateCelestialClustersForCenterObjects() called for unhandled number of Celestial bodies!"));
 		}
 
 		return resultClusters;
 	}
 
 
-	protected static FCelestialObject generateCelestialCenterObjectWithoutConstraints(FRandomStream &random, const TArray<int32> &randomNumberGeneratorCoordinates) {
+	protected static FCelestialObject generateCelestialCenterObjectWithoutConstraints(FRandomStream &random, const int32_t[] randomNumberGeneratorCoordinates) {
 		// TODO< use a random process for the random sampling of the temperature of the star >
 		float surfaceTemperatureInKelvin = linearInterpolate(random.GetFraction(), 3000.0f, 40000.0f);
 		
@@ -184,7 +187,7 @@ class DefaultSectorGenerator : ISectorGenerator {
 		// TODO< build in asteroid belts somehow >
 		// TODO< a young system has by far more asteroid belts than a old system, build this in somehow >
 		
-		for( uint32 tryI = 0; tryI < maxTries; tryI++ ) {
+		for( uint32_t tryI = 0; tryI < maxTries; tryI++ ) {
 			// choose orbitRadius at random
     
 			// TODO< take the maximal radius of the ecenter objects into account and the radius of the bigest center object >
@@ -202,7 +205,7 @@ class DefaultSectorGenerator : ISectorGenerator {
 				createdCelestialOrbitInfo.orbitRadius = chosenNewCelestialOrbitRadius;
 				createdCelestialOrbitInfo.celestialObject = generatedCelestialObject;
 				createdCelestialOrbitInfo.celestialObject.randomNumberGeneratorCoordinates = randomNumberGeneratorCoordinates;
-				createdCelestialOrbitInfo.celestialObject.randomNumberGeneratorCoordinates.Add((int32)hitCounter);
+				createdCelestialOrbitInfo.celestialObject.randomNumberGeneratorCoordinates ~= cast(int32_t)hitCounter;
 				
 				resultCelestialOrbits ~= createdCelestialOrbitInfo;
 				
@@ -232,7 +235,7 @@ class DefaultSectorGenerator : ISectorGenerator {
 
 		FCelestialObject resultCelestialObject;
 		resultCelestialObject.type = blueprint.celestialObjectType;
-		resultCelestialObject.mass = linearInterpolate((double)random.getFraction(), blueprint.massMin, blueprint.massMax);
+		resultCelestialObject.mass = linearInterpolate(cast(double)random.getFraction(), blueprint.massMin, blueprint.massMax);
 		
 		if( blueprint.canHaveAtmosphere ) {
 			resultCelestialObject.hasAtmosphere = ((random.GetUnsignedInt() % 2) == 1);

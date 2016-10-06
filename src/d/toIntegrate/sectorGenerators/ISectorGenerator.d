@@ -1,3 +1,7 @@
+module sectorGenerators.ISectorGenerator;
+
+import std.stdint;
+
 #include "CelestialCluster.h"
 #include "CelestialSettings.h"
 
