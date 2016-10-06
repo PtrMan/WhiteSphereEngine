@@ -1,10 +1,10 @@
 import std.stdint;
+import std.math : abs;
+import std.algorithm.comparison : max;
+import std.exception : enforce;
 
-///#pragma once
-
-///#include <cmath>
-
-///#include "TemplateHelper.hpp"
+import common.ArrayQueue;
+import ArrayStack;
 
 interface IHeightCalculationCallback(NumericType, VectorType) {
     NumericType calculateHeightForNormalizedDirection(VectorType direction);
@@ -174,14 +174,14 @@ class SphericalRoam(NumericType, VectorType) {
             const NumericType y = getSigned(ONEDIVSQRT3, ySignFlag);
             const NumericType z = getSigned(ONEDIVSQRT3, zSignFlag);
 
-			const VectorType direction = VectorType(x, y, z);
+			const VectorType direction = VectorType.make(x, y, z);
 			const NumericType height = heightCalculation.calculateHeightForNormalizedDirection(direction);
 
             startPoints[vertexI] = new PointType(direction, height);
 		}
 
         for( uint vertexI = 0; vertexI < 8; vertexI++ ) {
-            points.AddHead(startPoints[vertexI]);
+            points ~= startPoints[vertexI];
 		}
 
 		// create root triangles and link them
@@ -190,14 +190,14 @@ class SphericalRoam(NumericType, VectorType) {
 
 		TemporaryQuad[6] temporaryQuads;
 		// side
-		temporaryQuads[0] = TemporaryQuad(6, 7, 5, 4, false);
-		temporaryQuads[1] = TemporaryQuad(4, 5, 1, 0, true);
-		temporaryQuads[2] = TemporaryQuad(0, 1, 3, 2, false);
-		temporaryQuads[3] = TemporaryQuad(2, 3, 7, 6, true);
+		temporaryQuads[0] = new TemporaryQuad(6, 7, 5, 4, false);
+		temporaryQuads[1] = new TemporaryQuad(4, 5, 1, 0, true);
+		temporaryQuads[2] = new TemporaryQuad(0, 1, 3, 2, false);
+		temporaryQuads[3] = new TemporaryQuad(2, 3, 7, 6, true);
 
 		// top and bottom
-		temporaryQuads[4] = TemporaryQuad(2, 6, 4, 0, true);
-		temporaryQuads[5] = TemporaryQuad(7, 3, 1, 5, false);
+		temporaryQuads[4] = new TemporaryQuad(2, 6, 4, 0, true);
+		temporaryQuads[5] = new TemporaryQuad(7, 3, 1, 5, false);
 
 		// build triangles from quads
         for (uint quadIndex = 0; quadIndex < 6; quadIndex++) {
@@ -291,7 +291,7 @@ class SphericalRoam(NumericType, VectorType) {
 	}
 
     protected final TriangleType determineNeightborTriangleExceptRootTriangleIndex(PointType pointA, PointType pointB, const size_t exceptRootTriangleIndex) {
-        for (size_t outerI = 0; outerI < size(rootTriangles); outerI++) {
+        for (size_t outerI = 0; outerI < rootTriangles.length; outerI++) {
 			if (outerI == exceptRootTriangleIndex) {
 				continue;
 			}
@@ -345,21 +345,21 @@ class SphericalRoam(NumericType, VectorType) {
             triangleB.points[2] = startPoints[quad.pointIndices[1]];
 		}
 
-		triangles.AddHead(triangleA);
-		triangles.AddHead(triangleB);
+		triangles ~= triangleA;
+		triangles ~= triangleB;
 	}
 
 	private final void transferTrianglesToRootTriangles() {
         uint rootTrianglesI = 0;
 		
-        foreach( TriangleType *iterationTriangle; triangles ) {
+        foreach( iterationTriangle; triangles ) {
 			rootTriangles[rootTrianglesI] = iterationTriangle;
 			rootTrianglesI++;
 		}
 	}
 
 	private final void transferTrianglesToSplitqueue() {
-        foreach( TriangleType *iterationTriangle; triangles ) {
+        foreach( iterationTriangle; triangles ) {
             eventlikeCreatedTopTriangle(iterationTriangle);
 		}
 	}
@@ -368,18 +368,18 @@ class SphericalRoam(NumericType, VectorType) {
     // as described in http://www.gamasutra.com/view/feature/131596/realtime_dynamic_level_of_detail_.php?page=2
     // doesn't use recursion because we have to keep track of the "callstack"
     protected final void tryForceSplitRecursive(TriangleType triangle) {
-        TriangleType*[] triangleStack;
-        triangleStack.Push(triangle);
+        TriangleType[] triangleStack;
+        triangleStack.push(triangle);
 
         for(;;) {
             if( triangleStack.length == 0 ) {
                 break;
             }
 
-            TriangleType topTriangle = triangleStack.pop(false);
+            TriangleType topTriangle = triangleStack.pop();
 
             if( topTriangle.isDiamond ) {
-                UE_LOG(YourLog,Log,TEXT("SphericalRoam<>::::tryForceSplitRecursive() splitDiamond"));
+                ///UE_LOG(YourLog,Log,TEXT("SphericalRoam<>::::tryForceSplitRecursive() splitDiamond"));
 
                 splitDiamond(topTriangle, topTriangle.edgeNeightbors[2]);
             }
@@ -414,23 +414,23 @@ class SphericalRoam(NumericType, VectorType) {
 		const NumericType heightOfMidpoint = heightCalculation.calculateHeightForNormalizedDirection(normalizedMidpointDirection);
 
         PointType midpoint = new PointType(normalizedMidpointDirection, heightOfMidpoint);
-        points.AddHead(midpoint);
+        points ~= midpoint;
 
         TriangleType leftBottomChildEdge20 = new TriangleType();
-		leftBottomChildEdge20.coarseLevel = leftBottom.coarseLevel + 1;
-		triangles.AddHead(leftBottomChildEdge20);
+		leftBottomChildEdge20.coarseLevel = cast(uint16_t)(leftBottom.coarseLevel + 1);
+		triangles ~= leftBottomChildEdge20;
 
-        TriangleType *leftBottomChildEdge21 = new TriangleType();
-		leftBottomChildEdge21.coarseLevel = leftBottom.coarseLevel + 1;
-		triangles.AddHead(leftBottomChildEdge21);
+        TriangleType leftBottomChildEdge21 = new TriangleType();
+		leftBottomChildEdge21.coarseLevel = cast(uint16_t)(leftBottom.coarseLevel + 1);
+		triangles ~= leftBottomChildEdge21;
 
-        TriangleType *rightTopChildEdge20 = new TriangleType();
-		rightTopChildEdge20.coarseLevel = leftBottom.coarseLevel + 1;
-		triangles.AddHead(rightTopChildEdge20);
+        TriangleType rightTopChildEdge20 = new TriangleType();
+		rightTopChildEdge20.coarseLevel = cast(uint16_t)(leftBottom.coarseLevel + 1);
+		triangles ~= rightTopChildEdge20;
 
-        TriangleType *rightTopChildEdge21 = new TriangleType();
-		rightTopChildEdge21.coarseLevel = leftBottom.coarseLevel + 1;
-		triangles.AddHead(rightTopChildEdge21);
+        TriangleType rightTopChildEdge21 = new TriangleType();
+		rightTopChildEdge21.coarseLevel = cast(uint16_t)(leftBottom.coarseLevel + 1);
+		triangles ~= rightTopChildEdge21;
 
 		// link all pointers of the edges and vertices and others
 		splitHelperLink(leftBottom, leftBottomChildEdge20, leftBottomChildEdge21, rightTop, rightTopChildEdge20, rightTopChildEdge21, midpoint);
@@ -464,8 +464,8 @@ class SphericalRoam(NumericType, VectorType) {
 	 *		+------------+
 	 */
     private static void splitHelperLink(TriangleType leftBottom, TriangleType leftBottomChildEdge20, TriangleType leftBottomChildEdge21, TriangleType rightTop, TriangleType rightTopChildEdge20, TriangleType rightTopChildEdge21, PointType midpoint) {
-        verify(leftBottom.isDiamond());
-        verify(rightTop.isDiamond());
+        enforce(leftBottom.isDiamond());
+        enforce(rightTop.isDiamond());
 
 		leftBottomChildEdge20.splitFromParent = leftBottom;
 		leftBottomChildEdge20.points[0] = leftBottom.points[1];
@@ -501,26 +501,26 @@ class SphericalRoam(NumericType, VectorType) {
 		rightTopChildEdge21.edgeNeightbors[2] = rightTop.edgeNeightbors[1];
 
 		// check invariants
-        verify(leftBottomChildEdge21.isPartOfDiamondAnticlockwise());
-        verify(leftBottomChildEdge21.isPartOfDiamondClockwise());
+        enforce(leftBottomChildEdge21.isPartOfDiamondAnticlockwise());
+        enforce(leftBottomChildEdge21.isPartOfDiamondClockwise());
 	}
 
     protected final void recalcVariancesOfAllTriangles() {
-        foreach( TriangleType *iterationTriangle; triangles ) {
+        foreach( iterationTriangle; triangles ) {
             recalculateVarianceOfEdgesOfTriangle(iterationTriangle);
         }
     }
 
     protected final void recalculateVarianceOfEdgesOfTriangle(TriangleType triangle) /*const*/ {
-        verify(heightCalculation != nullptr);
+        enforce(heightCalculation !is null);
 
         const VectorType directionOfMiddleOfEdge0 = calcMiddle(triangle.points[1].direction, triangle.points[0].direction).normalized();
         const VectorType directionOfMiddleOfEdge1 = calcMiddle(triangle.points[1].direction, triangle.points[2].direction).normalized();
         const VectorType directionOfMiddleOfEdge2 = calcMiddle(triangle.points[0].direction, triangle.points[2].direction).normalized();
 
-        const NumericType interpolatedHeightOfMiddleOfEdge0 = calcMiddle(triangle.points[1].direction*triangle.points[1].cachedHeight, triangle.points[0].direction*triangle.points[0].cachedHeight).norm();
-        const NumericType interpolatedHeightOfMiddleOfEdge1 = calcMiddle(triangle.points[1].direction*triangle.points[1].cachedHeight, triangle.points[2].direction*triangle.points[2].cachedHeight).norm();
-        const NumericType interpolatedHeightOfMiddleOfEdge2 = calcMiddle(triangle.points[0].direction*triangle.points[0].cachedHeight, triangle.points[2].direction*triangle.points[2].cachedHeight).norm();
+        const NumericType interpolatedHeightOfMiddleOfEdge0 = calcMiddle(triangle.points[1].direction*triangle.points[1].cachedHeight, triangle.points[0].direction*triangle.points[0].cachedHeight).magnitude;
+        const NumericType interpolatedHeightOfMiddleOfEdge1 = calcMiddle(triangle.points[1].direction*triangle.points[1].cachedHeight, triangle.points[2].direction*triangle.points[2].cachedHeight).magnitude;
+        const NumericType interpolatedHeightOfMiddleOfEdge2 = calcMiddle(triangle.points[0].direction*triangle.points[0].cachedHeight, triangle.points[2].direction*triangle.points[2].cachedHeight).magnitude;
 
         /*
         const NumericType interpolatedHeightOfMiddleOfEdge0 = (triangle.points[1].cachedHeight + triangle.points[0].cachedHeight) * 0.5;
@@ -537,21 +537,21 @@ class SphericalRoam(NumericType, VectorType) {
         triangle.cachedEdgeCenterVariance[2] = abs(interpolatedHeightOfMiddleOfEdge2-heightOfMiddleOfEdge2);
     }
 
-    protected static VectorType calcMiddle(ref const VectorType a, ref const VectorType b) {
+    protected static VectorType calcMiddle(VectorType a, VectorType b) {
         return (a+b) * 0.5;
     }
 
-    protected final void eventlikeCreatedTopTriangle(TriangleType *triangle) {
-        verify(triangle.top);
+    protected final void eventlikeCreatedTopTriangle(TriangleType triangle) {
+        enforce(triangle.top);
 
-        SplitQueueElement<NumericType, VectorType> createdSplitQueueElement;
+        SplitQueueElement!(NumericType, VectorType) createdSplitQueueElement;
         createdSplitQueueElement.triangle = triangle;
         splitQueueAdd(createdSplitQueueElement);
     }
 
     protected final void eventlikeRemovedTopTriangle(TriangleType triangle) {
-        for(size_t currentHeapIndex = 0; currentHeapIndex < splitQueue.Num(); currentHeapIndex++) {
-            if( splitQueue[currentHeapIndex].triangle == triangle ) {
+        for(size_t currentHeapIndex = 0; currentHeapIndex < splitQueue.length; currentHeapIndex++) {
+            if( splitQueue[currentHeapIndex].triangle is triangle ) {
                 splitQueueRemoveAt(currentHeapIndex);
                 return;
             }
@@ -562,7 +562,7 @@ class SphericalRoam(NumericType, VectorType) {
 
     // invariants: only top polygons are in the splitqueue
     //             we need to add remove elements (which point at the polygons) on the fly
-	private SplitQueueElement!(NumericType, VectorType) splitQueue;
+	private SplitQueueElement!(NumericType, VectorType)[] splitQueue;
 
 	// queue helpers
     protected final void splitQueueRemoveAt(size_t index) {
@@ -588,4 +588,12 @@ class SphericalRoam(NumericType, VectorType) {
 	protected final SplitQueueElement!(NumericType, VectorType) splitQueueTop() {
         return splitQueue[0]; // TODO< top >
 	}
+}
+
+
+
+import linopterixed.linear.Vector;
+
+void xxx(SphericalRoam!(double, SpatialVectorStruct!(3, double)) roam) {
+
 }
