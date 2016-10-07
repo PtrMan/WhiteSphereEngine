@@ -315,7 +315,7 @@ class GraphicsVulkan {
 				with(createFramebufferArguments) {
 					flags = 0;
 					renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
-					attachments = [imageViewForFramebuffer];
+					attachments = [imageViewForFramebuffer, depthBufferImageView];
 					width = 300;
 					height = 300;
 				}
