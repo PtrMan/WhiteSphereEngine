@@ -514,8 +514,11 @@ class GraphicsVulkan {
 		void refillCommandBufferForTransform(Matrix44Type mvpMatrix) {
 			VkResult vulkanResult;
 			
-			VkClearValue clear_value;
-			clear_value.color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
+			VkClearValue clearValues[2];
+			clearValues[0].color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
+			clearValues[1].depthStencil.depth = 1.0f;
+			clearValues[1].depthStencil.stencil = 0;
+			
 			
 			TypesafeVkRenderPass renderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDrawover.resource).resource;
 			
@@ -546,8 +549,8 @@ class GraphicsVulkan {
 					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
 					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
-					clearValueCount = cast(uint32_t)1;
-					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
+					clearValueCount = cast(uint32_t)clearValues.length;
+					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 				}
 				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassDrawover;
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
@@ -606,8 +609,11 @@ class GraphicsVulkan {
 				layerCount = 1;
 			}
 
-			VkClearValue clear_value;
-			clear_value.color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
+			VkClearValue clearValues[2];
+			clearValues[0].color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
+			clearValues[1].depthStencil.depth = 1.0f;
+			clearValues[1].depthStencil.stencil = 0;
+
 			
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
@@ -673,12 +679,12 @@ class GraphicsVulkan {
 				
 				VkImageSubresourceRange imageSubresourceRangeForCopy = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 				
-				VkClearColorValue clear_color;
-				clear_color.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
+				VkClearColorValue clearColor;
+				clearColor.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
 				
 				
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
-				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &imageSubresourceRangeForCopy);
+				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 				
 				VkImageSubresourceLayers imageSubresourceLayersForCopy;
 				with(imageSubresourceLayersForCopy) {
@@ -737,8 +743,8 @@ class GraphicsVulkan {
 					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
 					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
-					clearValueCount = cast(uint32_t)1;
-					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
+					clearValueCount = cast(uint32_t)clearValues.length;
+					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 				}
 				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
