@@ -1008,14 +1008,14 @@ class GraphicsVulkan {
 		//////////////////
 		
 		{
-			string path = "resources/engine/graphics/configuration/preset/renderpassReset.json";
+			string path = "resources/engine/graphics/configuration/preset/renderpassResetWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createRenderpass(jsonValue, /*out*/ renderPassReset);
 		}
 		scope(exit) releaseResourceNodes([renderPassReset]);
 		
 		{
-			string path = "resources/engine/graphics/configuration/preset/renderpassDrawover.json";
+			string path = "resources/engine/graphics/configuration/preset/renderpassDrawoverWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createRenderpass(jsonValue, /*out*/ renderPassDrawover);
 		}
