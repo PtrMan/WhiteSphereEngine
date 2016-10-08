@@ -393,7 +393,7 @@ class VulkanDeviceFacade {
 		VkPipelineViewportStateCreateInfo viewportState;
 		VkPipelineRasterizationStateCreateInfo rasterizationState;
 		VkPipelineMultisampleStateCreateInfo multisampleState;
-		VkPipelineDepthStencilStateCreateInfo* depthStencilState; // pointer because its optional
+		VkPipelineDepthStencilStateCreateInfo depthStencilState; // pointer because its optional
 		VkPipelineColorBlendStateCreateInfo colorBlendState;
 		VkPipelineDynamicStateCreateInfo* dynamicState; // pointer because its optional
 		

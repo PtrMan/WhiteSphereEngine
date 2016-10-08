@@ -468,7 +468,7 @@ class GraphicsVulkan {
 				depthBoundsTestEnable = VK_FALSE;
 				minDepthBounds = 0.0f; // Optional
 				maxDepthBounds = 1.0f; // Optional
-				depthStencil.stencilTestEnable = VK_FALSE;
+				stencilTestEnable = VK_FALSE;
 				front = VkStencilOpState.init; // Optional
 				back = VkStencilOpState.init; // Optional
 			}
