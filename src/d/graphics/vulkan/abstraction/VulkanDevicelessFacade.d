@@ -12,7 +12,7 @@ import linopterixed.linear.Vector;
 
 // Facade for vulkan functionality qhich odesnt need the device
 class VulkanDevicelessFacade {
-	public static makeVkViewport(SpatialVector!(2, float) size, float minDepth = 0.0f, float maxDepth = 1.0f, SpatialVector!(2, float) position = new SpatialVector!(2, float)(0.0f, 0.0f)) {
+	public static makeVkViewport(SpatialVectorStruct!(2, float) size, float minDepth = 0.0f, float maxDepth = 1.0f, SpatialVectorStruct!(2, float) position = SpatialVectorStruct!(2, float).make(0.0f, 0.0f)) {
 		VkViewport viewport;
 		with( viewport ) {
 			x = position.x;

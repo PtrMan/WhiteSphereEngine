@@ -429,7 +429,7 @@ class GraphicsVulkan {
 			
 			
 			
-			VkViewport viewport = DevicelessFacade.makeVkViewport(new SpatialVector!(2, float)(cast(float)300, cast(float)300));
+			VkViewport viewport = DevicelessFacade.makeVkViewport(SpatialVectorStruct!(2, float).make(cast(float)300, cast(float)300));
 			
 			VkRect2D scissor;
 			scissor.offset = DevicelessFacade.makeVkOffset2D(0, 0);
@@ -1116,13 +1116,13 @@ class GraphicsVulkan {
 		// binding must happen before the filling of the command buffers
 		
 		{ // build mesh
-			SpatialVector!(4, float)[] positions;
+			SpatialVectorStruct!(4, float)[] positions;
 			positions.length = 4;
 			// on screen:                                 y       x
-			positions[0] = new SpatialVector!(4, float)(-1.0f, 0.0f, 0, 1.0f);
-			positions[1] = new SpatialVector!(4, float)(1.0f,  1.0f, 0, 1.0f);
-			positions[2] = new SpatialVector!(4, float)(1.0f,  0.0f, 0, 1.0f);
-			positions[3] = new SpatialVector!(4, float)(1.0f, 1.0f, 0, 1.0f);
+			positions[0] = SpatialVectorStruct!(4, float).make(-1.0f, 0.0f, 0, 1.0f);
+			positions[1] = SpatialVectorStruct!(4, float).make(1.0f,  1.0f, 0, 1.0f);
+			positions[2] = SpatialVectorStruct!(4, float).make(1.0f,  0.0f, 0, 1.0f);
+			positions[3] = SpatialVectorStruct!(4, float).make(1.0f, 1.0f, 0, 1.0f);
 			
 			
 			//uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];

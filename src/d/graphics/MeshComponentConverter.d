@@ -3,7 +3,7 @@ module graphics.MeshComponentConverter;
 import linopterixed.linear.Vector;
 import graphics.ImmutableMeshComponent;
 
-ImmutableMeshComponent toImmutableMeshComponent(SpatialVector!(4, float)[] vectors) {
+ImmutableMeshComponent toImmutableMeshComponent(SpatialVectorStruct!(4, float)[] vectors) {
 	float[4][] translatedVectors;
 	translatedVectors.length = vectors.length;
 	foreach( i; 0..translatedVectors.length ) {
