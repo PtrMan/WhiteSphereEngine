@@ -100,7 +100,7 @@ VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue, Atta
 		result.format = attachmentDescriptionContext.depthFormat;
 	}
 	else {
-		result.format = cast(VkFormat)jsonValue["format"].str.to!(VkFormat);
+		result.format = cast(VkFormat)jsonValue["format"].str.to!(erupted.types.VkFormat);
 	}
 
 	return result;
