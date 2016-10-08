@@ -76,11 +76,15 @@ VkPipelineColorBlendStateCreateInfo convertForPipelineColorBlendStateCreateInfo(
 	}
 }
 
-VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue) {
-	return jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkAttachmentDescription, 
+// context which holds helpervariables for special functionality
+struct AttachmentDescriptionContext {
+	VkFormat depthFormat; // the format of the depth image
+}
+
+VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue, AttachmentDescriptionContext attachmentDescriptionContext) {
+	VkAttachmentDescription result = jsonReaderForVulkanStructureWithOnlySpecifiedFields!(VkAttachmentDescription, 
 		[
 			"flags":"VkAttachmentDescriptionFlags",
-			"format":"VkFormat",
 			"samples":"VkSampleCountFlagBits",
 			"loadOp":"VkAttachmentLoadOp",
 			"storeOp":"VkAttachmentStoreOp",
@@ -90,6 +94,15 @@ VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue) {
 			"finalLayout":"VkImageLayout",
 		]
 	)(jsonValue);
+
+	if( jsonValue["format"].str == "depthFormat()" ) {
+		result.format = attachmentDescriptionContext.depthFormat;
+	}
+	else {
+		result.format = cast(VkFormat)jsonValue["format"].str.to!(VkFormat);
+	}
+
+	return result;
 }
 
 VkAttachmentReference convertForAttachmentReference(JsonValue jsonValue) {

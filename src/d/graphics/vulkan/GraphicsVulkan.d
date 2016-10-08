@@ -89,6 +89,7 @@ class GraphicsVulkan {
 
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
 		TypesafeVkImageView depthBufferImageView;
+		VkFormat depthImageFormat;
 
 		// calculate projection matrix
 		{
@@ -161,7 +162,7 @@ class GraphicsVulkan {
 			//       TODO< investigate and test for cases where it has chosen the formats with stencil > >
 
 			// search best format
-			VkFormat depthImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredDepthImageFormatFeatures, "Depthbuffer");
+			depthImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredDepthImageFormatFeatures, "Depthbuffer");
 			
 			VulkanDeviceFacade.CreateImageArguments createImageArguments;
 			createImageArguments.format = depthImageFormat;
@@ -203,10 +204,12 @@ class GraphicsVulkan {
 		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode) {
 			VkResult vulkanResult;
 			
+			AttachmentDescriptionContext attachmentDescriptionContext; // helper which contains some context for the conversion of the attachment description for special json values
+			attachmentDescriptionContext.depthFormat = depthImageFormat;
 			
 			VkAttachmentDescription[] attachmentDescriptions;
 			foreach( iterationJsonValue; jsonValue["attachmentDescriptions"].array ) {
-				attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonValue);
+				attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonValue, attachmentDescriptionContext);
 			}
 			
 			VkSubpassDescription[] subpassDescriptions;
