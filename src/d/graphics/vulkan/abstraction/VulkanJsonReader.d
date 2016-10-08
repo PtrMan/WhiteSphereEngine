@@ -137,6 +137,14 @@ VkSubpassDescription convertForSubpassDescription(JsonValue jsonValue) {
 		}
 	}
 
+	VkAttachmentReference *depthStencilAttachment = null;
+	{
+		if( !jsonValue["depthStencilAttachment"].isNull ) {
+			depthStencilAttachment = new VkAttachmentReference;
+			*depthStencilAttachment = convertForAttachmentReference(jsonValue["depthStencilAttachment"]);
+		}
+	}
+
 	
 	with(result) {
 		inputAttachmentCount = cast(uint32_t)InputAttachments.length;
@@ -144,7 +152,7 @@ VkSubpassDescription convertForSubpassDescription(JsonValue jsonValue) {
 		colorAttachmentCount = cast(uint32_t)colorAttachments.length;
 		pColorAttachments = cast(immutable(VkAttachmentReference)*)colorAttachments.ptr;
 		pResolveAttachments = null; // TODO< read from json >
-		pDepthStencilAttachment = null; // TODO< read from json >
+		pDepthStencilAttachment = cast(immutable(VkAttachmentReference)*)depthStencilAttachment;
 		preserveAttachmentCount = 0; // TODO< read from json >
 		pPreserveAttachments = null; // TODO< read from json >
 	}

@@ -30,9 +30,10 @@
 			"flags":"0",
 			"pipelineBindPoint":"VK_PIPELINE_BIND_POINT_GRAPHICS",
 			"colorAttachments":[
-				{"attachment":"0", "layout":"VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL"},
+				{"attachment":"0", "layout":"VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL"}
+			],
+			"depthStencilAttachment": 
 				{"attachment":"1", "layout":"VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL"}
-			]
 		}
 	]
 }
