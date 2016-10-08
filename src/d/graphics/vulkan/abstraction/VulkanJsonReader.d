@@ -92,7 +92,8 @@ VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue, Atta
 			"stencilStoreOp":"VkAttachmentStoreOp",
 			"initialLayout":"VkImageLayout",
 			"finalLayout":"VkImageLayout",
-		]
+		],
+		"format" // ignore
 	)(jsonValue);
 
 	if( jsonValue["format"].str == "depthFormat()" ) {

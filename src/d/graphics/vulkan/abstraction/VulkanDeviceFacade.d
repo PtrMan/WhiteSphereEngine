@@ -418,7 +418,7 @@ class VulkanDeviceFacade {
 			pViewportState = cast(immutable(VkPipelineViewportStateCreateInfo)*)&arguments.viewportState;
 			pRasterizationState = cast(immutable(VkPipelineRasterizationStateCreateInfo)*)&arguments.rasterizationState;
 			pMultisampleState= cast(immutable(VkPipelineMultisampleStateCreateInfo)*)&arguments.multisampleState;
-			pDepthStencilState = cast(immutable(VkPipelineDepthStencilStateCreateInfo)*)arguments.depthStencilState;
+			pDepthStencilState = cast(immutable(VkPipelineDepthStencilStateCreateInfo)*)&arguments.depthStencilState;
 			pColorBlendState = cast(immutable(VkPipelineColorBlendStateCreateInfo)*)&arguments.colorBlendState;
 			pDynamicState = cast(immutable(VkPipelineDynamicStateCreateInfo)*)arguments.dynamicState;
 			
