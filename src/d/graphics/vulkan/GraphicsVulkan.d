@@ -807,35 +807,16 @@ class GraphicsVulkan {
 				
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
-				
-				VkImageSubresourceLayers imageSubresourceLayersForCopy;
-				with(imageSubresourceLayersForCopy) {
-					aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					mipLevel = 0;
-					baseArrayLayer = 0;
-					layerCount = 1;
+
+				CommandCopyImageArguments commandCopyImageArguments;
+				with(commandCopyImageArguments) {
+					sourceImage = framebufferImageResource.resource.value;
+					destinationImage = cast(TypesafeVkImage)vulkanContext.swapChain.swapchainImages[i];
+					sourceImageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					destinationImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					extent = Vector2ui.make(300, 300);
 				}
-				
-				VkImageCopy[1] imageCopyRegions;
-				with(imageCopyRegions[0]) {
-					srcSubresource = imageSubresourceLayersForCopy;
-					with(srcOffset) {x=y=z=0;}
-					dstSubresource = imageSubresourceLayersForCopy;
-					with(dstOffset) {x=y=z=0;}
-					with(extent) {width=300,height=300,depth=0;};
-				}
-				
-				
-				
-				vkCmdCopyImage(
-					cast(VkCommandBuffer)commandBuffersForCopy[i], // commandBuffer
-					cast(VkImage)framebufferImageResource.resource.value, // srcImage
-					VK_IMAGE_LAYOUT_GENERAL, // srcImageLayout
-					vulkanContext.swapChain.swapchainImages[i], // dstImage
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
-					1, // regionCount
-					imageCopyRegions.ptr// pRegions
-				);
+				commandCopyImage(commandBuffersForCopy[i], commandCopyImageArguments);
 				
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
 				
