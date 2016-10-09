@@ -716,7 +716,7 @@ class GraphicsVulkan {
 			// TODO< store with texture >
 			VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-			VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments;
+			VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments = VulkanDeviceFacade.CreateImageViewArguments.make();
 			with(createImageViewArguments) {
 				image = testingTextureImageResource.resource.value;
 				viewType = VK_IMAGE_VIEW_TYPE_2D;
