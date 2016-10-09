@@ -511,6 +511,26 @@ class VulkanDeviceFacade {
 		return mapResult;
 	}
 	
+	
+	public final VkTypesafeDescriptorSetLayout createDescriptorSetLayout(VkDescriptorSetLayoutBinding[] bindings, const(VkAllocationCallbacks*) allocator = null) {
+		VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.init;
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = cast(uint32_t)bindings.count;
+		layoutInfo.pBindings = cast(immutable(VkDescriptorSetLayoutBinding)*)bindings.ptr;
+
+		VkDescriptorSetLayout rawDescriptorSetLayout;
+		VkResult vulkanResult = vkCreateDescriptorSetLayout(device, &layoutInfo, allocator, &rawDescriptorSetLayout);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create descriptor set layout [vkCreateDescriptorSetLayout]");
+		}
+		return cast(VkTypesafeDescriptorSetLayout)rawDescriptorSetLayout;
+	}
+
+	public final void destroyDescriptorSetLayout(TypesafeVkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* pAllocator = null) {
+		vkDestroyDescriptorSetLayout(device, cast(VkDescriptorSetLayout)descriptorSetLayout, allocator);
+	}
+
+
 	public final void unmap(TypesafeVkDeviceMemory memory) {
 		vkUnmapMemory(device, cast(VkDeviceMemory)memory);
 	}
