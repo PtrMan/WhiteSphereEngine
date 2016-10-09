@@ -107,6 +107,10 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode descriptorSetLayout;
 
 
+		// statically allocated
+		TypesafeVkDescriptorPool descriptorPool;
+
+
 
 		// calculate projection matrix
 		{
@@ -787,6 +791,25 @@ class GraphicsVulkan {
 			/* out */descriptorSetLayout.incrementExternalReferenceCounter();
 		}
 
+		void createDescriptorPool() {
+			VulkanDeviceFacade.CreateDescriptorPoolArguments createDescriptorPoolArguments;
+			with(createDescriptorPoolArguments) {
+				flags = 0;
+				maxSets = 1;
+				poolSizes = []; // TODO
+			}
+
+			VkAllocationCallbacks* allocator = null;
+
+			descriptorPool = vkDevFacade.createDescriptorPool(createDescriptorPoolArguments, allocator);
+		}
+
+		void destroyDescriptorPool() {
+			VkAllocationCallbacks* allocator = null;
+
+			vkDevFacade.destroyDescriptorPool(descriptorPool, allocator);
+		}
+
 
 		
 		// function just for the example code, needs to get refactored later
@@ -1159,6 +1182,14 @@ class GraphicsVulkan {
 		scope(exit) checkForReleasedResourcesAndRelease();
 		
 		
+		/////////////////
+		// create descriptor pool and set
+		/////////////////
+		createDescriptorPool();
+		scope(exit) destroyDescriptorPool();
+
+
+
 		
 		//////////////////
 		// allocate setup command buffer and fence
