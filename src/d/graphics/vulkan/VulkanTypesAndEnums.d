@@ -26,6 +26,7 @@ alias TypesafeVkRenderPass = Typedef!(VkRenderPass, VkRenderPass.init, "renderpa
 alias TypesafeVkPipeline = Typedef!(VkPipeline, VkPipeline.init, "pipeline");
 alias TypesafeVkPipelineLayout = Typedef!(VkPipelineLayout, VkPipelineLayout.init, "pipelineLayout");
 alias TypesafeVkDeviceMemory = Typedef!(VkDeviceMemory, VkDeviceMemory.init, "deviceMemory");
+alias TypesafeVkSampler = Typedef!(VkSampler, VkSampler.init, "sampler");
 
 // make sure that the sizes are equal because we don't want to rebuild arrays
 static assert( TypesafeVkImage.sizeof == VkImage.sizeof);
@@ -36,6 +37,7 @@ static assert( TypesafeVkCommandBuffer.sizeof == VkCommandBuffer.sizeof);
 static assert( TypesafeVkQueue.sizeof == VkQueue.sizeof);
 static assert( TypesafeVkCommandPool.sizeof == VkCommandPool.sizeof);
 static assert( TypesafeVkPipelineLayout.sizeof == VkPipelineLayout.sizeof);
+static assert( TypesafeVkSampler.sizeof == VkSampler.sizeof);
 
 // doesnt compile
 //static assert( TypesafeVkImageView.sizeof = VkImageView.sizeof);

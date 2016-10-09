@@ -99,7 +99,8 @@ class GraphicsVulkan {
 
 		// texture for testing
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage testingTextureImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
-
+		ResourceDag.ResourceNode testingTextureImageSampler;
+		ResourceDag.ResourceNode testingTextureImageView;
 
 
 
@@ -710,6 +711,57 @@ class GraphicsVulkan {
 			// and we need to transition the layout of the staging image back to VK_IMAGE_LAYOUT_PREINITIALIZED for the next transfer
 			transitionImageLayout(textureStaging256ImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PREINITIALIZED);
 		}
+
+		void createTextureImageView() {
+			// TODO< store with texture >
+			VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
+			VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments;
+			with(createImageViewArguments) {
+				image = testingTextureImageResource.resource.value;
+				viewType = VK_IMAGE_VIEW_TYPE_2D;
+				format = textureFormat;
+			}
+
+
+			const(VkAllocationCallbacks*) allocator = null;
+
+			TypesafeVkImageView imageView = vkDevFacade.createImageView(createImageViewArguments, allocator);
+
+			VulkanResourceDagResource!TypesafeVkImageView testingTextureImageViewDagResource = new VulkanResourceDagResource!TypesafeVkImageView(vkDevFacade, imageView, allocator, &disposeImageView);
+			
+			/* out */testingTextureImageView = resourceDag.createNode(testingTextureImageViewDagResource);
+			
+			// we hold this because else the resourceDag would dispose them
+			/* out */testingTextureImageView.incrementExternalReferenceCounter();
+		}
+
+		void createTextureSampler() {
+			VulkanDeviceFacade.CreateSamplerArguments createSamplerArguments = VulkanDeviceFacade.CreateSamplerArguments.init;
+			with(createSamplerArguments) {
+				magFilter = VK_FILTER_LINEAR;
+				minFilter = VK_FILTER_LINEAR;
+				mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+				addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				anisotropyEnable = true; // TODO< "global" parameter for the engine >
+				maxAnisotropy = 16.0f; // TODO< "global" parameter for the engine >
+			}
+
+			const(VkAllocationCallbacks*) allocator = null;
+
+			TypesafeVkSampler createdSampler = vkDevFacade.createSampler(createSamplerArguments, allocator);
+
+			VulkanResourceDagResource!TypesafeVkSampler testingTextureImageSamplerDagResource = new VulkanResourceDagResource!TypesafeVkSampler(vkDevFacade, createdSampler, allocator, &disposeSampler);
+			
+			/* out */testingTextureImageSampler = resourceDag.createNode(testingTextureImageSamplerDagResource);
+			
+			// we hold this because else the resourceDag would dispose them
+			/* out */testingTextureImageSampler.incrementExternalReferenceCounter();
+		}
+
+
 		
 		// function just for the example code, needs to get refactored later
 		void recordingCommandBuffers() {
@@ -1102,9 +1154,11 @@ class GraphicsVulkan {
 
 
 		//////////////////
-		// create test texture
+		// create test texture, view and sampler
 		//////////////////
 		createTextureImage();
+		createTextureImageView();
+	    createTextureSampler();
 
 
 		//////////////////

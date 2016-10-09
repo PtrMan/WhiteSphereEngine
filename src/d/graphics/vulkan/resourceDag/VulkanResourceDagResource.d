@@ -44,6 +44,10 @@ void disposeImageView(VulkanDeviceFacade vkDevFacade, TypesafeVkImageView imageV
 	vkDevFacade.destroyImageView(imageView, allocator);
 }
 
+void disposeSampler(VulkanDeviceFacade vkDevFacade, TypesafeVkSampler sampler, const(VkAllocationCallbacks*) allocator) {
+	vkDevFacade.destroySampler(sampler, allocator);
+}
+
 void disposeFramebuffer(VulkanDeviceFacade vkDevFacade, TypesafeVkFramebuffer framebuffer, const(VkAllocationCallbacks*) allocator) {
 	vkDevFacade.destroyFramebuffer(framebuffer, allocator);
 }
