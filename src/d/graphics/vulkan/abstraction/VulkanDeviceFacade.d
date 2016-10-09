@@ -530,6 +530,35 @@ class VulkanDeviceFacade {
 		vkDestroyDescriptorSetLayout(device, cast(VkDescriptorSetLayout)descriptorSetLayout, allocator);
 	}
 
+	public static struct CreateDescriptorPoolArguments {
+		VkDescriptorPoolCreateFlags flags;
+		uint32_t maxSets;
+		VkDescriptorPoolSize[] poolSizes;
+	}
+
+
+	public final TypesafeVkDescriptorPool createDescriptorPool(CreateDescriptorPoolArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+		VkDescriptorPoolCreateInfo createInfo = VkDescriptorPoolCreateInfo.init;
+		with(createInfo) {
+			sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+			flags = arguments.flags;
+			maxSets = arguments.maxSets;
+			poolSizeCount = cast(uint32_t)arguments.poolSizes.length;
+			pPoolSizes = cast(immutable(VkDescriptorPoolSize)*)arguments.poolSizes.ptr;
+		}
+
+		VkDescriptorPool rawDescriptorPool;
+		VkResult vulkanResult = vkCreateDescriptorPool(device, &createInfo, allocator, &rawDescriptorPool);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create descriptor pool [vkCreateDescriptorPool]");
+		}
+		return cast(TypesafeVkDescriptorPool)rawDescriptorPool;
+	}
+
+	public final void destroyDescriptorPool(TypesafeVkDescriptorPool descriptorPool, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroyDescriptorPool(device, cast(VkDescriptorPool)descriptorPool, allocator);
+	}
+
 
 	public final void unmap(TypesafeVkDeviceMemory memory) {
 		vkUnmapMemory(device, cast(VkDeviceMemory)memory);
