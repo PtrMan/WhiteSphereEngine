@@ -647,8 +647,19 @@ class GraphicsVulkan {
 			// allocate and bind memory
 			resourceQueryAllocateBind(textureStaging256ImageResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "image");
 			
-			// TODO< map, copy texture data into staging memory, unmap >
-
+			// map, copy texture data into staging memory, unmap
+			{ // scope to automatically unmap
+				void *hostPtr = vkDevFacade.map(
+					textureStaging256ImageResource.derivedInformation.value.allocatorForResource.deviceMemory,
+					textureStaging256ImageResource.derivedInformation.value.offset,
+					textureStaging256ImageResource.derivedInformation.value.allocatedSize,
+					0 /* flags */
+				);
+				scope(exit) vkDevFacade.unmap(textureStaging256ImageResource.derivedInformation.value.allocatorForResource.deviceMemory);
+				
+				ubyte* textureUbytePtr = cast(ubyte*)hostPtr;
+				// TODO< fill with memory >
+			}
 
 
 
@@ -1108,6 +1119,11 @@ class GraphicsVulkan {
 		}
 
 
+
+		//////////////////
+		// create test texture
+		//////////////////
+		createTextureImage();
 
 
 		//////////////////
