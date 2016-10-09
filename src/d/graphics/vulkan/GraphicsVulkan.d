@@ -103,6 +103,10 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode testingTextureImageView;
 
 
+		// NOTE< maybe this should be statically managed? >
+		ResourceDag.ResourceNode descriptorSetLayout;
+
+
 
 		// calculate projection matrix
 		{
@@ -761,6 +765,28 @@ class GraphicsVulkan {
 			/* out */testingTextureImageSampler.incrementExternalReferenceCounter();
 		}
 
+		void createDescriptorSetLayout() {
+			/*
+			// TODO< fill with VkDescriptorSetLayoutBinding we need >
+
+			VkDescriptorSetLayoutBinding uboLayoutBinding = VkDescriptorSetLayoutBinding.init;
+			uboLayoutBinding.binding = 0;
+			uboLayoutBinding.descriptorType = //TODO  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			uboLayoutBinding.descriptorCount = // TODO    1;
+			
+			*/
+			const(VkAllocationCallbacks*) allocator = null;
+
+			TypesafeVkDescriptorSetLayout createdDescriptorSetLayout = vkDevFacade.createDescriptorSetLayout([], allocator);
+
+			VulkanResourceDagResource!TypesafeVkDescriptorSetLayout descriptorSetLayoutDagResource = new VulkanResourceDagResource!TypesafeVkDescriptorSetLayout(vkDevFacade, createdDescriptorSetLayout, allocator, &disposeDescriptorSetLayout);
+			
+			/* out */descriptorSetLayout = resourceDag.createNode(descriptorSetLayoutDagResource);
+			
+			// we hold this because else the resourceDag would dispose them
+			/* out */descriptorSetLayout.incrementExternalReferenceCounter();
+		}
+
 
 		
 		// function just for the example code, needs to get refactored later
@@ -1198,7 +1224,14 @@ class GraphicsVulkan {
 		// renderPass for the reset and the actually drawing are comptible to each other
 		createFramebuffer(renderPassReset);
 		scope(exit) releaseFramebufferResources();
-		
+
+
+
+		//////////////////
+		// this has to happen before
+		// * creation of graphics pipeline, because in the future we will use uniform buffers
+		//////////////////
+		createDescriptorSetLayout();
 		
 		
 		//////////////////
