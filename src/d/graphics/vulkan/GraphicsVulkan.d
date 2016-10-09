@@ -29,6 +29,7 @@ import linopterixed.linear.Matrix;
 import linopterixed.linear.Vector;
 import linopterixed.linear.MatrixCommonOperations;
 import whiteSphereEngine.graphics.vulkan.Projection;
+import math.VectorAlias;
 
 alias Matrix!(float, 4, 4) Matrix44Type;
 
@@ -90,6 +91,17 @@ class GraphicsVulkan {
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
 		TypesafeVkImageView depthBufferImageView;
 		VkFormat depthImageFormat;
+
+
+		// TODO< dictionary array for the staging images, indexed by format and size
+		VulkanResourceWithMemoryDecoration!TypesafeVkImage textureStaging256ImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
+
+
+		// texture for testing
+		VulkanResourceWithMemoryDecoration!TypesafeVkImage testingTextureImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
+
+
+
 
 		// calculate projection matrix
 		{
@@ -604,6 +616,88 @@ class GraphicsVulkan {
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
 			}
 			
+		}
+
+		void createTextureImage() {
+			VkFormat stagingFormat = VK_FORMAT_R8G8B8A8_UNORM;// TODO< search for format which the GPU supports, we take R8G8B8A8_UNORM because a lot of cards should support it by default >
+			VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UNORM;// TODO< search for format which the GPU supports, we take R8G8B8A8_UNORM because a lot of cards should support it by default >
+
+			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
+
+			// create staging image
+			{
+				VkExtent3D imageExtent = {256, 256, 1};
+
+				VulkanDeviceFacade.CreateImageArguments createImageArguments;
+				createImageArguments.format = stagingFormat; 
+				createImageArguments.extent = imageExtent;
+				createImageArguments.tiling = VK_IMAGE_TILING_LINEAR; // because we use this image for staging
+				createImageArguments.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // because we use it for staging
+				createImageArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				
+				createImageArguments.queueFamilyIndexCount = 1;
+				createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex,].ptr;
+				createImageArguments.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+				
+				textureStaging256ImageResource.resource = vkDevFacade.createImage(createImageArguments);
+			}
+			
+
+			/////
+			// allocate and bind memory
+			resourceQueryAllocateBind(textureStaging256ImageResource, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "image");
+			
+			// TODO< map, copy texture data into staging memory, unmap >
+
+
+
+
+			// create the real image
+			{
+				VkExtent3D imageExtent = {256, 256, 1};
+
+				VulkanDeviceFacade.CreateImageArguments createImageArguments;
+				createImageArguments.format = textureFormat;
+				createImageArguments.extent = imageExtent;
+				createImageArguments.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				createImageArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+				createImageArguments.queueFamilyIndexCount = 1;
+				createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex,].ptr;
+				createImageArguments.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+				testingTextureImageResource.resource = vkDevFacade.createImage(createImageArguments);
+			}
+
+			/////
+			// allocate and bind memory
+			resourceQueryAllocateBind(testingTextureImageResource, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "image");
+			
+
+
+			/////
+			// now we do the transitions, copy it, and do the other transitions
+
+			transitionImageLayout(textureStaging256ImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			transitionImageLayout(testingTextureImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+			CommandCopyImageArguments commandCopyImageArguments;
+			with(commandCopyImageArguments) {
+				sourceImage = textureStaging256ImageResource.resource.value;
+				destinationImage = testingTextureImageResource.resource.value;
+				sourceImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				destinationImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				extent = Vector2ui.make(256, 256);
+			}
+			copyImage(commandCopyImageArguments);
+
+
+
+			// to be able to sample from it we need one more transition
+			transitionImageLayout(testingTextureImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			// and we need to transition the layout of the staging image back to VK_IMAGE_LAYOUT_PREINITIALIZED for the next transfer
+			transitionImageLayout(textureStaging256ImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PREINITIALIZED);
 		}
 		
 		// function just for the example code, needs to get refactored later
@@ -1357,6 +1451,81 @@ class GraphicsVulkan {
 			pCommandBuffers = cast(immutable(VkCommandBuffer)*)&setupCommandBuffer;
 			signalSemaphoreCount = 0;
 			pSignalSemaphores = null;
+		}
+		vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, cast(VkFence)setupCommandBufferFence);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Queue submit failed [vkQueueSubmit]!");
+		}
+		
+		vkDevFacade.fenceWaitAndReset(setupCommandBufferFence);
+		
+		vulkanResult = vkResetCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, 0);
+		if( !vulkanSuccess(vulkanResult) ) {
+			throw new EngineException(true, true, "Reset command buffer failed! [vkResetCommandBuffer]");
+		}
+	}
+
+	static struct CommandCopyImageArguments {
+		TypesafeVkImage sourceImage, destinationImage;
+		VkImageLayout sourceImageLayout, destinationImageLayout;
+		Vector2ui extent;
+	}
+
+	// inspired by https://vulkan-tutorial.com/Texture_mapping#page_Copying_images
+	// just adds a command
+	final private static void commandCopyImage(TypesafeVkCommandBuffer commandBuffer, CommandCopyImageArguments arguments) {
+		VkImageSubresourceLayers imageSubresourceLayersForCopy;
+		with(imageSubresourceLayersForCopy) {
+			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			mipLevel = 0;
+			baseArrayLayer = 0;
+			layerCount = 1;
+		}
+		
+		VkImageCopy[1] imageCopyRegions;
+		with(imageCopyRegions[0]) {
+			srcSubresource = imageSubresourceLayersForCopy;
+			with(srcOffset) {x=y=z=0;}
+			dstSubresource = imageSubresourceLayersForCopy;
+			with(dstOffset) {x=y=z=0;}
+			with(extent) {width=arguments.extent.x,height=arguments.extent.y,depth=0;};
+		}
+		
+		vkCmdCopyImage(
+			cast(VkCommandBuffer)commandBuffer,
+			cast(VkImage)arguments.sourceImage,
+			arguments.sourceImageLayout,
+			cast(VkImage)arguments.destinationImage,
+			arguments.destinationImageLayout,
+			1, // regionCount
+			imageCopyRegions.ptr// pRegions
+		);
+	}
+
+	// encapsulates and uses the setupCommandBuffer
+	final private void copyImage(CommandCopyImageArguments arguments) {
+		VkResult vulkanResult;
+
+		VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
+
+		{ // scope for beginCommandBuffer/end
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			vkBeginCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, &beginInfo);
+			scope(success) vkEndCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer);
+			
+			commandCopyImage(setupCommandBuffer, arguments);
+		}
+
+
+		VkSubmitInfo submitInfo = {};
+		with(submitInfo) {
+			sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			waitSemaphoreCount = 0;
+			commandBufferCount = 1;
+			pCommandBuffers = cast(immutable(VkCommandBuffer)*)&setupCommandBuffer;
+			signalSemaphoreCount = 0;
 		}
 		vulkanResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, cast(VkFence)setupCommandBufferFence);
 		if( !vulkanSuccess(vulkanResult) ) {
