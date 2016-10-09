@@ -311,6 +311,61 @@ class VulkanDeviceFacade {
 		vkDestroyImageView(device, cast(VkImageView)imageView, allocator);
 	}
 	
+	public static struct CreateSamplerArguments {
+		VkSamplerCreateFlags flags = 0; // default
+		VkFilter                magFilter;
+		VkFilter                minFilter;
+		VkSamplerMipmapMode     mipmapMode;
+		VkSamplerAddressMode    addressModeU;
+		VkSamplerAddressMode    addressModeV;
+		VkSamplerAddressMode    addressModeW;
+		float                   mipLodBias = 0.0f; // default
+		bool                anisotropyEnable;
+		float                   maxAnisotropy;
+		bool                compareEnable = false; // default
+		VkCompareOp             compareOp = VK_COMPARE_OP_ALWAYS; // default
+		float                   minLod = 0.0f; // default
+		float                   maxLod = 0.0f; // default
+		VkBorderColor           borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // default
+		bool                unnormalizedCoordinates = false; // default
+	}
+
+	public final TypesafeVkSampler createSampler(CreateSamplerArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+		VkSamplerCreateInfo samplerCreateInfo = VkSamplerCreateInfo.init;
+		with(samplerCreateInfo) {
+			sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			flags = arguments.flags;
+			magFilter = arguments.magFilter;
+			minFilter = arguments.minFilter;
+			mipmapMode = arguments.mipmapMode;
+			addressModeU = arguments.addressModeU;
+			addressModeV = arguments.addressModeV;
+			addressModeW = arguments.addressModeW;
+			mipLodBias = arguments.mipLodBias;
+			anisotropyEnable = vulkanBoolean(arguments.anisotropyEnable);
+			maxAnisotropy = arguments.maxAnisotropy;
+			compareEnable = vulkanBoolean(arguments.compareEnable);
+			compareOp = arguments.compareOp;
+			minLod = arguments.minLod;
+			maxLod = arguments.maxLod;
+			borderColor = arguments.borderColor;
+			unnormalizedCoordinates = vulkanBoolean(arguments.unnormalizedCoordinates);
+		}
+
+		VkSampler rawSampler;
+		VkResult vulkanResult = vkCreateSampler(device, &samplerCreateInfo, allocator, &rawSampler);
+		if( !vulkanResult.vulkanSuccess ) {
+			throw new EngineException(true, true, "Couldn't create sampler [vkCreateSampler]!");
+		}
+
+		return cast(TypesafeVkSampler)rawSampler;
+	}
+
+	public final void destroySampler(TypesafeVkSampler sampler, const(VkAllocationCallbacks*) allocator = null) {
+		vkDestroySampler(device, cast(VkSampler)sampler, allocator);
+	}
+
+
 	public static struct CreateFramebufferArguments {
 		VkFramebufferCreateFlags flags = 0; // default
 		TypesafeVkRenderPass renderPass;
