@@ -515,7 +515,7 @@ class VulkanDeviceFacade {
 	public final TypesafeVkDescriptorSetLayout createDescriptorSetLayout(VkDescriptorSetLayoutBinding[] bindings, const(VkAllocationCallbacks*) allocator = null) {
 		VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.init;
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = cast(uint32_t)bindings.count;
+		layoutInfo.bindingCount = cast(uint32_t)bindings.length;
 		layoutInfo.pBindings = cast(immutable(VkDescriptorSetLayoutBinding)*)bindings.ptr;
 
 		VkDescriptorSetLayout rawDescriptorSetLayout;
@@ -523,7 +523,7 @@ class VulkanDeviceFacade {
 		if( !vulkanResult.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't create descriptor set layout [vkCreateDescriptorSetLayout]");
 		}
-		return cast(VkTypesafeDescriptorSetLayout)rawDescriptorSetLayout;
+		return cast(TypesafeVkDescriptorSetLayout)rawDescriptorSetLayout;
 	}
 
 	public final void destroyDescriptorSetLayout(TypesafeVkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* allocator = null) {

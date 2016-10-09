@@ -48,6 +48,10 @@ void disposeSampler(VulkanDeviceFacade vkDevFacade, TypesafeVkSampler sampler, c
 	vkDevFacade.destroySampler(sampler, allocator);
 }
 
+void disposeDescriptorSetLayout(VulkanDeviceFacade vkDevFacade, TypesafeVkDescriptorSetLayout descriptorSetLayout, const(VkAllocationCallbacks*) allocator) {
+	vkDevFacade.destroyDescriptorSetLayout(descriptorSetLayout, allocator);
+}
+
 void disposeFramebuffer(VulkanDeviceFacade vkDevFacade, TypesafeVkFramebuffer framebuffer, const(VkAllocationCallbacks*) allocator) {
 	vkDevFacade.destroyFramebuffer(framebuffer, allocator);
 }
