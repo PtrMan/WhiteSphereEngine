@@ -29,6 +29,7 @@ alias TypesafeVkDeviceMemory = Typedef!(VkDeviceMemory, VkDeviceMemory.init, "de
 alias TypesafeVkSampler = Typedef!(VkSampler, VkSampler.init, "sampler");
 alias TypesafeVkDescriptorSetLayout = Typedef!(VkDescriptorSetLayout, VkDescriptorSetLayout.init, "descriptorSetLayout");
 alias TypesafeVkDescriptorPool = Typedef!(VkDescriptorPool, VkDescriptorPool.init, "descriptorPool");
+alias TypesafeVkDescriptorSet = Typedef!(VkDescriptorSet, VkDescriptorSet.init, "descriptorSet");
 
 // make sure that the sizes are equal because we don't want to rebuild arrays
 static assert( TypesafeVkImage.sizeof == VkImage.sizeof);
@@ -42,6 +43,7 @@ static assert( TypesafeVkPipelineLayout.sizeof == VkPipelineLayout.sizeof);
 static assert( TypesafeVkSampler.sizeof == VkSampler.sizeof);
 static assert( TypesafeVkDescriptorSetLayout.sizeof == VkDescriptorSetLayout.sizeof);
 static assert( TypesafeVkDescriptorPool.sizeof == VkDescriptorPool.sizeof);
+static assert( TypesafeVkDescriptorSet.sizeof == VkDescriptorSet.sizeof);
 
 // doesnt compile
 //static assert( TypesafeVkImageView.sizeof = VkImageView.sizeof);

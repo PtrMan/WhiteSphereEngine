@@ -560,6 +560,51 @@ class VulkanDeviceFacade {
 	}
 
 
+	public final TypesafeVkDescriptorSet[] allocateDescriptorSets(TypesafeVkDescriptorSetLayout[] layouts, TypesafeVkDescriptorPool descriptorPool) {
+		// NOTE< actually we dont have to translate the whole resources all the time but it doesnt eat any performance, because we dont call this too often, so its fine >
+
+
+		VkDescriptorSetLayout[] translatedLayouts;
+		translatedLayouts.length = layouts.length;
+		foreach( i, iterationLayout; layouts) {
+			translatedLayouts[i] = cast(VkDescriptorSetLayout)iterationLayout;
+		}
+
+		VkDescriptorSetAllocateInfo allocInfo;
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = cast(VkDescriptorPool)descriptorPool;
+		allocInfo.descriptorSetCount = cast(uint32_t)translatedLayouts.length;
+		allocInfo.pSetLayouts = cast(immutable(VkDescriptorSetLayout)*)translatedLayouts.ptr;
+
+		VkDescriptorSet[] rawDescriptorSets;
+		rawDescriptorSets.length = layouts.length;
+		VkResult vulkanResult;
+		if( !(vulkanResult = vkAllocateDescriptorSets(device, &allocInfo, rawDescriptorSets.ptr)).vulkanSuccess ) {
+    		throw new EngineException(true, true, "Couldn't create descriptor set [vkAllocateDescriptorSets]");
+		}
+
+		// translate
+		TypesafeVkDescriptorSet[] result;
+		result.length = layouts.length;
+		foreach( i, iterationDescriptorSet; rawDescriptorSets ) {
+			result[i] = cast(TypesafeVkDescriptorSet)iterationDescriptorSet;
+		}
+
+		return result;
+	}
+
+	public final void destroyDescriptorSets(TypesafeVkDescriptorPool descriptorPool, TypesafeVkDescriptorSet[] descriptorSets) {
+		// translate
+		VkDescriptorSet[] translatedDescriptorSets;
+		translatedDescriptorSets.length = descriptorSets.length;
+		foreach( i, iterationDescriptorSet; descriptorSets ) {
+			translatedDescriptorSets[i] = cast(VkDescriptorSet)iterationDescriptorSet;
+		}
+
+		vkFreeDescriptorSets(device, cast(VkDescriptorPool)descriptorPool, cast(uint32_t) translatedDescriptorSets.length, cast(const VkDescriptorSet*)translatedDescriptorSets.ptr);
+	}
+
+
 	public final void unmap(TypesafeVkDeviceMemory memory) {
 		vkUnmapMemory(device, cast(VkDeviceMemory)memory);
 	}

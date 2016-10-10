@@ -106,6 +106,8 @@ class GraphicsVulkan {
 		// NOTE< maybe this should be statically managed? >
 		ResourceDag.ResourceNode descriptorSetLayout;
 
+		// statically allocated
+		TypesafeVkDescriptorSet[] descriptorSets;
 
 		// statically allocated
 		TypesafeVkDescriptorPool descriptorPool;
@@ -360,34 +362,6 @@ class GraphicsVulkan {
 			}
 		}
 		
-		/+ uncommented because its incomplete
-		void createDescriptorSetLayout() {
-			VkDescriptorSetLayoutBinding uboLayoutBinding = VkDescriptorSetLayoutBinding.init;
-			uboLayoutBinding.binding = 0;
-			uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			uboLayoutBinding.descriptorCount = 1;
-			uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			uboLayoutBinding.pImmutableSamplers = null; // Optional
-			
-			VkDescriptorSetLayout descriptorSetLayout;
-			VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.init;
-			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			layoutInfo.bindingCount = 1;
-			layoutInfo.pBindings = &uboLayoutBinding;
-
-			if (!vkCreateDescriptorSetLayout(device, &layoutInfo, null, &descriptorSetLayout).vulkanSuccess) {
-				throw new EngineException(true, true, "Couldn't create an descriptor set layout [vkCreateDescriptorSetLayout]!");
-			}
-			//scope(exit) vkDestroyDescriptorSetLayout(device, descriptorSetLayout, null);
-			
-			VkDescriptorSetLayout setLayouts[] = {descriptorSetLayout};
-			VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutInfo.setLayoutCount = cast(uint32_t)setLayouts.length;
-			pipelineLayoutInfo.pSetLayouts = setLayouts.ptr;
-			
-			// TODO< remaining part 
-		}+/
 		
 		
 		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass, out ResourceDag.ResourceNode pipelineResourceNode, out ResourceDag.ResourceNode pipelineLayoutResourceNode) {
@@ -769,19 +743,23 @@ class GraphicsVulkan {
 			/* out */testingTextureImageSampler.incrementExternalReferenceCounter();
 		}
 
-		void createDescriptorSetLayout() {
-			/*
-			// TODO< fill with VkDescriptorSetLayoutBinding we need >
 
-			VkDescriptorSetLayoutBinding uboLayoutBinding = VkDescriptorSetLayoutBinding.init;
-			uboLayoutBinding.binding = 0;
-			uboLayoutBinding.descriptorType = //TODO  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			uboLayoutBinding.descriptorCount = // TODO    1;
-			
-			*/
+
+
+
+		void createDescriptorSetLayout() {
+			VkDescriptorSetLayoutBinding samplerLayoutBinding;
+			with(samplerLayoutBinding) {
+				binding = 0;
+				descriptorCount = 1;
+				descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				pImmutableSamplers = null;
+				stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			}
+
 			const(VkAllocationCallbacks*) allocator = null;
 
-			TypesafeVkDescriptorSetLayout createdDescriptorSetLayout = vkDevFacade.createDescriptorSetLayout([], allocator);
+			TypesafeVkDescriptorSetLayout createdDescriptorSetLayout = vkDevFacade.createDescriptorSetLayout([samplerLayoutBinding], allocator);
 
 			VulkanResourceDagResource!TypesafeVkDescriptorSetLayout descriptorSetLayoutDagResource = new VulkanResourceDagResource!TypesafeVkDescriptorSetLayout(vkDevFacade, createdDescriptorSetLayout, allocator, &disposeDescriptorSetLayout);
 			
@@ -792,11 +770,15 @@ class GraphicsVulkan {
 		}
 
 		void createDescriptorPool() {
+			VkDescriptorPoolSize poolSizeCombinedImageSampler;
+			poolSizeCombinedImageSampler.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			poolSizeCombinedImageSampler.descriptorCount = 1;
+
 			VulkanDeviceFacade.CreateDescriptorPoolArguments createDescriptorPoolArguments;
 			with(createDescriptorPoolArguments) {
 				flags = 0;
 				maxSets = 1;
-				poolSizes = []; // TODO
+				poolSizes = [poolSizeCombinedImageSampler];
 			}
 
 			VkAllocationCallbacks* allocator = null;
@@ -808,6 +790,15 @@ class GraphicsVulkan {
 			VkAllocationCallbacks* allocator = null;
 
 			vkDevFacade.destroyDescriptorPool(descriptorPool, allocator);
+		}
+
+		void createDescriptorSets() {
+			TypesafeVkDescriptorSetLayout[1] layouts = [(cast(VulkanResourceDagResource!TypesafeVkDescriptorSetLayout)descriptorSetLayout.resource).resource];
+			descriptorSets = vkDevFacade.allocateDescriptorSets(layouts, descriptorPool);
+		}
+
+		void destroyDescriptorSets() {
+			vkDevFacade.destroyDescriptorSets(descriptorPool, descriptorSets);
 		}
 
 
@@ -1189,6 +1180,16 @@ class GraphicsVulkan {
 		scope(exit) destroyDescriptorPool();
 
 
+		//////////////////
+		// this has to happen before
+		// * creation of graphics pipeline, because in the future we will use uniform buffers
+		// * creation of descriptor set, because it needs the layout
+		createDescriptorSetLayout();
+
+		createDescriptorSets();
+		scope(exit) destroyDescriptorSets();
+
+
 
 		
 		//////////////////
@@ -1258,11 +1259,6 @@ class GraphicsVulkan {
 
 
 
-		//////////////////
-		// this has to happen before
-		// * creation of graphics pipeline, because in the future we will use uniform buffers
-		//////////////////
-		createDescriptorSetLayout();
 		
 		
 		//////////////////
