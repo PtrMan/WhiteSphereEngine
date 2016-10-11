@@ -126,8 +126,6 @@ class GraphicsVulkan {
 
 
 		
-		// just for testing in here
-		Mesh testMesh;
 		
 		
 		
@@ -573,7 +571,7 @@ class GraphicsVulkan {
 				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
 				
 				// for testing we render the first decorated mesh
-				VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[0];
+				VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[1];
 				
 				VkBuffer[1] vertexBuffersToBind = [cast(VkBuffer)currentDecoratedMeshToRender.decoration.vbosOfBuffers[0].resource.value];
 				VkDeviceSize[1] offsets = [0];
@@ -1320,6 +1318,10 @@ class GraphicsVulkan {
 		// allocate and bind resources
 		
 		// binding must happen before the filling of the command buffers
+
+
+		// just for testing in here
+		Mesh testMesh;
 		
 		{ // build mesh
 			SpatialVectorStruct!(4, float)[] positions;
@@ -1342,6 +1344,33 @@ class GraphicsVulkan {
 			
 			testMesh = new Mesh([componentPosition], componentIndex, 0);
 		}
+
+
+
+		Mesh testMesh2;
+
+
+		{ // build mesh
+			SpatialVectorStruct!(4, float)[] positions;
+			positions.length = 4;
+			// on screen:                                 y       x
+			positions[0] = SpatialVectorStruct!(4, float).make(-1.0f, 1.0f, 0, 1.0f);
+			positions[1] = SpatialVectorStruct!(4, float).make(-1.0f, -1.0f, 0, 1.0f);
+			positions[2] = SpatialVectorStruct!(4, float).make(1.0f,  -1.0f, 0, 1.0f);
+			positions[3] = SpatialVectorStruct!(4, float).make(1.0f, 1.0f, 0, 1.0f);
+			
+			
+			//uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
+			uint32_t[] indexBuffer = [0, 1, 2, 3, 1, 2];
+			
+			
+			// translate to MeshComponent
+			
+			AbstractMeshComponent componentPosition = toImmutableMeshComponent(positions);
+			AbstractMeshComponent componentIndex = ImmutableMeshComponent.makeUint32(indexBuffer);
+			
+			testMesh2 = new Mesh([componentPosition], componentIndex, 0);
+		}
 		
 		
 		
@@ -1360,11 +1389,17 @@ class GraphicsVulkan {
 		
 		// create decorated mesh from mesh and add it
 		import std.stdio;
-		writeln("!");
+
+		{
+			VulkanDecoratedMesh createdDecoratedMeshForTestMesh = createDecoratedMesh(testMesh);
+			decoratedMeshes ~= createdDecoratedMeshForTestMesh;
+		}
+
+		{
+			VulkanDecoratedMesh createdDecoratedMeshForTestMesh2 = createDecoratedMesh(testMesh2);
+			decoratedMeshes ~= createdDecoratedMeshForTestMesh2;
+		}
 		
-		VulkanDecoratedMesh createdDecoratedMesh = createDecoratedMesh(testMesh);
-		writeln("!!");
-		decoratedMeshes ~= createdDecoratedMesh;
 		
 		
 		
