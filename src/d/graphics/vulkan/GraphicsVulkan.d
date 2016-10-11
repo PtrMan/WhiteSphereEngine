@@ -115,12 +115,15 @@ class GraphicsVulkan {
 
 
 		// calculate projection matrix
-		{
+		if(true) { // if perspective
 			float near = 0.1f;
 			float far = 5000.0f;
 			float r = 1.0f;
 			float t = 1.0f;
 			projectionMatrix = .projectionMatrix!float(near, far, r, t);
+		}
+		else { // if identity
+			projectionMatrix = createIdentity!float();
 		}
 
 
@@ -1073,7 +1076,7 @@ class GraphicsVulkan {
 				
 				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
 				
-				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -1.5f);//uncommented because we want to test projection  createIdentity!float();
+				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -3.5f);//uncommented because we want to test projection  createIdentity!float();
 
 				// a testloop to draw two times
 				foreach( iteration; 0..2) {
@@ -1353,15 +1356,15 @@ class GraphicsVulkan {
 		{ // build mesh
 			SpatialVectorStruct!(4, float)[] positions;
 			positions.length = 4;
-			// on screen:                                 y       x
-			positions[0] = SpatialVectorStruct!(4, float).make(-1.0f, 1.0f, 0, 1.0f);
-			positions[1] = SpatialVectorStruct!(4, float).make(-1.0f, -1.0f, 0, 1.0f);
-			positions[2] = SpatialVectorStruct!(4, float).make(1.0f,  -1.0f, 0, 1.0f);
+			// on screen:                                       x      y
+			positions[0] = SpatialVectorStruct!(4, float).make(1.0f, 1.0f, 0, 1.0f);
+			positions[1] = SpatialVectorStruct!(4, float).make(-1.0f, 1.0f, 0, 1.0f);
+			positions[2] = SpatialVectorStruct!(4, float).make(0.0f, 0.0f, 0, 1.0f);
 			positions[3] = SpatialVectorStruct!(4, float).make(1.0f, 1.0f, 0, 1.0f);
 			
 			
 			//uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
-			uint32_t[] indexBuffer = [0, 1, 2, 3, 1, 2];
+			uint32_t[] indexBuffer = [0, 1, 2]; //, 3, 1, 2];
 			
 			
 			// translate to MeshComponent

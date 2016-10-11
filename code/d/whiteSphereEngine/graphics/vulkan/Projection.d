@@ -16,6 +16,6 @@ private Matrix!(ScalarType, 4, 4) correctionMatrix(ScalarType)() {
 
 Matrix!(ScalarType, 4, 4) projectionMatrix(ScalarType)(ScalarType near, ScalarType far, ScalarType r, ScalarType t) {
 	Matrix!(ScalarType, 4, 4) result = new Matrix!(ScalarType, 4, 4);
-	mul(openglProjectionMatrix!ScalarType(near, far, r, t), correctionMatrix!ScalarType(), result);
+	mul(correctionMatrix!ScalarType(), openglProjectionMatrix!ScalarType(near, far, r, t), result);
 	return result;
 }
