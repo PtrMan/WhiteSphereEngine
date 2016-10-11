@@ -1,6 +1,7 @@
 module graphics.vulkan.GraphicsVulkan;
 
 import std.stdint;
+import std.exception : enforce;
 
 import Exceptions;
 import api.vulkan.Vulkan;
@@ -575,11 +576,18 @@ class GraphicsVulkan {
 				
 				// for testing we render the first decorated mesh
 				VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[1];
-				
-				VkBuffer[2] vertexBuffersToBind = [cast(VkBuffer)currentDecoratedMeshToRender.decoration.vbosOfBuffers[0].resource.value, cast(VkBuffer)currentDecoratedMeshToRender.decoration.vbosOfBuffers[1].resource.value];
-				VkDeviceSize[2] offsets = [0, 0];
-				assert(vertexBuffersToBind.length == offsets.length);
-				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr);
+
+
+				const size_t COUNTOFBUFFERS = 16;
+
+				VkBuffer[COUNTOFBUFFERS] vertexBuffersToBind;
+				VkDeviceSize[COUNTOFBUFFERS] offsets; // is automatically initialized to zero
+
+				enforce(currentDecoratedMeshToRender.decoration.vbosOfBuffers.length <= COUNTOFBUFFERS, "Number of buffers must be <= COUNTOFBUFFERS");
+				foreach( bufferIndex, iterationBuffer; currentDecoratedMeshToRender.decoration.vbosOfBuffers ) {
+					vertexBuffersToBind[bufferIndex] = cast(VkBuffer)iterationBuffer.resource.value;
+				}
+				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, currentDecoratedMeshToRender.decoration.vbosOfBuffers.length, vertexBuffersToBind.ptr, offsets.ptr);
 				
 				float[16] mvpArray;
 				import math.ConvertMatrix;
