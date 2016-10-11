@@ -11,8 +11,12 @@ import linopterixed.linear.Vector;
 // is immutable, which allows the engine to potentially do some optimisations
 class ImmutableMeshComponent : AbstractMeshComponent {
 	public struct Value {
-		public final this(float[4] floatValue) {
-			this.floatValue = floatValue;
+		public final this(float[4] float4Value) {
+			this.float4Value = float4Value;
+		}
+
+		public final this(float[2] float2Value) {
+			this.float2Value = float2Value;
 		}
 		
 		public final this(uint32_t uint32Value) {
@@ -23,9 +27,9 @@ class ImmutableMeshComponent : AbstractMeshComponent {
 			this.doubleValue = doubleValue;
 		}
 		
-		
 		union {
-			float[4] floatValue;
+			float[4] float4Value;
+			float[2] float2Value;
 			double[4] doubleValue;
 			uint32_t uint32Value;
 		}
@@ -55,6 +59,16 @@ class ImmutableMeshComponent : AbstractMeshComponent {
 		}
 		// note that we copy the whole array here, might be a bit heavy on the GC and CPU, we'll see
 		return new ImmutableMeshComponent(AbstractMeshComponent.EnumDataType.FLOAT4, cast(immutable(Value[]))tempArray.dup);
+	}
+
+	public static ImmutableMeshComponent makeFloat2(float[2][] arr) {
+		Value[] tempArray;
+		tempArray.length = arr.length;
+		foreach( i; 0..arr.length ) {
+			tempArray[i] = Value(arr[i]);
+		}
+		// note that we copy the whole array here, might be a bit heavy on the GC and CPU, we'll see
+		return new ImmutableMeshComponent(AbstractMeshComponent.EnumDataType.FLOAT2, cast(immutable(Value[]))tempArray.dup);
 	}
 
 	
@@ -155,7 +169,19 @@ class ImmutableMeshComponent : AbstractMeshComponent {
 			assert(index < length);
 			// no need to check type because this accessor can only get retrived by getFloatAccessor
 			
-			return array[index].floatValue;
+			return array[index].float4Value;
+		}
+	}
+
+	// not static
+	public class Float2Accessor : AbstractMeshComponent.Float2Accessor {
+		public final this() {}
+		
+		public override float[2] opIndex(size_t index) {
+			assert(index < length);
+			// no need to check type because this accessor can only get retrived by getFloatAccessor
+			
+			return array[index].float2Value;
 		}
 	}
 	
@@ -187,6 +213,11 @@ class ImmutableMeshComponent : AbstractMeshComponent {
 	public override AbstractMeshComponent.Float4Accessor getFloat4Accessor() {
 		assert(dataType == EnumDataType.FLOAT4);
 		return new Float4Accessor;
+	}
+
+	public override AbstractMeshComponent.Float2Accessor getFloat2Accessor() {
+		assert(dataType == EnumDataType.FLOAT2);
+		return new Float2Accessor;
 	}
 	
 	public override AbstractMeshComponent.Double4Accessor getDouble4Accessor() {

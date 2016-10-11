@@ -40,12 +40,17 @@ class Mesh {
 	
 	final protected void cacheMeshComponentAccessors() {
 		cachedFloat4Accessors.length = numberOfComponents;
+		cachedFloat2Accessors.length = numberOfComponents;
 		cachedDouble4Accessors.length = numberOfComponents;
 		
 		foreach( i, iterationComponent; protectedMeshComponents ) {
 			final switch( iterationComponent.dataType ) with(AbstractMeshComponent.EnumDataType) {
 				case FLOAT4:
 				cachedFloat4Accessors[i] = iterationComponent.getFloat4Accessor();
+				break;
+
+				case FLOAT2:
+				cachedFloat2Accessors[i] = iterationComponent.getFloat2Accessor();
 				break;
 				
 				case DOUBLE4:
@@ -62,6 +67,10 @@ class Mesh {
 	final public @property numberOfComponents() {
 		return protectedMeshComponents.length;
 	}
+
+	final AbstractMeshComponent.EnumDataType getDatatypeOfComponent(size_t index) @safe const pure {
+		return protectedMeshComponents[index].dataType;
+	}
 	
 	final public AbstractMeshComponent.Uint32Accessor getUint32AccessorForIndexBuffer() {
 		return protectedIndexMeshComponent.getUint32Accessor();
@@ -70,6 +79,11 @@ class Mesh {
 	final public AbstractMeshComponent.Float4Accessor getFloat4AccessorByComponentIndex(size_t index) {
 		assert(cachedFloat4Accessors[index] !is null);
 		return cachedFloat4Accessors[index];
+	}
+
+	final public AbstractMeshComponent.Float2Accessor getFloat2AccessorByComponentIndex(size_t index) {
+		assert(cachedFloat2Accessors[index] !is null);
+		return cachedFloat2Accessors[index];
 	}
 	
 	final public AbstractMeshComponent.Double4Accessor getDouble4AccessorByComponentIndex(size_t index) {
@@ -105,6 +119,7 @@ class Mesh {
 	protected AbstractMeshComponent protectedIndexMeshComponent;
 	protected AbstractMeshComponent[] protectedMeshComponents;
 	protected AbstractMeshComponent.Float4Accessor[] cachedFloat4Accessors; // elements are null for non-float4
+	protected AbstractMeshComponent.Float2Accessor[] cachedFloat2Accessors; // elements are null for non-float2
 	protected AbstractMeshComponent.Double4Accessor[] cachedDouble4Accessors; // elements are null for non-float4
 	
 	protected size_t positionComponentIndex;

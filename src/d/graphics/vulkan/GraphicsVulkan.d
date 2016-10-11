@@ -576,8 +576,8 @@ class GraphicsVulkan {
 				// for testing we render the first decorated mesh
 				VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[1];
 				
-				VkBuffer[1] vertexBuffersToBind = [cast(VkBuffer)currentDecoratedMeshToRender.decoration.vbosOfBuffers[0].resource.value];
-				VkDeviceSize[1] offsets = [0];
+				VkBuffer[2] vertexBuffersToBind = [cast(VkBuffer)currentDecoratedMeshToRender.decoration.vbosOfBuffers[0].resource.value, cast(VkBuffer)currentDecoratedMeshToRender.decoration.vbosOfBuffers[1].resource.value];
+				VkDeviceSize[2] offsets = [0, 0];
 				assert(vertexBuffersToBind.length == offsets.length);
 				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr);
 				
@@ -1078,8 +1078,8 @@ class GraphicsVulkan {
 				
 				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -3.5f);//uncommented because we want to test projection  createIdentity!float();
 
-				// a testloop to draw two times
-				foreach( iteration; 0..2) {
+				// a testloop to draw eventually multiple times
+				foreach( iteration; 0..1) {
 					mvpMatrix = new Matrix44Type;
 					mul(projectionMatrix, modelMatrix, mvpMatrix);
 
@@ -1361,6 +1361,13 @@ class GraphicsVulkan {
 			positions[1] = SpatialVectorStruct!(4, float).make(-1.0f, 1.0f, 0, 1.0f);
 			positions[2] = SpatialVectorStruct!(4, float).make(0.0f, 0.0f, 0, 1.0f);
 			positions[3] = SpatialVectorStruct!(4, float).make(1.0f, 1.0f, 0, 1.0f);
+
+			SpatialVectorStruct!(2, float)[] uvs;
+			uvs.length = 4;
+			uvs[0] = SpatialVectorStruct!(2, float).make(0.0f, 0.0f);
+			uvs[1] = SpatialVectorStruct!(2, float).make(0.0f, 1.0f);
+			uvs[2] = SpatialVectorStruct!(2, float).make(1.0f, 1.0f);
+			uvs[3] = SpatialVectorStruct!(2, float).make(1.0f, 0.0f);
 			
 			
 			//uint32_t[] indexBuffer = [0, 1, 2, 1, 2, 3];
@@ -1370,9 +1377,10 @@ class GraphicsVulkan {
 			// translate to MeshComponent
 			
 			AbstractMeshComponent componentPosition = toImmutableMeshComponent(positions);
+			AbstractMeshComponent componentUvs = toImmutableMeshComponent(uvs);
 			AbstractMeshComponent componentIndex = ImmutableMeshComponent.makeUint32(indexBuffer);
 			
-			testMesh2 = new Mesh([componentPosition], componentIndex, 0);
+			testMesh2 = new Mesh([componentPosition, componentUvs], componentIndex, 0);
 		}
 		
 		
@@ -1472,7 +1480,16 @@ class GraphicsVulkan {
 			/////
 			// create buffer and fill
 			VulkanDeviceFacade.CreateBufferArguments createBufferArguments = VulkanDeviceFacade.CreateBufferArguments.init;
-			createBufferArguments.size = /*vertex.sizeof*/16   * mesh.numberOfVertices;
+
+			if( mesh.getDatatypeOfComponent(componentIndex) == AbstractMeshComponent.EnumDataType.FLOAT4 ) {
+				createBufferArguments.size = /*vertex.sizeof*/4*4   * mesh.numberOfVertices;
+			}
+			else if( mesh.getDatatypeOfComponent(componentIndex) == AbstractMeshComponent.EnumDataType.FLOAT2 ) {
+				createBufferArguments.size = /*vertex.sizeof*/2*4   * mesh.numberOfVertices;
+			}
+			else {
+				throw new EngineException(true, true, "Unexpected Component datatype!");
+			}
 			createBufferArguments.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			createBufferArguments.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			resourceWithMemoryDecoration.resource = vkDevFacade.createBuffer(createBufferArguments);
@@ -1493,10 +1510,23 @@ class GraphicsVulkan {
 				);
 				scope(exit) vkDevFacade.unmap(resourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory);
 				
-				float[4]* float4HostPtr = cast(float[4]*)hostPtr;
-				foreach( vertexI; 0..mesh.numberOfVertices ) {
-					float4HostPtr[vertexI] = mesh.getFloat4AccessorByComponentIndex(0)[vertexI];
+				if( mesh.getDatatypeOfComponent(componentIndex) == AbstractMeshComponent.EnumDataType.FLOAT4 ) {
+					float[4]* float4HostPtr = cast(float[4]*)hostPtr;
+					foreach( vertexI; 0..mesh.numberOfVertices ) {
+						float4HostPtr[vertexI] = mesh.getFloat4AccessorByComponentIndex(componentIndex)[vertexI];
+					}
 				}
+				else if( mesh.getDatatypeOfComponent(componentIndex) == AbstractMeshComponent.EnumDataType.FLOAT2 ) {
+					float[2]* float2HostPtr = cast(float[2]*)hostPtr;
+					foreach( vertexI; 0..mesh.numberOfVertices ) {
+						float2HostPtr[vertexI] = mesh.getFloat2AccessorByComponentIndex(componentIndex)[vertexI];
+					}
+				}
+				else {
+					throw new EngineException(true, true, "Unexpected Component datatype!");
+				}
+
+
 			}
 			
 			vkDevFacade.bind(resourceWithMemoryDecoration.resource.value, resourceWithMemoryDecoration.derivedInformation.value.allocatorForResource.deviceMemory, resourceWithMemoryDecoration.derivedInformation.value.offset);

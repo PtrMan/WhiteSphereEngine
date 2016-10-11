@@ -7,6 +7,7 @@ import core.stdc.stdint;
 abstract class AbstractMeshComponent {
 	enum EnumDataType {
 		FLOAT4,
+		FLOAT2,
 		DOUBLE4,
 		UINT32,
 	}
@@ -25,6 +26,10 @@ abstract class AbstractMeshComponent {
 	public abstract class Float4Accessor {
 		public abstract float[4] opIndex(size_t index);
 	}
+
+	public abstract class Float2Accessor {
+		public abstract float[2] opIndex(size_t index);
+	}
 	
 	public abstract class Double4Accessor {
 		public abstract double[4] opIndex(size_t index);
@@ -35,6 +40,7 @@ abstract class AbstractMeshComponent {
 	}
 	
 	public abstract Float4Accessor getFloat4Accessor();
+	public abstract Float2Accessor getFloat2Accessor();
 	public abstract Double4Accessor getDouble4Accessor();
 	public abstract Uint32Accessor getUint32Accessor();
 	
