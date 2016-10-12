@@ -35,6 +35,39 @@ import math.VectorAlias;
 alias Matrix!(float, 4, 4) Matrix44Type;
 
 
+
+import whiteSphereEngine.scheduler.Task;
+import whiteSphereEngine.scheduler.Scheduler;
+
+// class for simple functionality of one single task
+// the task has to just fill one fixed commandbuffer
+
+class TestTask : Task {
+	TypesafeVkCommandBuffer commandBuffer;
+	Matrix44Type mvpMatrix;
+	VulkanDecoratedMesh decoratedMeshToRender;
+	VulkanDelegates *vulkanDelegates;
+
+
+	override void doTask(Scheduler scheduler, out uint delay, out Task.EnumTaskStates state) {
+		vulkanDelegates.refillCommandBufferForTransform(commandBuffer, mvpMatrix, decoratedMeshToRender);
+
+		state = Task.EnumTaskStates.WAITNEXTFRAME; // execute task on next frame
+	}
+}
+
+
+
+
+// holds all delegates which can be called by the engine or engine-client code
+struct VulkanDelegates {
+	alias void delegate(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender) RefillCommandBufferForTransformType;
+
+	RefillCommandBufferForTransformType refillCommandBufferForTransform;
+}
+
+
+
 // some parts are from
 // https://av.dfki.de/~jhenriques/development.html#tutorial_011
 // (really copyleft as stated on the site)
@@ -67,6 +100,8 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
+		VulkanDelegates *vulkanDelegates = new VulkanDelegates;
+
 		Matrix44Type projectionMatrix = new Matrix44Type();
 
 		
@@ -524,7 +559,6 @@ class GraphicsVulkan {
 		}
 		
 		
-		//
 		void refillCommandBufferForTransform(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender) {
 			VkResult vulkanResult;
 			
@@ -606,6 +640,7 @@ class GraphicsVulkan {
 			}
 			
 		}
+		vulkanDelegates.refillCommandBufferForTransform = &refillCommandBufferForTransform;
 
 		void createTextureImage() {
 			VkFormat stagingFormat = VK_FORMAT_R8G8B8A8_UNORM;// TODO< search for format which the GPU supports, we take R8G8B8A8_UNORM because a lot of cards should support it by default >
@@ -1014,11 +1049,34 @@ class GraphicsVulkan {
 		}
 		
 		void loop() {
+			// task to test refilling of command buffer
+			TestTask testTask;
+
+			{
+				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -3.5f);//uncommented because we want to test projection  createIdentity!float();
+
+				Matrix44Type mvpMatrix = new Matrix44Type;
+				mul(projectionMatrix, modelMatrix, mvpMatrix);
+
+
+				testTask = new TestTask;
+				testTask.vulkanDelegates = vulkanDelegates; // point at the delegates
+
+				testTask.commandBuffer = commandBufferForRendering; // for testing our only command buffer, LATER we need a task for each asyncronous refilling of an command buffer
+				testTask.mvpMatrix = mvpMatrix;
+				testTask.decoratedMeshToRender = decoratedMeshes[1]; // we just render the mesh for testing
+			}
+
+
+
+			import whiteSphereEngine.scheduler.SchedulerSubsystem;
+
+			SchedulerSubsystem schedulerSubsystem = new SchedulerSubsystem;
+			schedulerSubsystem.addTaskSync(testTask);
+
+
 			VkResult vulkanResult;
 			
-			Matrix44Type mvpMatrix;
-			// fill mvp with identity
-			mvpMatrix = createIdentity!float();
 			
 			
 			uint semaphorePairIndex = 0;
@@ -1078,25 +1136,20 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
 				
+
+				// somewhere before drawing we have to refill our commandbuffers, this can happen at any time with any syncronisation
+				// but all commandbuffers have to be refilled before drawing
+				schedulerSubsystem.doIt();
 				
 				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
 				
-				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -3.5f);//uncommented because we want to test projection  createIdentity!float();
-
-				// a testloop to draw eventually multiple times
-				foreach( iteration; 0..1) {
-					// for testing
-					VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[1];
-
-					mvpMatrix = new Matrix44Type;
-					mul(projectionMatrix, modelMatrix, mvpMatrix);
-
-					refillCommandBufferForTransform(commandBufferForRendering, mvpMatrix, currentDecoratedMeshToRender);
-					
+				
+				// we loop over all refill tasks
+				foreach( iterationRefillTask; [testTask] ) {
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
 					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
-					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForRendering];
+					TypesafeVkCommandBuffer[1] commandBuffers = [iterationRefillTask.commandBuffer];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
 						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
@@ -1106,9 +1159,6 @@ class GraphicsVulkan {
 					
 					
 					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
-				
-					// we do it here so the transformation for the 2nd draw should be different
-					// uncommented to seperate effects modelMatrix = createRotationZ!float(0.2f);
 				}
 
 				
