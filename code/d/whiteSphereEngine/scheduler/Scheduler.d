@@ -27,7 +27,7 @@ unittest {
  *
  */
 class Scheduler {
-	private Task []tasks;
+	private Task[] tasks;
 	private bool inLoop = false;
 	private Mutex sync;
 
@@ -39,15 +39,13 @@ class Scheduler {
 	 *
 	 * This Method do the work for all Tasks which are running
 	 *
-	 * \param ReturnCode indicates if some error happened
-	 * \param ErrorDescription contains the Error message if an error happend
 	 */
-	final void doIt(out SchedulerSubsystem.EnumReturnCode ReturnCode, out string ErrorDescription) {
+	final void doIt() {
 		foreach( iterationTask; tasks ) {
-			Task.EnumTaskStates TaskState;
-			uint Delay;
+			Task.EnumTaskStates taskState;
+			uint delay;
 
-			iterationTask.doTask(this, Delay, TaskState);
+			iterationTask.doTask(this, delay, taskState);
 		}
 
 		// TODO
@@ -56,15 +54,10 @@ class Scheduler {
 	/** \brief adds Thread-safe a task to the Tasklist
 	 *
 	 * \param pTask the Task to add
-	 * \param success was the adding successfull?
 	 */
-	final void addTaskSync(Task pTask, out bool success) {
+	final void addTaskSync(Task pTask) {
 		synchronized(sync) {
-			success = false;
-
 			tasks ~= pTask;
-			
-			success = true;
 		}
 	}
 

@@ -7,7 +7,7 @@ import whiteSphereEngine.scheduler.Task;
  *
  */
 class SchedulerSubsystem {
-	private Scheduler MScheduler;
+	private Scheduler scheduler;
 
 	enum EnumReturnCode {
 		DUMMY // TODO
@@ -23,13 +23,11 @@ class SchedulerSubsystem {
 	 *
 	 * This Method pokes the doIt Method of all Threads/Cores and waits until all exited
 	 *
-	 * \param ReturnCode indicates if some error happened
-	 * \param ErrorDescription contains the Error message if an error happend
 	 */
-	final void doIt(out EnumReturnCode ReturnCode, out string ErrorDescription) {
+	final void doIt() {
 		// TODO< start the work for all threads >
 
-		scheduler.doIt(ReturnCode, ErrorDescription);
+		scheduler.doIt();
 	}
 
 	/** \brief ...
@@ -48,12 +46,11 @@ class SchedulerSubsystem {
 	/** \brief adds Thread-safe a task to the Tasklist
 	 *
 	 * \param PTask the Task to add
-	 * \param Success was the adding successfull?
 	 */
-	final void addTaskSync(Task pTask, out bool success) {
+	final void addTaskSync(Task pTask) {
 		// TODO< for multiple threads >
 
-		scheduler.addTaskSync(pTask, success);
+		scheduler.addTaskSync(pTask);
 	}
 
 	/** \brief removes Thread-safe a task
