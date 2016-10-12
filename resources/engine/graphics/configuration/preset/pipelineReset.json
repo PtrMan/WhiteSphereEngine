@@ -1,7 +1,7 @@
 {
 	"stages":{
-		"vertex":"SimpleTransforming_3.vert.spv",
-		"fragment":"Simple1.frag.spv"
+		"vertex":"TextureTest_4.vert.spv",
+		"fragment":"Texture1.frag.spv"
 	},
 
 	"vertexInputState":{
@@ -17,6 +17,13 @@
 				"location" : "0",
 				"binding":"0",
 				"format":"VK_FORMAT_R32G32B32A32_SFLOAT",
+				"offset":"0"
+			},
+
+			{
+				"location" : "1",
+				"binding":"0",
+				"format":"VK_FORMAT_R32G32_SFLOAT",
 				"offset":"0"
 			}
 		]
