@@ -604,6 +604,10 @@ class VulkanDeviceFacade {
 		vkFreeDescriptorSets(device, cast(VkDescriptorPool)descriptorPool, cast(uint32_t) translatedDescriptorSets.length, cast(const VkDescriptorSet*)translatedDescriptorSets.ptr);
 	}
 
+	final void updateDescriptorSets(VkWriteDescriptorSet[] descriptorWrites, VkCopyDescriptorSet[] descriptorCopies) {
+		vkUpdateDescriptorSets(device, cast(uint32_t)descriptorWrites.length, descriptorWrites.ptr, cast(uint32_t)descriptorCopies.length, descriptorCopies.ptr);
+	}
+
 
 	public final void unmap(TypesafeVkDeviceMemory memory) {
 		vkUnmapMemory(device, cast(VkDeviceMemory)memory);
