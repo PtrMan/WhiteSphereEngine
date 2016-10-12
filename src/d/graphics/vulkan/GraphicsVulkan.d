@@ -525,7 +525,7 @@ class GraphicsVulkan {
 		
 		
 		//
-		void refillCommandBufferForTransform(Matrix44Type mvpMatrix) {
+		void refillCommandBufferForTransform(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender) {
 			VkResult vulkanResult;
 			
 			VkClearValue clearValues[2];
@@ -549,9 +549,9 @@ class GraphicsVulkan {
 			
 				// for actual rendering
 			{ // to scope command buffer filling
-				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
+				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBuffer, &graphicsCommandBufferBeginInfo);
 				scope(success) {
-					if( !vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering).vulkanSuccess ) {
+					if( !vkEndCommandBuffer(cast(VkCommandBuffer)commandBuffer).vulkanSuccess ) {
 						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
 					}
 				} 
@@ -570,42 +570,39 @@ class GraphicsVulkan {
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
 				
 				
-				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				
-				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
 				
-				// for testing we render the first decorated mesh
-				VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[1];
-
 
 				const size_t COUNTOFBUFFERS = 16;
 
 				VkBuffer[COUNTOFBUFFERS] vertexBuffersToBind;
 				VkDeviceSize[COUNTOFBUFFERS] offsets; // is automatically initialized to zero
 
-				enforce(currentDecoratedMeshToRender.decoration.vbosOfBuffers.length <= COUNTOFBUFFERS, "Number of buffers must be <= COUNTOFBUFFERS");
-				foreach( bufferIndex, iterationBuffer; currentDecoratedMeshToRender.decoration.vbosOfBuffers ) {
+				enforce(decoratedMeshToRender.decoration.vbosOfBuffers.length <= COUNTOFBUFFERS, "Number of buffers must be <= COUNTOFBUFFERS");
+				foreach( bufferIndex, iterationBuffer; decoratedMeshToRender.decoration.vbosOfBuffers ) {
 					vertexBuffersToBind[bufferIndex] = cast(VkBuffer)iterationBuffer.resource.value;
 				}
-				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, currentDecoratedMeshToRender.decoration.vbosOfBuffers.length, vertexBuffersToBind.ptr, offsets.ptr);
+				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBuffer, 0, decoratedMeshToRender.decoration.vbosOfBuffers.length, vertexBuffersToBind.ptr, offsets.ptr);
 				
 				float[16] mvpArray;
 				import math.ConvertMatrix;
 				mvpMatrix.translateToArrayColumRow!(float, 4, 4)(mvpArray);
 
-				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
+				vkCmdPushConstants(cast(VkCommandBuffer)commandBuffer, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
 				
-				if( currentDecoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
-					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBufferForRendering, cast(VkBuffer)currentDecoratedMeshToRender.decoration.vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
+				if( decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
+					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBuffer, cast(VkBuffer)decoratedMeshToRender.decoration.vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
 				}
 				else {
 					throw new EngineException(true, true, "Vulkan Renderer - index buffer not implemented for non-uint32bit !");
 				}
 				
-				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBufferForRendering, currentDecoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
+				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBuffer, decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
 				
 				
-				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
+				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
 			}
 			
 		}
@@ -1088,10 +1085,13 @@ class GraphicsVulkan {
 
 				// a testloop to draw eventually multiple times
 				foreach( iteration; 0..1) {
+					// for testing
+					VulkanDecoratedMesh currentDecoratedMeshToRender = decoratedMeshes[1];
+
 					mvpMatrix = new Matrix44Type;
 					mul(projectionMatrix, modelMatrix, mvpMatrix);
 
-					refillCommandBufferForTransform(mvpMatrix);
+					refillCommandBufferForTransform(commandBufferForRendering, mvpMatrix, currentDecoratedMeshToRender);
 					
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
