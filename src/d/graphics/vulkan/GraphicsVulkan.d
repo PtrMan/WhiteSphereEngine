@@ -838,6 +838,25 @@ class GraphicsVulkan {
 			descriptorSets = vkDevFacade.allocateDescriptorSets(layouts, descriptorPool);
 		}
 
+		void updateDescriptorSet() {
+			VkDescriptorImageInfo imageInfo;
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageView = cast(VkImageView)((cast(VulkanResourceDagResource!TypesafeVkImageView)testingTextureImageView.resource).resource);
+			imageInfo.sampler = cast(VkSampler)((cast(VulkanResourceDagResource!TypesafeVkSampler)testingTextureImageSampler.resource).resource);
+
+			VkWriteDescriptorSet[] descriptorWrites;
+			descriptorWrites.length = 1;
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = cast(VkDescriptorSet)descriptorSets[0];
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pImageInfo = cast(immutable(VkDescriptorImageInfo)*)&imageInfo;
+
+			vkDevFacade.updateDescriptorSets(descriptorWrites, []);	
+		}
+
 		void destroyDescriptorSets() {
 			vkDevFacade.destroyDescriptorSets(descriptorPool, descriptorSets);
 		}
@@ -1277,6 +1296,11 @@ class GraphicsVulkan {
 		createTextureImage();
 		createTextureImageView();
 	    createTextureSampler();
+
+	    // update descriptor set, because we now know the imageView and sampler from the testtexture
+	    updateDescriptorSet();
+
+
 
 
 		//////////////////
