@@ -632,6 +632,9 @@ class GraphicsVulkan {
 				else {
 					throw new EngineException(true, true, "Vulkan Renderer - index buffer not implemented for non-uint32bit !");
 				}
+
+				static assert( TypesafeVkDescriptorSet.sizeof == VkDescriptorSet.sizeof); // assert because we point to an TypesafeVkDescriptorSet as an VkDescriptorSet pointer
+				vkCmdBindDescriptorSets(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipelineLayout)pipelineLayout, 0, 1, cast(VkDescriptorSet*)descriptorSets.ptr, 0, null);
 				
 				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBuffer, decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
 				
