@@ -191,7 +191,6 @@ VkPipelineVertexInputStateCreateInfo convertForPipelineVertexInputState(JsonValu
 		vertexInputAttributeDescriptions ~= convertForVertexInputAttributeDescription(iterationJsonValue);
 	}
 	
-	assert(vertexInputBindingDescriptions.length == vertexInputAttributeDescriptions.length);
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.init;
 	with(vertexInputStateCreateInfo) {
 		sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
