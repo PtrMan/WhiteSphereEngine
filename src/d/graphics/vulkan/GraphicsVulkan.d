@@ -302,6 +302,7 @@ class GraphicsVulkan {
 			
 			
 			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
+			  VK_FORMAT_FEATURE_BLIT_SRC_BIT | // because we need to blit
 			  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
 			  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
 			VkImageUsageFlagBits usageFlags =
@@ -963,6 +964,7 @@ class GraphicsVulkan {
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 
+				/* uncommented to keep old copy code for later fallback
 				CommandCopyImageArguments commandCopyImageArguments;
 				with(commandCopyImageArguments) {
 					sourceImage = framebufferImageResource.resource.value;
@@ -972,7 +974,43 @@ class GraphicsVulkan {
 					extent = Vector2ui.make(300, 300);
 				}
 				commandCopyImage(commandBuffersForCopy[i], commandCopyImageArguments);
-				
+				*/
+
+				{
+					VkImageBlit[1] regions;
+
+					VkImageSubresourceLayers imageSubresourceLayersForBlit;
+					with(imageSubresourceLayersForBlit) {
+						aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						mipLevel = 0;
+						baseArrayLayer = 0;
+						layerCount = 1;
+					}
+		
+					with(regions[0]) {
+						srcSubresource = imageSubresourceLayersForBlit;
+						with(srcOffsets[0]) {x=y=z=0;}
+						with(srcOffsets[1]) {x=300;y=300;z=1;}
+						
+						dstSubresource = imageSubresourceLayersForBlit;
+						with(dstOffsets[0]) {x=y=z=0;}
+						with(dstOffsets[1]) {x=300;y=300;z=1;}
+					}
+
+
+					vkCmdBlitImage(
+						cast(VkCommandBuffer)commandBuffersForCopy[i],
+						cast(VkImage)framebufferImageResource.resource.value, // srcImage
+						VK_IMAGE_LAYOUT_GENERAL, // srcImageLayout
+						cast(VkImage)vulkanContext.swapChain.swapchainImages[i], // destImage
+						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
+						cast(uint32_t)regions.length,
+						regions.ptr,
+						VK_FILTER_NEAREST // filter
+					);
+				}
+
+
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
 				
 				

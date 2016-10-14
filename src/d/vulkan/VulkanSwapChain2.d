@@ -130,15 +130,21 @@ class VulkanSwapChain2 {
 		LoggerPipe loggerPipe;
 		VariableValidator!VkSurfaceKHR surface;
 	}
-	
+
 	public final void initSwapchain(InitSwapChainArguments arguments) {
 		const string ERROR_COULDNT_PHYSICAL_DEVICE_FORMATS = "Couldn't get physical device surface formats!";
 		const string ERROR_COULDNT_PHYSICAL_DEVICE_PRESENTATION = "Couldn't get physical device present modes!";
+
+		void log(string vulkanSubsystem, string message) {
+			arguments.loggerPipe.write(IPipe.EnumLevel.INFO, "", message, "vulkan-" ~ vulkanSubsystem);
+		}
 		
 		VkResult vulkanResult;
 		
 		import core.memory : GC;
+		import std.conv : to;
 		
+		static import erupted.types;		
 		import vulkan.VulkanTools;
 		
 		assert(device.isValid && arguments.surface.isValid);
@@ -149,6 +155,9 @@ class VulkanSwapChain2 {
 		if( !vulkanSuccess(vulkanResult) ) {
 			throw new EngineException(true, true, "Couldn't get physical device surface capabilities!");
 		}
+
+		// for tracking down our bug with blitting
+		//uncommented because i think blitting works   log("swapchain", "surface format supports transfer dest %s".format(surfaceProperties.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT));
 		
 		uint32_t formatCount;
 		vulkanResult = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.value, arguments.surface.value, &formatCount, null);
@@ -219,7 +228,7 @@ class VulkanSwapChain2 {
 		context.desiredNumberOfSwapchainImages = cast(uint32_t)getSwapChainNumImages(numberOfImagesToOwnRequest);
 		
 		
-		arguments.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("desiredNumberOfSwapchainImages %s", context.desiredNumberOfSwapchainImages), "vulkan");
+		log("swapchain", format("desiredNumberOfSwapchainImages %s", context.desiredNumberOfSwapchainImages));
 		
 		VkColorSpaceKHR swapchainColorSpace;
 		// If the format list includes just one entry of VK_FORMAT_UNDEFINED,
@@ -227,8 +236,10 @@ class VulkanSwapChain2 {
 		// supported format will be returned (assuming that the
 		// vkGetPhysicalDeviceSurfaceSupportKHR function, in the
 		// VK_KHR_surface extension returned support for the surface).
+		
+		// TODO< we need to earch a format which supports a blit-destination
 		if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
-			context.swapchainFormat = VK_FORMAT_R8G8B8_UNORM;
+			context.swapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
 			swapchainColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 		}
 		else {
@@ -254,6 +265,7 @@ class VulkanSwapChain2 {
 			swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
 		}
 		
+		log("swapchain", "chosen format is %s".format((cast(erupted.types.VkFormat)swapchainFormat).to!string));
 		
 		VkSwapchainCreateInfoKHR createInfo;
 		with (createInfo) {
