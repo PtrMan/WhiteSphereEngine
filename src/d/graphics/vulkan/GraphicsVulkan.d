@@ -418,6 +418,8 @@ class GraphicsVulkan {
 				
 				pushConstantRanges ~= pushConstantInfo; // add push constant
 				
+				setLayouts ~= cast(VkDescriptorSetLayout)  (cast(VulkanResourceDagResource!TypesafeVkDescriptorSetLayout)descriptorSetLayout.resource).resource;
+
 				VkPipelineLayoutCreateInfo layoutCreateInfo = VkPipelineLayoutCreateInfo.init;
 				with(layoutCreateInfo) {
 					sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -964,7 +966,7 @@ class GraphicsVulkan {
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 
-				/* uncommented to keep old copy code for later fallback
+				//* uncommented to keep old copy code for later fallback
 				CommandCopyImageArguments commandCopyImageArguments;
 				with(commandCopyImageArguments) {
 					sourceImage = framebufferImageResource.resource.value;
@@ -974,8 +976,9 @@ class GraphicsVulkan {
 					extent = Vector2ui.make(300, 300);
 				}
 				commandCopyImage(commandBuffersForCopy[i], commandCopyImageArguments);
-				*/
+				//*/
 
+				/+
 				{
 					VkImageBlit[1] regions;
 
@@ -1009,6 +1012,7 @@ class GraphicsVulkan {
 						VK_FILTER_NEAREST // filter
 					);
 				}
+				+/
 
 
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
