@@ -853,7 +853,7 @@ public void platformVulkanTestSwapChain(ChainContext chainContext, ChainElement[
         with (barrier_from_present_to_clear) {
         	sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	        pNext = null;
-	        srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	        srcAccessMask = 0; // must be null because layout is undefined
 		    dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	        oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	        newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;

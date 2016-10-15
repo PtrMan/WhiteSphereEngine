@@ -738,7 +738,9 @@ class GraphicsVulkan {
 			transitionImageLayout(testingTextureImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// and we need to transition the layout of the staging image back to VK_IMAGE_LAYOUT_PREINITIALIZED for the next transfer
-			transitionImageLayout(textureStaging256ImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PREINITIALIZED);
+			// is uncommented because we cant transition to preinitialized
+			// TODO< remove this when we found out if it works for multiple texture uploads fine >
+			//transitionImageLayout(textureStaging256ImageResource.resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PREINITIALIZED);
 		}
 
 		void createTextureImageView() {
@@ -823,7 +825,7 @@ class GraphicsVulkan {
 
 			VulkanDeviceFacade.CreateDescriptorPoolArguments createDescriptorPoolArguments;
 			with(createDescriptorPoolArguments) {
-				flags = 0;
+				flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 				maxSets = 1;
 				poolSizes = [poolSizeCombinedImageSampler];
 			}
@@ -934,7 +936,7 @@ class GraphicsVulkan {
 				VkImageMemoryBarrier barrierFromPresentToClear = VkImageMemoryBarrier.init;
 				with (barrierFromPresentToClear) {
 					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+					srcAccessMask = 0; // because layout is undefined
 					dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 					oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 					newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -1018,12 +1020,14 @@ class GraphicsVulkan {
 				// this is the new barrier for the blit
 				// very much inspired by https://github.com/Novum/vkQuake/blob/14fa407480a0865ef4ce3945ad91b8d06d97e05a/Quake/gl_warp.c
 				VkMemoryBarrier memory_barrier;
+				memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 				memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
+				memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;//VK_ACCESS_TRANSFER_READ_BIT;
+				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, /* uncommented because it didn't work  VK_PIPELINE_STAGE_TRANSFER_BIT   */ VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
 				
 
 				// after the barrier we have to transition the layout to an presentable layout
+				/*
 				setImageLayout(
 					cast(VkCommandBuffer)commandBuffersForCopy[i],
 					cast(VkImage)vulkanContext.swapChain.swapchainImages[i],
@@ -1031,6 +1035,7 @@ class GraphicsVulkan {
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 				);
+				*/
 
 
 				
@@ -1308,9 +1313,6 @@ class GraphicsVulkan {
 		
 		
 		
-		
-		
-		
 		scope(exit) checkForReleasedResourcesAndRelease();
 		
 		
@@ -1357,6 +1359,11 @@ class GraphicsVulkan {
 		// create test texture, view and sampler
 		//////////////////
 		createTextureImage();
+
+
+		return;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; // for debugging
+
+
 		createTextureImageView();
 	    createTextureSampler();
 
