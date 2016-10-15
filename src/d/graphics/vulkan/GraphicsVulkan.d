@@ -966,7 +966,7 @@ class GraphicsVulkan {
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 
-				//* uncommented to keep old copy code for later fallback
+				/* uncommented to keep old copy code for later fallback
 				CommandCopyImageArguments commandCopyImageArguments;
 				with(commandCopyImageArguments) {
 					sourceImage = framebufferImageResource.resource.value;
@@ -978,7 +978,6 @@ class GraphicsVulkan {
 				commandCopyImage(commandBuffersForCopy[i], commandCopyImageArguments);
 				//*/
 
-				/+
 				{
 					VkImageBlit[1] regions;
 
@@ -993,11 +992,11 @@ class GraphicsVulkan {
 					with(regions[0]) {
 						srcSubresource = imageSubresourceLayersForBlit;
 						with(srcOffsets[0]) {x=y=z=0;}
-						with(srcOffsets[1]) {x=300;y=300;z=1;}
+						with(srcOffsets[1]) {x=300-1;y=300-1;z=1;}
 						
 						dstSubresource = imageSubresourceLayersForBlit;
 						with(dstOffsets[0]) {x=y=z=0;}
-						with(dstOffsets[1]) {x=300;y=300;z=1;}
+						with(dstOffsets[1]) {x=300-1;y=300-1;z=1;}
 					}
 
 
@@ -1012,12 +1011,28 @@ class GraphicsVulkan {
 						VK_FILTER_NEAREST // filter
 					);
 				}
-				+/
+				
+				// commented because its the old barrier for the copy
+				//vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
+				
+				// this is the new barrier for the blit
+				// very much inspired by https://github.com/Novum/vkQuake/blob/14fa407480a0865ef4ce3945ad91b8d06d97e05a/Quake/gl_warp.c
+				VkMemoryBarrier memory_barrier;
+				memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
+				
+
+				// after the barrier we have to transition the layout to an presentable layout
+				setImageLayout(
+					cast(VkCommandBuffer)commandBuffersForCopy[i],
+					cast(VkImage)vulkanContext.swapChain.swapchainImages[i],
+					VK_IMAGE_ASPECT_COLOR_BIT,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				);
 
 
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
-				
-				
 				
 				
 				if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBuffersForCopy[i]) != VK_SUCCESS ) {
@@ -1266,6 +1281,9 @@ class GraphicsVulkan {
 				}
 				
 				semaphorePairIndex = (semaphorePairIndex+1) % vulkanContext.swapChain.semaphorePairs.length;
+			
+
+				break; // we just want to render one frame
 			} while (vulkanResult >= 0);
 		
 		}

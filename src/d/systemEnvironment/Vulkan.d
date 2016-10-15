@@ -695,7 +695,7 @@ public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] c
 	chainContext.vulkan.swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
 	VulkanSwapChain2.InitSwapChainArguments swapchainArgument = VulkanSwapChain2.InitSwapChainArguments.init;
-	swapchainArgument.imageUsageBits = VK_IMAGE_USAGE_TRANSFER_DST_BIT; // required for render to image(texture) and copy to swapchain images
+	swapchainArgument.imageUsageBits = VK_IMAGE_USAGE_TRANSFER_DST_BIT; // required for render to image(texture) and copy/blit to swapchain images
 	swapchainArgument.loggerPipe = chainContext.loggerPipe;
 	swapchainArgument.surface = chainContext.vulkan.surface.surface;
 	
