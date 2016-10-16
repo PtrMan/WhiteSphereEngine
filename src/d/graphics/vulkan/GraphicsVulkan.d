@@ -969,10 +969,7 @@ class GraphicsVulkan {
 				clearColor.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
 				
 				
-				//vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT , VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
-
-
+				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 
 
@@ -1035,8 +1032,7 @@ class GraphicsVulkan {
 				memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 				memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;//VK_ACCESS_TRANSFER_READ_BIT;
-				// uncommented for testing if the barrier is wrong    vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT /*VK_PIPELINE_STAGE_TRANSFER_BIT*/, /* uncommented because it didn't work  VK_PIPELINE_STAGE_TRANSFER_BIT   */ VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT , VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
+				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
 
 
 
@@ -1068,7 +1064,7 @@ class GraphicsVulkan {
 					if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForClear) != VK_SUCCESS ) {
 						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
 					}
-				} 
+				}
 				
 				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
@@ -1263,10 +1259,6 @@ class GraphicsVulkan {
 				
 				TypesafeVkSemaphore chainSemaphore3 = chainingSemaphoreAllocator.allocateOne();
 				
-
-				// for ruling out sync/barrier issues while tracing down the bug
-				vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
-
 				
 				{ // do copy
 					VkPipelineStageFlags[1] waitDstStageMasks = [/*VK_PIPELINE_STAGE_TRANSFER_BIT*/VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT];
@@ -1280,11 +1272,6 @@ class GraphicsVulkan {
 					);
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
-
-				// for ruling out sync/barrier issues while tracing down the bug
-				vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
-
-				
 				
 				
 				// Submit present operation to present queue
