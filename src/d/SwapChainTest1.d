@@ -10,7 +10,7 @@ import api.vulkan.Vulkan;
 import vulkan.VulkanHelpers;
 import vulkan.VulkanDevice;
 import vulkan.VulkanTools;
-import vulkan.VulkanSwapChain2;
+import whiteSphereEngine.graphics.vulkan.VulkanSwapChain;
 
 import std.stdint;
 

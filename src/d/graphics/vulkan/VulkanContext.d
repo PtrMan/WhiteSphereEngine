@@ -7,7 +7,7 @@ import memory.NonGcHandle : NonGcHandle;
 import vulkan.VulkanDevice;
 import vulkan.QueueManager;
 
-import vulkan.VulkanSwapChain2;
+import whiteSphereEngine.graphics.vulkan.VulkanSwapChain;
 import vulkan.VulkanSurface;
 import helpers.VariableValidator;
 import graphics.vulkan.VulkanContext;
@@ -30,7 +30,7 @@ class VulkanContext {
 	VariableValidator!VkFormat depthFormatMediumPrecision;
 	VariableValidator!VkFormat depthFormatHighPrecision;
 	
-	VulkanSwapChain2 swapChain;
+	VulkanSwapChain swapChain;
 	
 	
 	protected VulkanMemoryAllocator[uint32_t] allocatorsByMemoryTypeIndex;

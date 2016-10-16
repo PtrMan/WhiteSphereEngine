@@ -565,16 +565,16 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 static import vulkan.Messages;
 
 
-import vulkan.VulkanSwapChain2 : VulkanSwapChain2;
+import whiteSphereEngine.graphics.vulkan.VulkanSwapChain : VulkanSwapChain;
 
 public void platformVulkan3SwapChain(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
 	VkResult vulkanResult;
 	
-	chainContext.vulkan.swapChain = new VulkanSwapChain2();
+	chainContext.vulkan.swapChain = new VulkanSwapChain();
 
 	chainContext.vulkan.swapChain.connect(chainContext.vulkan.instance.value, chainContext.vulkan.chosenDevice.physicalDevice, chainContext.vulkan.chosenDevice.logicalDevice);
 	
-	VulkanSwapChain2.InitSwapChainArguments swapchainArgument = VulkanSwapChain2.InitSwapChainArguments.init;
+	VulkanSwapChain.InitSwapChainArguments swapchainArgument = VulkanSwapChain.InitSwapChainArguments.init;
 	swapchainArgument.imageUsageBits = VK_IMAGE_USAGE_TRANSFER_DST_BIT; // required for render to image(texture) and copy/blit to swapchain images
 	swapchainArgument.loggerPipe = chainContext.loggerPipe;
 	swapchainArgument.surface = chainContext.vulkan.surface.surface;

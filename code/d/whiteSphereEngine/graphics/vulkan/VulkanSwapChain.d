@@ -1,4 +1,4 @@
-module vulkan.VulkanSwapChain2;
+module whiteSphereEngine.graphics.vulkan.VulkanSwapChain;
 
 import std.stdint;
 import std.format : format;
@@ -47,13 +47,12 @@ private extern(System) VkBool32 vulkanDebugCallback2(VkFlags msgFlags, VkDebugRe
 
 
 /**
- * alternative implementation of swapchain because I had issues with the other implementation
- * (see the code at the time of the first commit)
- * 
+ * Vulkan swap chain
+ *
  * almost completly based on
  * https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/xhtml/vkspec.html#_vk_khr_swapchain
  */
-class VulkanSwapChain2 {
+class VulkanSwapChain {
 	private VariableValidator!VkInstance instance;
 	private VariableValidator!VkDevice device;
 	private VariableValidator!VkPhysicalDevice physicalDevice;
