@@ -693,6 +693,15 @@ class GraphicsVulkan {
 				
 				ubyte* textureUbytePtr = cast(ubyte*)hostPtr;
 				// TODO< fill with memory >
+
+				// fill with testimage
+				foreach(x; 0..256) {
+					foreach(y; 0..256) {
+						if( ((x+y) % 2) == 0 ) {
+							textureUbytePtr[(x+y*256) * 4] = 255;
+						}
+					}
+				}
 			}
 
 
@@ -1147,7 +1156,7 @@ class GraphicsVulkan {
 			TestTask testTask;
 
 			{
-				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -3.5f);//uncommented because we want to test projection  createIdentity!float();
+				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -0.6f);//uncommented because we want to test projection  createIdentity!float();
 
 				Matrix44Type mvpMatrix = new Matrix44Type;
 				mul(projectionMatrix, modelMatrix, mvpMatrix);

@@ -5,6 +5,7 @@
 layout (location = 0) in vec4 position;
 layout (location = 1) in vec2 inTextureCoordinate;
 
+layout (location = 0) out vec4 fragmentPosition;
 layout (location = 1) out vec2 fragmentTextureCoordinate;
 
 layout(std430, push_constant) uniform PushConstants
@@ -15,4 +16,6 @@ layout(std430, push_constant) uniform PushConstants
 void main() {
     gl_Position = constants.mvp * position;
     fragmentTextureCoordinate = inTextureCoordinate;
+
+    fragmentPosition = constants.mvp * position;
 }
