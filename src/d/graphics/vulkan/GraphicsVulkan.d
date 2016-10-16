@@ -981,21 +981,6 @@ class GraphicsVulkan {
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 
-
-
-
-				/* uncommented to keep old copy code for later fallback
-				CommandCopyImageArguments commandCopyImageArguments;
-				with(commandCopyImageArguments) {
-					sourceImage = framebufferImageResource.resource.value;
-					destinationImage = cast(TypesafeVkImage)vulkanContext.swapChain.swapchainImages[i];
-					sourceImageLayout = VK_IMAGE_LAYOUT_GENERAL;
-					destinationImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					extent = Vector2ui.make(300, 300);
-				}
-				commandCopyImage(commandBuffersForCopy[i], commandCopyImageArguments);
-				//*/
-
 				{
 					VkImageBlit[1] regions;
 
@@ -1032,10 +1017,7 @@ class GraphicsVulkan {
 					);
 				}
 				
-				// commented because its the old barrier for the copy
-				//vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, null, 0, null, 1, &barrierFromClearToPresent);
-				
-				// this is the new barrier for the blit
+				// this is the barrier for the blit
 				// very much inspired by https://github.com/Novum/vkQuake/blob/14fa407480a0865ef4ce3945ad91b8d06d97e05a/Quake/gl_warp.c
 				VkMemoryBarrier memory_barrier;
 				memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
@@ -1043,21 +1025,6 @@ class GraphicsVulkan {
 				memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;//VK_ACCESS_TRANSFER_READ_BIT;
 				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
 
-
-
-				// after the barrier we have to transition the layout to an presentable layout
-				/*
-				setImageLayout(
-					cast(VkCommandBuffer)commandBuffersForCopy[i],
-					cast(VkImage)vulkanContext.swapChain.swapchainImages[i],
-					VK_IMAGE_ASPECT_COLOR_BIT,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				);
-				*/
-
-
-				
 				
 				if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBuffersForCopy[i]) != VK_SUCCESS ) {
 					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
@@ -1100,55 +1067,6 @@ class GraphicsVulkan {
 			
 			
 			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
-
-			/+ uncommented because its done by the rebuildCommandBuffer??() method
-			// for actual rendering
-			{ // to scope command buffer filling
-				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering, &graphicsCommandBufferBeginInfo);
-				scope(success) {
-					if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForRendering) != VK_SUCCESS ) {
-						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
-					}
-				} 
-				
-				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
-				
-				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
-				with(renderPassBeginInfo) {
-					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
-					clearValueCount = cast(uint32_t)1;
-					pClearValues = cast(immutable(VkClearValue)*)&clear_value;
-				}
-				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassDrawover;
-				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
-				
-				
-				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForRendering, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-				
-				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForRendering, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
-				
-				VkBuffer[1] vertexBuffersToBind = [cast(VkBuffer)vboPositionBufferResource.resource.value];
-				VkDeviceSize[1] offsets = [0];
-				assert(vertexBuffersToBind.length == offsets.length);
-				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBufferForRendering, 0, vertexBuffersToBind.length, vertexBuffersToBind.ptr, offsets.ptr);
-				
-				vkCmdPushConstants(cast(VkCommandBuffer)commandBufferForRendering, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, mvpMatrix.ptr);
-				
-				if( testMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
-					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBufferForRendering, cast(VkBuffer)vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
-				}
-				else {
-					throw new EngineException(true, true, "Vulkan Renderer - index buffer not implemented for non-uint32bit !");
-				}
-				
-				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBufferForRendering, testMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
-				
-				
-				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForRendering);
-			}+/
-
 		}
 		
 		void loop() {
