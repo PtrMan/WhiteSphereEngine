@@ -34,7 +34,7 @@ void setImageLayout(VkCommandBuffer cmdbuffer, VkImage image, VkImageAspectFlags
 	// Only allowed as initial layout!
 	// Make sure any writes to the image have been finished
 	if (oldImageLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-		imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageMemoryBarrier.srcAccessMask = 0; // uncommented because it was the old code but it seems wrong after the validation layer    VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
 	}
 
 	// Old layout is color attachment

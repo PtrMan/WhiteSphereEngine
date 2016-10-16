@@ -309,8 +309,12 @@ class GraphicsVulkan {
 				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | //
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			
+
+			// TODO< we need to use this format for the creation of the renderpass!!!! >
+
 			// search best format
-			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_A2B10G10R10_UINT_PACK32], requiredFramebufferImageFormatFeatures, "Framebuffer");
+			VkFormat[] preferedFormats = [VK_FORMAT_B8G8R8A8_UNORM]; // uncommented to track down the stupid blitting bug, same as our swapchain format    VK_FORMAT_A2B10G10R10_UINT_PACK32];
+			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormats, requiredFramebufferImageFormatFeatures, "Framebuffer");
 			
 			
 			
@@ -965,8 +969,14 @@ class GraphicsVulkan {
 				clearColor.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
 				
 				
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
+				//vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
+				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT , VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
+
+
 				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
+
+
+
 
 				/* uncommented to keep old copy code for later fallback
 				CommandCopyImageArguments commandCopyImageArguments;
@@ -994,11 +1004,13 @@ class GraphicsVulkan {
 					with(regions[0]) {
 						srcSubresource = imageSubresourceLayersForBlit;
 						with(srcOffsets[0]) {x=y=z=0;}
-						with(srcOffsets[1]) {x=300-1;y=300-1;z=1;}
+						//with(srcOffsets[1]) {x=300;y=300;z=1;}
+						with(srcOffsets[1]) {x=300;y=300;z=1;}
 						
 						dstSubresource = imageSubresourceLayersForBlit;
-						with(dstOffsets[0]) {x=y=z=0;}
-						with(dstOffsets[1]) {x=300-1;y=300-1;z=1;}
+						//with(dstOffsets[0]) {x=y=z=0;}
+						with(dstOffsets[0]) {x=0;y=0;z=0;}
+						with(dstOffsets[1]) {x=300;y=300;z=1;}
 					}
 
 
@@ -1023,8 +1035,10 @@ class GraphicsVulkan {
 				memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 				memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;//VK_ACCESS_TRANSFER_READ_BIT;
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, /* uncommented because it didn't work  VK_PIPELINE_STAGE_TRANSFER_BIT   */ VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
-				
+				// uncommented for testing if the barrier is wrong    vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT /*VK_PIPELINE_STAGE_TRANSFER_BIT*/, /* uncommented because it didn't work  VK_PIPELINE_STAGE_TRANSFER_BIT   */ VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
+				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT , VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
+
+
 
 				// after the barrier we have to transition the layout to an presentable layout
 				/*
@@ -1249,9 +1263,13 @@ class GraphicsVulkan {
 				
 				TypesafeVkSemaphore chainSemaphore3 = chainingSemaphoreAllocator.allocateOne();
 				
+
+				// for ruling out sync/barrier issues while tracing down the bug
+				vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+
 				
 				{ // do copy
-					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_TRANSFER_BIT];
+					VkPipelineStageFlags[1] waitDstStageMasks = [/*VK_PIPELINE_STAGE_TRANSFER_BIT*/VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
 					TypesafeVkSemaphore[1] signalSemaphores = [chainSemaphore3];
 					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBuffersForCopy[imageIndex]];
@@ -1262,6 +1280,10 @@ class GraphicsVulkan {
 					);
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
+
+				// for ruling out sync/barrier issues while tracing down the bug
+				vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+
 				
 				
 				
@@ -1286,9 +1308,8 @@ class GraphicsVulkan {
 				}
 				
 				semaphorePairIndex = (semaphorePairIndex+1) % vulkanContext.swapChain.semaphorePairs.length;
-			
 
-				break; // we just want to render one frame
+				///break;
 			} while (vulkanResult >= 0);
 		
 		}
@@ -1359,11 +1380,6 @@ class GraphicsVulkan {
 		// create test texture, view and sampler
 		//////////////////
 		createTextureImage();
-
-
-		return;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; // for debugging
-
-
 		createTextureImageView();
 	    createTextureSampler();
 
