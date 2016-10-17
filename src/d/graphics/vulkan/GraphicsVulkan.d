@@ -39,6 +39,8 @@ alias Matrix!(float, 4, 4) Matrix44Type;
 import whiteSphereEngine.scheduler.Task;
 import whiteSphereEngine.scheduler.Scheduler;
 
+import whiteSphereEngine.graphics.vulkan.helpers.CommandBufferScope;
+
 // class for simple functionality of one single task
 // the task has to just fill one fixed commandbuffer
 
@@ -589,22 +591,8 @@ class GraphicsVulkan {
 			
 			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
 			
-			VkCommandBufferBeginInfo graphicsCommandBufferBeginInfo = VkCommandBufferBeginInfo.init;
-			with(graphicsCommandBufferBeginInfo) {
-				sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				pInheritanceInfo = null;
-			}
-			
-				// for actual rendering
-			{ // to scope command buffer filling
-				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBuffer, &graphicsCommandBufferBeginInfo);
-				scope(success) {
-					if( !vkEndCommandBuffer(cast(VkCommandBuffer)commandBuffer).vulkanSuccess ) {
-						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
-					}
-				} 
-				
+			// for actual rendering
+			commandBufferScope(commandBuffer, (TypesafeVkCommandBuffer commandBuffer) {
 				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
 				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
@@ -655,10 +643,10 @@ class GraphicsVulkan {
 				
 				
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
-			}
-			
+			});
 		}
 		vulkanDelegates.refillCommandBufferForTransform = &refillCommandBufferForTransform;
+		scope(exit) vulkanDelegates.refillCommandBufferForTransform = null; // invalidate because out of scope it's no more valid
 
 		void createTextureImage() {
 			VkFormat stagingFormat = VK_FORMAT_R8G8B8A8_UNORM;// TODO< search for format which the GPU supports, we take R8G8B8A8_UNORM because a lot of cards should support it by default >
@@ -896,12 +884,6 @@ class GraphicsVulkan {
 		void recordingCommandBuffers() {
 			VkResult vulkanResult;
 			
-			VkCommandBufferBeginInfo graphicsCommandBufferBeginInfo = VkCommandBufferBeginInfo.init;
-			with(graphicsCommandBufferBeginInfo) {
-				sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				pInheritanceInfo = null;
-			}
 			
 			VkImageSubresourceRange imageSubresourceRange;
 			with(imageSubresourceRange) {
@@ -929,145 +911,136 @@ class GraphicsVulkan {
 			TypesafeVkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineResourceNode.resource).resource;
 
 			foreach( i; 0..commandBuffersForCopy.length ) {
-				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBuffersForCopy[i], &graphicsCommandBufferBeginInfo);
-				
-				/* uncommented because its impossible to test with this hardware of the developer ;)
-				if( presentQueue != graphicsQueue ) {
-					VkImageMemoryBarrier barrier_from_present_to_draw = VkImageMemoryBarrier.init
+				commandBufferScope(commandBuffersForCopy[i], (TypesafeVkCommandBuffer commandBuffer) {
+
+					/* uncommented because its impossible to test with this hardware of the developer ;)
+					if( presentQueue != graphicsQueue ) {
+						VkImageMemoryBarrier barrier_from_present_to_draw = VkImageMemoryBarrier.init
+						
+						with(barrier_from_present_to_draw) {
+							sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+							pNext = null;
+							srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+							dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+							oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+							newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+							srcQueueFamilyIndex = presentQueueFamilyIndex;
+							dstQueueFamilyIndex = graphicsQueueFamilyIndex;
+							image = swap_chain_images[i];
+							subresourceRange = image_subresource_range;
+						};
+						
+						vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
+					}
+					*/
 					
-					with(barrier_from_present_to_draw) {
+					
+					 // NOTE< not 100% sure if this is right for multiple queues, test on hardware where the queues are different ones > 
+					VkImageMemoryBarrier barrierFromPresentToClear = VkImageMemoryBarrier.init;
+					with (barrierFromPresentToClear) {
 						sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-						pNext = null;
-						srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-						dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-						oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+						srcAccessMask = 0; // because layout is undefined
+						dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+						oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+						newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+						srcQueueFamilyIndex = graphicsQueueFamilyIndex;
+						dstQueueFamilyIndex = presentQueueFamilyIndex;
+						image = vulkanContext.swapChain.swapchainImages[i];
+						subresourceRange = imageSubresourceRange;
+					}
+					
+					VkImageMemoryBarrier barrierFromClearToPresent = VkImageMemoryBarrier.init;
+					with (barrierFromClearToPresent) {
+						sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+						srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+						dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+						oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 						newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 						srcQueueFamilyIndex = presentQueueFamilyIndex;
 						dstQueueFamilyIndex = graphicsQueueFamilyIndex;
-						image = swap_chain_images[i];
-						subresourceRange = image_subresource_range;
-					};
+						image = vulkanContext.swapChain.swapchainImages[i];
+						subresourceRange = imageSubresourceRange;	
+					}
 					
-					vkCmdPipelineBarrier(commandBuffersForCopy[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, null, 0, null, 1, &barrier_from_present_to_draw);
-				}
-				*/
-				
-				
-				 // NOTE< not 100% sure if this is right for multiple queues, test on hardware where the queues are different ones > 
-				VkImageMemoryBarrier barrierFromPresentToClear = VkImageMemoryBarrier.init;
-				with (barrierFromPresentToClear) {
-					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					srcAccessMask = 0; // because layout is undefined
-					dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-					oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-					newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					srcQueueFamilyIndex = graphicsQueueFamilyIndex;
-					dstQueueFamilyIndex = presentQueueFamilyIndex;
-					image = vulkanContext.swapChain.swapchainImages[i];
-					subresourceRange = imageSubresourceRange;
-				}
-				
-				VkImageMemoryBarrier barrierFromClearToPresent = VkImageMemoryBarrier.init;
-				with (barrierFromClearToPresent) {
-					sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-					dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-					oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-					srcQueueFamilyIndex = presentQueueFamilyIndex;
-					dstQueueFamilyIndex = graphicsQueueFamilyIndex;
-					image = vulkanContext.swapChain.swapchainImages[i];
-					subresourceRange = imageSubresourceRange;	
-				}
-				
-				VkImageSubresourceRange imageSubresourceRangeForCopy = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-				
-				VkClearColorValue clearColor;
-				clearColor.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
-				
-				
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
-				vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffersForCopy[i], vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
+					VkImageSubresourceRange imageSubresourceRangeForCopy = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+					
+					VkClearColorValue clearColor;
+					clearColor.float32 = [1.0f, 0.8f, 0.4f, 0.0f];
+					
+					
+					vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, null, 0, null, 1, &barrierFromPresentToClear);
+					vkCmdClearColorImage(cast(VkCommandBuffer)commandBuffer, vulkanContext.swapChain.swapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &imageSubresourceRangeForCopy);
 
-				{
-					VkImageBlit[1] regions;
+					{
+						VkImageBlit[1] regions;
 
-					VkImageSubresourceLayers imageSubresourceLayersForBlit;
-					with(imageSubresourceLayersForBlit) {
-						aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-						mipLevel = 0;
-						baseArrayLayer = 0;
-						layerCount = 1;
+						VkImageSubresourceLayers imageSubresourceLayersForBlit;
+						with(imageSubresourceLayersForBlit) {
+							aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+							mipLevel = 0;
+							baseArrayLayer = 0;
+							layerCount = 1;
+						}
+			
+						with(regions[0]) {
+							srcSubresource = imageSubresourceLayersForBlit;
+							with(srcOffsets[0]) {x=y=z=0;}
+							//with(srcOffsets[1]) {x=300;y=300;z=1;}
+							with(srcOffsets[1]) {x=300;y=300;z=1;}
+							
+							dstSubresource = imageSubresourceLayersForBlit;
+							//with(dstOffsets[0]) {x=y=z=0;}
+							with(dstOffsets[0]) {x=0;y=0;z=0;}
+							with(dstOffsets[1]) {x=300;y=300;z=1;}
+						}
+
+
+						vkCmdBlitImage(
+							cast(VkCommandBuffer)commandBuffer,
+							cast(VkImage)framebufferImageResource.resource.value, // srcImage
+							VK_IMAGE_LAYOUT_GENERAL, // srcImageLayout
+							cast(VkImage)vulkanContext.swapChain.swapchainImages[i], // destImage
+							VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
+							cast(uint32_t)regions.length,
+							regions.ptr,
+							VK_FILTER_NEAREST // filter
+						);
 					}
-		
-					with(regions[0]) {
-						srcSubresource = imageSubresourceLayersForBlit;
-						with(srcOffsets[0]) {x=y=z=0;}
-						//with(srcOffsets[1]) {x=300;y=300;z=1;}
-						with(srcOffsets[1]) {x=300;y=300;z=1;}
-						
-						dstSubresource = imageSubresourceLayersForBlit;
-						//with(dstOffsets[0]) {x=y=z=0;}
-						with(dstOffsets[0]) {x=0;y=0;z=0;}
-						with(dstOffsets[1]) {x=300;y=300;z=1;}
-					}
-
-
-					vkCmdBlitImage(
-						cast(VkCommandBuffer)commandBuffersForCopy[i],
-						cast(VkImage)framebufferImageResource.resource.value, // srcImage
-						VK_IMAGE_LAYOUT_GENERAL, // srcImageLayout
-						cast(VkImage)vulkanContext.swapChain.swapchainImages[i], // destImage
-						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // dstImageLayout
-						cast(uint32_t)regions.length,
-						regions.ptr,
-						VK_FILTER_NEAREST // filter
-					);
-				}
-				
-				// this is the barrier for the blit
-				// very much inspired by https://github.com/Novum/vkQuake/blob/14fa407480a0865ef4ce3945ad91b8d06d97e05a/Quake/gl_warp.c
-				VkMemoryBarrier memory_barrier;
-				memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-				memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;//VK_ACCESS_TRANSFER_READ_BIT;
-				vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffersForCopy[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
-
-				
-				if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBuffersForCopy[i]) != VK_SUCCESS ) {
-					throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
-				}
+					
+					// this is the barrier for the blit
+					// very much inspired by https://github.com/Novum/vkQuake/blob/14fa407480a0865ef4ce3945ad91b8d06d97e05a/Quake/gl_warp.c
+					VkMemoryBarrier memory_barrier;
+					memory_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+					memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;//VK_ACCESS_TRANSFER_READ_BIT;
+					vkCmdPipelineBarrier(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &memory_barrier, 0, null, 1, &barrierFromClearToPresent);
+				});
 			}
 			
 			
 			
 			
 			{ // for clearing the screen
-				vkBeginCommandBuffer(cast(VkCommandBuffer)commandBufferForClear, &graphicsCommandBufferBeginInfo);
-				scope(success) {
-					if( vkEndCommandBuffer(cast(VkCommandBuffer)commandBufferForClear) != VK_SUCCESS ) {
-						throw new EngineException(true, true, "Couldn't record command buffer [vkEndCommandBuffer]");
+				commandBufferScope(commandBufferForClear, (TypesafeVkCommandBuffer commandBuffer) {
+					TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
+					
+					VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
+					with(renderPassBeginInfo) {
+						sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+						renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+						renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+						clearValueCount = cast(uint32_t)clearValues.length;
+						pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 					}
-				}
-				
-				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
-				
-				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
-				with(renderPassBeginInfo) {
-					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
-					clearValueCount = cast(uint32_t)clearValues.length;
-					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
-				}
-				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
-				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
-				
-				
-				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBufferForClear, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-				vkCmdBindPipeline(cast(VkCommandBuffer)commandBufferForClear, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
-				
-				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBufferForClear);
+					renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
+					renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
+					
+					
+					vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+					vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+					
+					vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
+				});
 			}
 			
 			
@@ -1231,7 +1204,7 @@ class GraphicsVulkan {
 				
 				semaphorePairIndex = (semaphorePairIndex+1) % vulkanContext.swapChain.semaphorePairs.length;
 
-				///break;
+				break;
 			} while (vulkanResult >= 0);
 		
 		}
@@ -1695,22 +1668,15 @@ class GraphicsVulkan {
 
 		VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
 
-		{ // scope for beginCommandBuffer/end
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			vkBeginCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, &beginInfo);
-			scope(success) vkEndCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer);
-			
+		commandBufferScope(setupCommandBuffer, (TypesafeVkCommandBuffer commandBuffer) {
 			setImageLayout(
-				cast(VkCommandBuffer)setupCommandBuffer, // cmdBuffer
+				cast(VkCommandBuffer)commandBuffer, // cmdBuffer
 				cast(VkImage)image, // image
 				aspectMask, // aspectMask
 				oldLayout, // oldImageLayout
 				newLayout // newImageLayout
 			);
-		}
-
+		});
 
 		VkPipelineStageFlags[] waitStageMask = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
 		VkSubmitInfo submitInfo = {};
@@ -1780,15 +1746,10 @@ class GraphicsVulkan {
 
 		VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
 
-		{ // scope for beginCommandBuffer/end
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			vkBeginCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer, &beginInfo);
-			scope(success) vkEndCommandBuffer(cast(VkCommandBuffer)setupCommandBuffer);
-			
-			commandCopyImage(setupCommandBuffer, arguments);
-		}
+		commandBufferScope(setupCommandBuffer, (TypesafeVkCommandBuffer commandBuffer) {
+			commandCopyImage(commandBuffer, arguments);
+		});
+		
 
 
 		VkSubmitInfo submitInfo = {};
