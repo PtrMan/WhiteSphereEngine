@@ -1,5 +1,7 @@
 module common.ResourceDag;
 
+import std.algorithm.mutation : remove;
+
 import common.IDisposable;
 
 // is a unified GC for resources
@@ -64,8 +66,9 @@ class ResourceDag {
 	}
 
 	public /*not static*/ class ResourceNode : IDisposable {
-		protected final this(IResource resource) {
+		protected final this(IResource resource, string humanReadableDescription) {
 			this.protectedResource = resource;
+			this.humanReadableDescription = humanReadableDescription;
 		}
 
 		public void dispose() {
@@ -103,6 +106,17 @@ class ResourceDag {
 			resourceNodes[child.resourceDagIndex].dagReferenceCounterInternal++;
 		}
 
+		// rewires/adapts the child indices which point to the element(s) behind the removed elment at index
+		final void elementWasRemovedAt(size_t removedIndex) {
+			foreach( childResourceIndexIndex; 0..childResourceIndices.length ) {
+				size_t childResourceIndex = childResourceIndices[childResourceIndexIndex];
+				assert(childResourceIndex != removedIndex, "elementWasRemovedAt() was called for an element which is still referenced!");
+				if( childResourceIndex > removedIndex ) {
+					childResourceIndices[childResourceIndexIndex]--; // decrement index by one because an element before it was removed
+				}
+			}
+		}
+
 		public final @property IResource resource() {
 			return protectedResource;
 		}
@@ -110,6 +124,8 @@ class ResourceDag {
 		public final @property bool isNotReferenced() {
 			return dagReferenceCounterCombined == 0;
 		}
+
+		immutable string humanReadableDescription; // for debugging/profiling
 
 		protected bool wasDisposedFromExternal = false;
 		protected bool wasDisposed = false;
@@ -131,12 +147,52 @@ class ResourceDag {
 	// doesn't do anything, just holds references to childs
 	public /*not static*/ class EntryResourceNode : ResourceNode {
 		protected final this() {
-			super(null);
+			super(null, "");
 		}
 	}
 	
 	
-	// TODO< method to free the elements in the resource-dag (and rewire the eventually changed child indices) >
+	// method to free the elements in the resource-dag (and rewire the eventually changed child indices)
+	final void disposeIfPossible() {
+		// this rewires the indices to the elements behind the removed element
+		void innerFnElementAtIndexWasRemoved(size_t indexOfToRemoveElement) {
+			foreach( iterationResourceNode; resourceNodes ) {
+				iterationResourceNode.elementWasRemovedAt(indexOfToRemoveElement);
+			}
+		}
+
+		for(;;) {
+			bool elementWasDisposedAndRemoved = false;
+			
+			foreach( resourceNodeIndex, iterationResourceNode; resourceNodes ) {
+				if( iterationResourceNode.dagReferenceCounterCombined == 0 ) {
+
+					if( false ) {
+						import std.stdio;
+						writeln("ResourceDag:  begin dispose=", iterationResourceNode.humanReadableDescription);
+					}
+
+					iterationResourceNode.disposeFromExternalImmediatly();
+
+					if( false ) {
+						import std.stdio;
+						writeln("ResourceDag:  end dispose=", iterationResourceNode.humanReadableDescription);
+					}
+
+
+					innerFnElementAtIndexWasRemoved(resourceNodeIndex);
+					resourceNodes = resourceNodes.remove(resourceNodeIndex);
+					
+					elementWasDisposedAndRemoved = true;
+					break;
+				}
+			}
+
+			if( !elementWasDisposedAndRemoved ) {
+				break;
+			}
+		}
+	}
 	
 	// TODO< maybe its better to first dispose the parent and then the childs and so on >
 	// disposes all resources
@@ -187,8 +243,8 @@ class ResourceDag {
 		resourceNodes[resourceNodeIndex] = null;
 	}
 
-	public final ResourceNode createNode(IResource resource) {
-		ResourceNode createdResourceNode = new ResourceNode(resource);
+	public final ResourceNode createNode(IResource resource, string humanReadableDescription = "") {
+		ResourceNode createdResourceNode = new ResourceNode(resource, humanReadableDescription);
 		resourceNodes ~= createdResourceNode;
 		createdResourceNode.resourceDagIndex = cast(size_t)resourceNodes.length-1;
 		return createdResourceNode;

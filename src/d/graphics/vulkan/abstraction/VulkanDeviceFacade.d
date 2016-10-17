@@ -12,31 +12,31 @@ import graphics.vulkan.VulkanTypesAndEnums;
 // * simplifies names by overloads for images, etc
 // * TODO< static methods which construct default structures, for exmple for the parameters of image creation >
 class VulkanDeviceFacade {
-	public final this(VkDevice device) {
+	final this(VkDevice device) {
 		this.protectedDevice = device;
 	}
 	
-	public final void getMemoryRequirements(TypesafeVkImage image, out VkMemoryRequirements memRequirements) {
+	final void getMemoryRequirements(TypesafeVkImage image, out VkMemoryRequirements memRequirements) {
 		VkMemoryRequirements internalMemRequirements; // local value to avoid troubles with pointers
 		vkGetImageMemoryRequirements(device, cast(VkImage)image, &internalMemRequirements);
 		memRequirements = internalMemRequirements;
 	}
 	
-	public final void getMemoryRequirements(TypesafeVkBuffer buffer, out VkMemoryRequirements memRequirements) {
+	final void getMemoryRequirements(TypesafeVkBuffer buffer, out VkMemoryRequirements memRequirements) {
 		VkMemoryRequirements internalMemRequirements; // local value to avoid troubles with pointers
 		vkGetBufferMemoryRequirements(device, cast(VkBuffer)buffer, &internalMemRequirements);
 		memRequirements = internalMemRequirements;
 	}
 
 	
-	public final void bind(TypesafeVkImage image, TypesafeVkDeviceMemory memory, VkDeviceSize memoryOffset) {
+	final void bind(TypesafeVkImage image, TypesafeVkDeviceMemory memory, VkDeviceSize memoryOffset) {
 		VkResult result = vkBindImageMemory(device, cast(VkImage)image, cast(VkDeviceMemory)memory, memoryOffset);
 		if( !result.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't bind memory! [vkBindImageMemory]");
 		}
 	}
 	
-	public final void bind(TypesafeVkBuffer buffer, TypesafeVkDeviceMemory memory, VkDeviceSize memoryOffset) {
+	final void bind(TypesafeVkBuffer buffer, TypesafeVkDeviceMemory memory, VkDeviceSize memoryOffset) {
 		VkResult result = vkBindBufferMemory(device, cast(VkBuffer)buffer, cast(VkDeviceMemory)memory, memoryOffset);
 		if( !result.vulkanSuccess ) {
 			throw new EngineException(true, true, "Couldn't bind memory! [vkBindBufferMemory]");
@@ -44,7 +44,7 @@ class VulkanDeviceFacade {
 	}
 
 	
-	public final TypesafeVkSemaphore createSemaphore(const VkAllocationCallbacks* allocator = null) {
+	final TypesafeVkSemaphore createSemaphore(const VkAllocationCallbacks* allocator = null) {
 		VkSemaphore rawSemaphore;
 		const VkSemaphoreCreateInfo semaphoreCreateInfo = {
 			VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,    // sType
@@ -60,19 +60,19 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkSemaphore)rawSemaphore;
 	}
 	
-	public final void destroySemaphore(TypesafeVkSemaphore semaphore, const VkAllocationCallbacks* allocator = null) {
+	final void destroySemaphore(TypesafeVkSemaphore semaphore, const VkAllocationCallbacks* allocator = null) {
 		TypesafeVkSemaphore[1] semaphores = [semaphore];
 		destroySemaphores(semaphores, allocator);
 	}
 	
 	// meta function
-	public final void destroySemaphores(TypesafeVkSemaphore[] semaphores, const VkAllocationCallbacks* allocator = null) {
+	final void destroySemaphores(TypesafeVkSemaphore[] semaphores, const VkAllocationCallbacks* allocator = null) {
 		foreach( iterationSemaphore; semaphores ) {
 			vkDestroySemaphore(device, cast(VkSemaphore)iterationSemaphore, allocator);
 		}
 	}
 	
-	public static struct CreateBufferArguments {
+	static struct CreateBufferArguments {
 		VkBufferCreateFlags flags = 0;
 		VkDeviceSize size;
 		VkBufferUsageFlags usage;
@@ -80,7 +80,7 @@ class VulkanDeviceFacade {
 		uint32_t[] queueFamilyIndices;
 	}
 	
-	public final TypesafeVkBuffer createBuffer(CreateBufferArguments arguments, const VkAllocationCallbacks* allocator = null) {
+	final TypesafeVkBuffer createBuffer(CreateBufferArguments arguments, const VkAllocationCallbacks* allocator = null) {
 		VkBuffer rawBuffer;
 		
 		VkBufferCreateInfo createInfo = VkBufferCreateInfo.init;
@@ -101,13 +101,13 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkBuffer)rawBuffer;
 	}
 	
-	public final void destroyBuffer(TypesafeVkBuffer buffer, const VkAllocationCallbacks* allocator = null) {
+	final void destroyBuffer(TypesafeVkBuffer buffer, const VkAllocationCallbacks* allocator = null) {
 		TypesafeVkBuffer[1] buffers = [buffer];
 		destroyBuffers(buffers, allocator);
 	}
 	
 	// meta function
-	public final void destroyBuffers(TypesafeVkBuffer[] buffers, const VkAllocationCallbacks* allocator = null) {
+	final void destroyBuffers(TypesafeVkBuffer[] buffers, const VkAllocationCallbacks* allocator = null) {
 		foreach( iterationBuffer; buffers ) {
 			vkDestroyBuffer(device, cast(VkBuffer)iterationBuffer, allocator);
 		}
@@ -116,7 +116,7 @@ class VulkanDeviceFacade {
 	
 	// TODO< create image >
 
-	public static struct CreateImageArguments {
+	static struct CreateImageArguments {
 		VkImageCreateFlags flags = 0;
 		VkImageType imageType = VK_IMAGE_TYPE_2D;
 		VkFormat format;
@@ -165,18 +165,18 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkImage)rawImage;
 	}
 	
-	public final void destroyImage(TypesafeVkImage image, const VkAllocationCallbacks* allocator = null) {
+	final void destroyImage(TypesafeVkImage image, const VkAllocationCallbacks* allocator = null) {
 		TypesafeVkImage[1] images = [image];
 		destroyImages(images, allocator);
 	}
 	
-	public final void destroyImages(TypesafeVkImage[] images, const VkAllocationCallbacks* allocator = null) {
+	final void destroyImages(TypesafeVkImage[] images, const VkAllocationCallbacks* allocator = null) {
 		foreach( iterationImage; images ) {
 			vkDestroyImage(device, cast(VkImage)iterationImage, allocator);
 		}
 	}
 	
-	public final TypesafeVkFence createFence(VkFenceCreateFlags flags = 0, const VkAllocationCallbacks* allocator = null) {
+	final TypesafeVkFence createFence(VkFenceCreateFlags flags = 0, const VkAllocationCallbacks* allocator = null) {
 		VkFence rawFence;
 		
 		VkFenceCreateInfo fenceCreateInfo = VkFenceCreateInfo.init;
@@ -190,12 +190,12 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkFence)rawFence;
 	}
 	
-	public final void destroyFence(TypesafeVkFence fence, const VkAllocationCallbacks* allocator = null) {
+	final void destroyFence(TypesafeVkFence fence, const VkAllocationCallbacks* allocator = null) {
 		TypesafeVkFence[1] fences = [fence];
 		destroyFences(fences, allocator);
 	}
 	
-	public final void destroyFences(TypesafeVkFence[] fences, const VkAllocationCallbacks* allocator = null) {
+	final void destroyFences(TypesafeVkFence[] fences, const VkAllocationCallbacks* allocator = null) {
 		foreach( iterationFence; fences ) {
 			vkDestroyFence(device, cast(VkFence)iterationFence, allocator);
 		}
@@ -203,7 +203,7 @@ class VulkanDeviceFacade {
 	}
 	
 	// meta function
-	public final void fenceWaitAndReset(TypesafeVkFence fence) {
+	final void fenceWaitAndReset(TypesafeVkFence fence) {
 		VkFence rawFence = cast(VkFence)fence;
 		VkResult vulkanResult = vkWaitForFences(protectedDevice, 1, &rawFence, VK_TRUE, UINT64_MAX);
 		if( !vulkanSuccess(vulkanResult) ) {
@@ -217,7 +217,7 @@ class VulkanDeviceFacade {
 	}
 	
 	
-	public final TypesafeVkCommandBuffer[] allocateCommandBuffers(TypesafeVkCommandPool pool, size_t count, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+	final TypesafeVkCommandBuffer[] allocateCommandBuffers(TypesafeVkCommandPool pool, size_t count, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
 		
 		VkCommandBuffer[] rawCommandBuffers;
 		rawCommandBuffers.length = count;
@@ -245,23 +245,23 @@ class VulkanDeviceFacade {
 		return commandBuffers;
 	}
 	
-	public final TypesafeVkCommandBuffer allocateCommandBuffer(TypesafeVkCommandPool pool, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+	final TypesafeVkCommandBuffer allocateCommandBuffer(TypesafeVkCommandPool pool, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
 		TypesafeVkCommandBuffer[] commandBuffers = allocateCommandBuffers(pool, 1, level);
 		return commandBuffers[0];
 	}
 	
-	public final void freeCommandBuffer(TypesafeVkCommandBuffer commandBuffer, TypesafeVkCommandPool commandPool) {
+	final void freeCommandBuffer(TypesafeVkCommandBuffer commandBuffer, TypesafeVkCommandPool commandPool) {
 		TypesafeVkCommandBuffer[1] commandBuffers = [commandBuffer];
 		freeCommandBuffers(commandBuffers, commandPool);
 	}
 	
-	public final void freeCommandBuffers(TypesafeVkCommandBuffer[] commandBuffers, TypesafeVkCommandPool commandPool) {
+	final void freeCommandBuffers(TypesafeVkCommandBuffer[] commandBuffers, TypesafeVkCommandPool commandPool) {
 		static assert( TypesafeVkCommandBuffer.sizeof == VkCommandBuffer.sizeof ); // sizes have to be identical for array cheatery
 		vkFreeCommandBuffers(device, cast(VkCommandPool)commandPool, commandBuffers.length, cast(VkCommandBuffer*)commandBuffers.ptr);
 	}
 	
 	
-	public static struct CreateImageViewArguments {
+	static struct CreateImageViewArguments {
 		VkImageViewCreateFlags     flags = 0; // default
 		TypesafeVkImage            image;
 		VkImageViewType            viewType;
@@ -269,7 +269,7 @@ class VulkanDeviceFacade {
 		VkComponentMapping         components; // default
 		VkImageSubresourceRange    subresourceRange; // default
 		
-		public static CreateImageViewArguments make() {
+		static CreateImageViewArguments make() {
 			CreateImageViewArguments result = CreateImageViewArguments.init;
 			with( result.components ) {
 				r = g = b = a = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -287,7 +287,7 @@ class VulkanDeviceFacade {
 		}
 	}
 	
-	public final TypesafeVkImageView createImageView(CreateImageViewArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkImageView createImageView(CreateImageViewArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
 		VkImageViewCreateInfo imageViewCreateInfo = VkImageViewCreateInfo.init;
 		with(imageViewCreateInfo) {
 			sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -307,11 +307,11 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkImageView)rawImageView;
 	}
 	
-	public final void destroyImageView(TypesafeVkImageView imageView, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroyImageView(TypesafeVkImageView imageView, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroyImageView(device, cast(VkImageView)imageView, allocator);
 	}
 	
-	public static struct CreateSamplerArguments {
+	static struct CreateSamplerArguments {
 		VkSamplerCreateFlags flags = 0; // default
 		VkFilter                magFilter;
 		VkFilter                minFilter;
@@ -330,7 +330,7 @@ class VulkanDeviceFacade {
 		bool                unnormalizedCoordinates = false; // default
 	}
 
-	public final TypesafeVkSampler createSampler(CreateSamplerArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkSampler createSampler(CreateSamplerArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
 		VkSamplerCreateInfo samplerCreateInfo = VkSamplerCreateInfo.init;
 		with(samplerCreateInfo) {
 			sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -361,12 +361,12 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkSampler)rawSampler;
 	}
 
-	public final void destroySampler(TypesafeVkSampler sampler, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroySampler(TypesafeVkSampler sampler, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroySampler(device, cast(VkSampler)sampler, allocator);
 	}
 
 
-	public static struct CreateFramebufferArguments {
+	static struct CreateFramebufferArguments {
 		VkFramebufferCreateFlags flags = 0; // default
 		TypesafeVkRenderPass renderPass;
 		TypesafeVkImageView[] attachments;
@@ -375,7 +375,7 @@ class VulkanDeviceFacade {
 		uint32_t layers = 1; // default
 	}
 	
-	public final TypesafeVkFramebuffer createFramebuffer(CreateFramebufferArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkFramebuffer createFramebuffer(CreateFramebufferArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
 		VkImageView[] translatedAttachments;
 		translatedAttachments.length = arguments.attachments.length;
 		foreach( i; 0..arguments.attachments.length ) {
@@ -402,19 +402,19 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkFramebuffer)rawFramebuffer;
 	}
 	
-	public final void destroyFramebuffer(TypesafeVkFramebuffer framebuffer, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroyFramebuffer(TypesafeVkFramebuffer framebuffer, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroyFramebuffer(device, cast(VkFramebuffer)framebuffer, allocator);
 	}
 	
 	
-	public static struct CreateRenderPassArguments {
+	static struct CreateRenderPassArguments {
 		VkRenderPassCreateFlags flags = 0;
 		VkAttachmentDescription[] attachmentDescriptions;
 		VkSubpassDescription[] subpassDescriptions;
 		VkSubpassDependency[] subpassDependencies;
 	}
 	
-	public final TypesafeVkRenderPass createRenderPass(CreateRenderPassArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkRenderPass createRenderPass(CreateRenderPassArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
 		VkRenderPassCreateInfo renderPassCreateInfo = VkRenderPassCreateInfo.init;
 		with(renderPassCreateInfo) {
 			sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -435,11 +435,11 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkRenderPass)rawRenderpass;
 	}
 	
-	public final void destroyRenderPass(TypesafeVkRenderPass renderPass, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroyRenderPass(TypesafeVkRenderPass renderPass, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroyRenderPass(device, cast(VkRenderPass)renderPass, allocator);
 	}
 	
-	public static struct CreateGraphicsPipelineArguments {
+	static struct CreateGraphicsPipelineArguments {
 		VkPipelineCreateFlags flags = 0;
 		VkPipelineShaderStageCreateInfo[] stages;
 		VkPipelineVertexInputStateCreateInfo vertexInputState;
@@ -460,7 +460,7 @@ class VulkanDeviceFacade {
 		uint32_t basePipelineIndex = -1; // default
 	}
 	
-	public final TypesafeVkPipeline createGraphicsPipeline(CreateGraphicsPipelineArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkPipeline createGraphicsPipeline(CreateGraphicsPipelineArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
 		VkGraphicsPipelineCreateInfo pipelineCreateInfo = VkGraphicsPipelineCreateInfo.init;
 		with(pipelineCreateInfo) {
 			sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -493,15 +493,15 @@ class VulkanDeviceFacade {
 	}
 	
 	
-	public final void destroyPipeline(TypesafeVkPipeline pipeline, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroyPipeline(TypesafeVkPipeline pipeline, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroyPipeline(device, cast(VkPipeline)pipeline, allocator);
 	}
 	
-	public final void destroyPipelineLayout(TypesafeVkPipelineLayout pipelineLayout, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroyPipelineLayout(TypesafeVkPipelineLayout pipelineLayout, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroyPipelineLayout(device, cast(VkPipelineLayout)pipelineLayout, allocator);
 	}
 	
-	public final void* map(TypesafeVkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags) {
+	final void* map(TypesafeVkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags) {
 		void *mapResult;
 		VkResult vulkanResult = vkMapMemory(device, cast(VkDeviceMemory)memory, offset, size, flags, &mapResult);
 		if( !vulkanResult.vulkanSuccess ) {
@@ -512,7 +512,7 @@ class VulkanDeviceFacade {
 	}
 	
 
-	public final TypesafeVkDescriptorSetLayout createDescriptorSetLayout(VkDescriptorSetLayoutBinding[] bindings, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkDescriptorSetLayout createDescriptorSetLayout(VkDescriptorSetLayoutBinding[] bindings, const(VkAllocationCallbacks*) allocator = null) {
 		VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.init;
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = cast(uint32_t)bindings.length;
@@ -526,18 +526,18 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkDescriptorSetLayout)rawDescriptorSetLayout;
 	}
 
-	public final void destroyDescriptorSetLayout(TypesafeVkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* allocator = null) {
+	final void destroyDescriptorSetLayout(TypesafeVkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* allocator = null) {
 		vkDestroyDescriptorSetLayout(device, cast(VkDescriptorSetLayout)descriptorSetLayout, allocator);
 	}
 
-	public static struct CreateDescriptorPoolArguments {
+	static struct CreateDescriptorPoolArguments {
 		VkDescriptorPoolCreateFlags flags;
 		uint32_t maxSets;
 		VkDescriptorPoolSize[] poolSizes;
 	}
 
 
-	public final TypesafeVkDescriptorPool createDescriptorPool(CreateDescriptorPoolArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
+	final TypesafeVkDescriptorPool createDescriptorPool(CreateDescriptorPoolArguments arguments, const(VkAllocationCallbacks*) allocator = null) {
 		VkDescriptorPoolCreateInfo createInfo = VkDescriptorPoolCreateInfo.init;
 		with(createInfo) {
 			sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -555,12 +555,12 @@ class VulkanDeviceFacade {
 		return cast(TypesafeVkDescriptorPool)rawDescriptorPool;
 	}
 
-	public final void destroyDescriptorPool(TypesafeVkDescriptorPool descriptorPool, const(VkAllocationCallbacks*) allocator = null) {
+	final void destroyDescriptorPool(TypesafeVkDescriptorPool descriptorPool, const(VkAllocationCallbacks*) allocator = null) {
 		vkDestroyDescriptorPool(device, cast(VkDescriptorPool)descriptorPool, allocator);
 	}
 
 
-	public final TypesafeVkDescriptorSet[] allocateDescriptorSets(TypesafeVkDescriptorSetLayout[] layouts, TypesafeVkDescriptorPool descriptorPool) {
+	final TypesafeVkDescriptorSet[] allocateDescriptorSets(TypesafeVkDescriptorSetLayout[] layouts, TypesafeVkDescriptorPool descriptorPool) {
 		// NOTE< actually we dont have to translate the whole resources all the time but it doesnt eat any performance, because we dont call this too often, so its fine >
 
 
@@ -593,7 +593,7 @@ class VulkanDeviceFacade {
 		return result;
 	}
 
-	public final void destroyDescriptorSets(TypesafeVkDescriptorPool descriptorPool, TypesafeVkDescriptorSet[] descriptorSets) {
+	final void destroyDescriptorSets(TypesafeVkDescriptorPool descriptorPool, TypesafeVkDescriptorSet[] descriptorSets) {
 		// translate
 		VkDescriptorSet[] translatedDescriptorSets;
 		translatedDescriptorSets.length = descriptorSets.length;
@@ -609,11 +609,15 @@ class VulkanDeviceFacade {
 	}
 
 
-	public final void unmap(TypesafeVkDeviceMemory memory) {
+	final void unmap(TypesafeVkDeviceMemory memory) {
 		vkUnmapMemory(device, cast(VkDeviceMemory)memory);
 	}
+
+	final void waitIdle() {
+		vkDeviceWaitIdle(device);
+	}
 	
-	public final @property device() {
+	final @property device() {
 		return protectedDevice;
 	}
 	

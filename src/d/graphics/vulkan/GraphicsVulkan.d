@@ -192,7 +192,7 @@ class GraphicsVulkan {
 		StackResourceAllocator!TypesafeVkSemaphore chainingSemaphoreAllocator = new StackResourceAllocator!TypesafeVkSemaphore(&allocateSemaphores, &destroySemaphores, semaphoresInitialAllocationSize);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
-			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			vkDevFacade.waitIdle();
 			
 			chainingSemaphoreAllocator.dispose();
 		}
@@ -250,9 +250,17 @@ class GraphicsVulkan {
 		}
 
 		void releaseDepthResources() {
+			vkDevFacade.waitIdle();
 			vkDevFacade.destroyImageView(depthBufferImageView);
+			depthBufferImageView = cast(TypesafeVkImageView)VK_NULL_HANDLE;
 
-			// TODO< release memory of depthbufferImageResource and destroy image >
+			// release memory
+			resourceFree(depthbufferImageResource);
+
+			// destroy image
+			vkDevFacade.waitIdle();
+			vkDevFacade.destroyImage(depthbufferImageResource.resource.value);
+			depthbufferImageResource.resource.invalidate();
 		}
 
 
@@ -284,7 +292,7 @@ class GraphicsVulkan {
 			TypesafeVkRenderPass renderPass = vkDevFacade.createRenderPass(createRenderPassArguments, allocator);
 			
 			VulkanResourceDagResource!TypesafeVkRenderPass renderPassDagResource = new VulkanResourceDagResource!TypesafeVkRenderPass(vkDevFacade, renderPass, allocator, &disposeRenderPass);
-			renderPassResourceNode = resourceDag.createNode(renderPassDagResource);
+			renderPassResourceNode = resourceDag.createNode(renderPassDagResource, "RenderPass");
 			
 			// we hold this because else the resourceDag would dispose them
 			renderPassResourceNode.incrementExternalReferenceCounter();
@@ -869,6 +877,7 @@ class GraphicsVulkan {
 			VkAllocationCallbacks* allocator = null;
 
 			vkDevFacade.destroyDescriptorPool(descriptorPool, allocator);
+			descriptorPool = cast(TypesafeVkDescriptorPool)VK_NULL_HANDLE;
 		}
 
 		void createDescriptorSets() {
@@ -897,6 +906,7 @@ class GraphicsVulkan {
 
 		void destroyDescriptorSets() {
 			vkDevFacade.destroyDescriptorSets(descriptorPool, descriptorSets);
+			descriptorSets = [];
 		}
 
 
@@ -1237,6 +1247,12 @@ class GraphicsVulkan {
 			}
 		}
 
+		void releaseResourceNodesImmediately(ResourceDag.ResourceNode[] resourceNodes) {
+			releaseResourceNodes(resourceNodes);
+			checkForReleasedResourcesAndRelease();
+		}
+
+
 		
 		
 		void releaseFramebufferResources() {
@@ -1255,6 +1271,8 @@ class GraphicsVulkan {
 		/////////////////
 		createDescriptorPool();
 		scope(exit) destroyDescriptorPool();
+
+		
 
 
 		//////////////////
@@ -1276,7 +1294,7 @@ class GraphicsVulkan {
 		setupCommandBuffer = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
-			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			vkDevFacade.waitIdle();
 			
 			vkDevFacade.freeCommandBuffer(setupCommandBuffer, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
@@ -1285,7 +1303,9 @@ class GraphicsVulkan {
 		setupCommandBufferFence = vkDevFacade.createFence();
 		scope (exit) {
 			vkDevFacade.destroyFence(setupCommandBufferFence);
+			setupCommandBufferFence = cast(TypesafeVkFence)VK_NULL_HANDLE;
 		}
+
 
 
 
@@ -1295,6 +1315,8 @@ class GraphicsVulkan {
 		createTextureImage();
 		createTextureImageView();
 	    createTextureSampler();
+
+	    // TODO< initialize and teardown the texture uploader >
 
 	    // update descriptor set, because we now know the imageView and sampler from the testtexture
 	    updateDescriptorSet();
@@ -1307,6 +1329,7 @@ class GraphicsVulkan {
 		//////////////////
 		createDepthResources();
 		scope(exit) releaseDepthResources();
+
 		
 		
 		// must happen before
@@ -1323,14 +1346,16 @@ class GraphicsVulkan {
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createRenderpass(jsonValue, /*out*/ renderPassReset);
 		}
-		scope(exit) releaseResourceNodes([renderPassReset]);
-		
+		scope(exit) releaseResourceNodesImmediately([renderPassReset]);
+
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassDrawoverWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createRenderpass(jsonValue, /*out*/ renderPassDrawover);
 		}
-		scope(exit) releaseResourceNodes([renderPassDrawover]);
+		scope(exit) releaseResourceNodesImmediately([renderPassDrawover]);
+
+		return; // for testing destruction
 		
 		
 		/////////////////
@@ -1367,7 +1392,7 @@ class GraphicsVulkan {
 			// and rewrite it so its more flexible and works fine with multiple renderpasses/pipelines
 			
 		}
-		scope(exit) releaseResourceNodes([pipelineLayoutResourceNode, pipelineResourceNode]);
+		scope(exit) releaseResourceNodesImmediately([pipelineLayoutResourceNode, pipelineResourceNode]);
 		
 		
 		//////////////////
@@ -1378,7 +1403,7 @@ class GraphicsVulkan {
 		commandBuffersForCopy = vkDevFacade.allocateCommandBuffers(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value, count);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
-			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			vkDevFacade.waitIdle();
 			
 			vkDevFacade.freeCommandBuffers(commandBuffersForCopy, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
@@ -1386,7 +1411,7 @@ class GraphicsVulkan {
 		commandBufferForRendering = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
-			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			vkDevFacade.waitIdle();
 			
 			vkDevFacade.freeCommandBuffer(commandBufferForRendering, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
@@ -1394,7 +1419,7 @@ class GraphicsVulkan {
 		commandBufferForClear = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
-			vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+			vkDevFacade.waitIdle();
 			
 			vkDevFacade.freeCommandBuffer(commandBufferForClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
@@ -1499,7 +1524,7 @@ class GraphicsVulkan {
 		
 		scope(success) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
-		    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+		    vkDevFacade.waitIdle();
 			
 			foreach( iterationDecoratedMesh; decoratedMeshes ) {
 				iterationDecoratedMesh.decoration.dispose(vkDevFacade, vulkanContext);
@@ -1669,10 +1694,10 @@ class GraphicsVulkan {
 	
 	protected final void checkForReleasedResourcesAndRelease() {
 		// before destruction of vulkan resources we have to ensure that the decive idles
-	    vkDeviceWaitIdle(vulkanContext.chosenDevice.logicalDevice);
+	    vkDevFacade.waitIdle();
 
-		
-		// TODO< invoke resourceDag >
+	    // invoke resource dag which cleans up the resources if needed
+	    resourceDag.disposeIfPossible();
 	}
 
 
@@ -1859,6 +1884,19 @@ class GraphicsVulkan {
 		
 		// bind
 		vkDevFacade.bind(resourceWithMemDeco.resource.value, allocatorForMemoryOfResource.deviceMemory, resourceWithMemDeco.derivedInformation.value.offset);
+	}
+
+	protected final void resourceFree(VulkanResourceType)(VulkanResourceWithMemoryDecoration!VulkanResourceType resourceWithMemDeco) {
+		assert(resourceWithMemDeco.resource.isValid, "resource must have been allocated");
+		
+		VulkanMemoryAllocator memoryAllocator = resourceWithMemDeco.derivedInformation.value.allocatorForResource;
+		enforce(memoryAllocator !is null);
+
+		bool cantFindAdress;
+		memoryAllocator.deallocate(resourceWithMemDeco.derivedInformation.value.offset, resourceWithMemDeco.derivedInformation.value.hintAllocatedSize, /*out*/ cantFindAdress);
+		assert(!cantFindAdress);
+
+		resourceWithMemDeco.derivedInformation.invalidate();
 	}
 	
 	// we need this here for the resource* method family

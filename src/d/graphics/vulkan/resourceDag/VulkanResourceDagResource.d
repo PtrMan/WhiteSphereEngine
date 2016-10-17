@@ -7,13 +7,15 @@ import graphics.vulkan.VulkanTypesAndEnums;
 
 
 class VulkanResourceDagResource(ResourceType) : ResourceDag.IResource {
-	public alias void function(VulkanDeviceFacade device, ResourceType resource, const(VkAllocationCallbacks*) allocator) DisposalDelegateType;
+	public alias void function(VulkanDeviceFacade vkDevFacade, ResourceType resource, const(VkAllocationCallbacks*) allocator) DisposalDelegateType;
 	
-	public final this(VulkanDeviceFacade vkDevFacade, ResourceType resource, const(VkAllocationCallbacks*) allocator, DisposalDelegateType disposaleDelegate) {
+	public final this(VulkanDeviceFacade vkDevFacade, ResourceType resource, const(VkAllocationCallbacks*) allocator, DisposalDelegateType disposalDelegate) {
+		assert(disposalDelegate !is null);
+
 		this.protectedVkDevFacade = vkDevFacade;
 		this.protectedResource = resource;
 		this.protectedAllocator = allocator;
-		
+
 		this.disposalDelegate = disposalDelegate;
 	}
 	
