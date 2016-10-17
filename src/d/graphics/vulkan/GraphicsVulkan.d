@@ -171,20 +171,10 @@ class GraphicsVulkan {
 
 		
 		
-		
-		
 		// TODO< initialize this somewhere outside and only once >
 		vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
 		
 		VulkanDecoratedMesh decoratedMeshes[];
-		
-		
-		
-		///VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboPositionBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
-		///VulkanResourceWithMemoryDecoration!TypesafeVkBuffer vboIndexBufferResource = new VulkanResourceWithMemoryDecoration!TypesafeVkBuffer;
-		
-		
-		
 		
 		TypesafeVkSemaphore[] allocateSemaphores(size_t count) {
 			TypesafeVkSemaphore[] resultSemaphores;
@@ -1049,28 +1039,27 @@ class GraphicsVulkan {
 			
 			
 			
-			{ // for clearing the screen
-				commandBufferScope(commandBufferForClear, (TypesafeVkCommandBuffer commandBuffer) {
-					TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
-					
-					VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
-					with(renderPassBeginInfo) {
-						sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-						renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-						renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
-						clearValueCount = cast(uint32_t)clearValues.length;
-						pClearValues = cast(immutable(VkClearValue)*)&clearValues;
-					}
-					renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
-					renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
-					
-					
-					vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-					vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
-					
-					vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
-				});
-			}
+			// for clearing the screen
+			commandBufferScope(commandBufferForClear, (TypesafeVkCommandBuffer commandBuffer) {
+				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
+				
+				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
+				with(renderPassBeginInfo) {
+					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+					clearValueCount = cast(uint32_t)clearValues.length;
+					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
+				}
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
+				
+				
+				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+				
+				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
+			});
 			
 			
 			
