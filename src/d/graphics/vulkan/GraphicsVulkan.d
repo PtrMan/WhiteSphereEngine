@@ -489,12 +489,12 @@ class GraphicsVulkan {
 			
 			VkPipelineViewportStateCreateInfo viewportStateCreateInfo = VkPipelineViewportStateCreateInfo.init;
 			with(viewportStateCreateInfo) {
-				sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-				flags = 0;
-				viewportCount = cast(uint32_t)viewports.length,
-				pViewports = cast(immutable(VkViewport)*)viewports.ptr,
-				scissorCount = cast(uint32_t)scissors.length;
-				pScissors = cast(immutable(VkRect2D)*)scissors.ptr;
+				sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+				flags = 0,
+				viewportCount = 1,
+				pViewports = null,
+				scissorCount = 1;
+				pScissors = null;
 			};
 			
 			
@@ -521,7 +521,15 @@ class GraphicsVulkan {
 				front = VkStencilOpState.init; // Optional
 				back = VkStencilOpState.init; // Optional
 			}
-			
+
+			VkDynamicState[2] dynamicStates = [VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR];
+			VkPipelineDynamicStateCreateInfo pipelineDynamicState = VkPipelineDynamicStateCreateInfo.init;
+			with(pipelineDynamicState) {
+				sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+				flags = 0;
+				dynamicStateCount = cast(uint32_t)dynamicStates.length;
+				pDynamicStates = cast(immutable(uint)*)dynamicStates.ptr;
+			}
 			
 			
 			// create graphics pipeline
@@ -554,7 +562,7 @@ class GraphicsVulkan {
 				multisampleState = multisampleStateCreateInfo;
 				depthStencilState = depthStencilCreateInfo;
 				colorBlendState = convertForPipelineColorBlendStateCreateInfo(jsonValue["colorBlendState"]);
-				dynamicState = null;
+				dynamicState = &pipelineDynamicState;
 				
 				layout = pipelineLayout;
 				
@@ -611,6 +619,29 @@ class GraphicsVulkan {
 				
 				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
 				
+
+				VkViewport viewport;
+				with(viewport) {
+					x = 0.0f,
+					y = 0.0f,
+					width = cast(float)300,
+					height = cast(float)300,
+					minDepth = 0.0f,
+					maxDepth = 0.0f;
+				}
+
+				VkRect2D scissor;
+				with(scissor) {
+					offset.x = 0,
+					offset.y = 0,
+					extent.width = 300,
+					extent.height = 300;
+				}
+
+				vkCmdSetViewport(cast(VkCommandBuffer)commandBuffer, 0, 1, &viewport);
+				vkCmdSetScissor(cast(VkCommandBuffer)commandBuffer, 0, 1, &scissor);
+
+
 
 				const size_t COUNTOFBUFFERS = 16;
 
@@ -985,11 +1016,9 @@ class GraphicsVulkan {
 						with(regions[0]) {
 							srcSubresource = imageSubresourceLayersForBlit;
 							with(srcOffsets[0]) {x=y=z=0;}
-							//with(srcOffsets[1]) {x=300;y=300;z=1;}
 							with(srcOffsets[1]) {x=300;y=300;z=1;}
 							
 							dstSubresource = imageSubresourceLayersForBlit;
-							//with(dstOffsets[0]) {x=y=z=0;}
 							with(dstOffsets[0]) {x=0;y=0;z=0;}
 							with(dstOffsets[1]) {x=300;y=300;z=1;}
 						}
