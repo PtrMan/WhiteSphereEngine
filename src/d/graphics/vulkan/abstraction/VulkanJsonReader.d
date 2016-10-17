@@ -78,6 +78,7 @@ VkPipelineColorBlendStateCreateInfo convertForPipelineColorBlendStateCreateInfo(
 
 // context which holds helpervariables for special functionality
 struct AttachmentDescriptionContext {
+	VkFormat colorFormat; // the format of the color image
 	VkFormat depthFormat; // the format of the depth image
 }
 
@@ -98,6 +99,9 @@ VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue, Atta
 
 	if( jsonValue["format"].str == "depthFormat()" ) {
 		result.format = attachmentDescriptionContext.depthFormat;
+	}
+	else if( jsonValue["format"].str == "colorFormat()" ) {
+		result.format = attachmentDescriptionContext.colorFormat;
 	}
 	else {
 		result.format = cast(VkFormat)jsonValue["format"].str.to!(erupted.types.VkFormat);
@@ -229,9 +233,11 @@ VkPipelineRasterizationStateCreateInfo convertForPipelineRasterizationStateCreat
 	return result;
 }
 
-
+// ignore is a list sperated with ","
 private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[string] typeLookup, string ignore = "")(JsonValue jsonValue) {
 	import std.format : format;
+	import std.algorithm.searching : canFind;
+	import std.string : split;
 	
 	string currentField;
 	try {
@@ -241,7 +247,7 @@ private Type jsonReaderForVulkanStructureWithOnlySpecifiedFields(Type, string[st
 				import std.ascii : isUpper;
 				enum isPointer = iterationMemberName[0] == 'p' && iterationMemberName[1].isUpper; // pointers are indicated by a p followed by an uppercase letter
 				enum isCount = iterationMemberName.length > 5 && iterationMemberName[$-5..$] == "Count";
-				enum otherIgnoreFields = iterationMemberName == "sType" || iterationMemberName == ignore;
+				enum otherIgnoreFields = iterationMemberName == "sType" ||  ignore.split(",").canFind(iterationMemberName);
 				enum ignore = isCount || isPointer || otherIgnoreFields; // ignore count fields and pointer fields
 				
 				static if( !ignore ) {// we ignore certain fields

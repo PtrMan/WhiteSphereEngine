@@ -120,6 +120,9 @@ class GraphicsVulkan {
 		TypesafeVkCommandBuffer[] commandBuffersForCopy; // no need to manage this with the resource dag, because we need it just once
 		TypesafeVkCommandBuffer commandBufferForRendering;
 		TypesafeVkCommandBuffer commandBufferForClear;
+
+		VkFormat framebufferImageFormat;
+
 		
 		
 		
@@ -265,6 +268,7 @@ class GraphicsVulkan {
 			VkResult vulkanResult;
 			
 			AttachmentDescriptionContext attachmentDescriptionContext; // helper which contains some context for the conversion of the attachment description for special json values
+			attachmentDescriptionContext.colorFormat = framebufferImageFormat;
 			attachmentDescriptionContext.depthFormat = depthImageFormat;
 			
 			VkAttachmentDescription[] attachmentDescriptions;
@@ -293,6 +297,19 @@ class GraphicsVulkan {
 			// we hold this because else the resourceDag would dispose them
 			renderPassResourceNode.incrementExternalReferenceCounter();
 		}
+
+
+		void findBestFramebufferFormat() {
+			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
+			  VK_FORMAT_FEATURE_BLIT_SRC_BIT | // because we need to blit
+			  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
+			  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
+
+			// must be UNORM because else blitting to UNORM fails
+			// TODO< make sure that a unorm format is selected for the swapchain image! >
+			VkFormat[] preferedFormats = [VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_B8G8R8A8_UNORM];
+			framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormats, requiredFramebufferImageFormatFeatures, "Framebuffer");
+		}
 		
 		
 		void createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode) {
@@ -301,22 +318,13 @@ class GraphicsVulkan {
 			VkExtent3D framebufferImageExtent = {300, 300, 1};
 			
 			
-			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
-			  VK_FORMAT_FEATURE_BLIT_SRC_BIT | // because we need to blit
-			  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
-			  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
+			
 			VkImageUsageFlagBits usageFlags =
 				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | //
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			
 
-			// TODO< we need to use this format for the creation of the renderpass!!!! >
-
-			// search best format
-			VkFormat[] preferedFormats = [VK_FORMAT_B8G8R8A8_UNORM]; // uncommented to track down the stupid blitting bug, same as our swapchain format    VK_FORMAT_A2B10G10R10_UINT_PACK32];
-			VkFormat framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormats, requiredFramebufferImageFormatFeatures, "Framebuffer");
-			
-			
+			assert(framebufferImageFormat != VK_FORMAT_UNDEFINED, "we must already have determined the framebufferImageFormat!");			
 			
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
@@ -1310,8 +1318,10 @@ class GraphicsVulkan {
 		scope(exit) releaseDepthResources();
 		
 		
-		
-		
+		// must happen before
+		// * creation of renderpasses
+		// * creation of framebuffer
+		findBestFramebufferFormat();
 		
 		//////////////////
 		// create renderPasses
