@@ -571,7 +571,7 @@ class GraphicsVulkan {
 				const(VkAllocationCallbacks*) allocator = null;
 				
 				VulkanResourceDagResource!TypesafeVkPipelineLayout pipelineLayoutDagResource = new VulkanResourceDagResource!TypesafeVkPipelineLayout(vkDevFacade, pipelineLayout, allocator, &disposePipelineLayout);
-				/* out */pipelineLayoutResourceNode = resourceDag.createNode(pipelineLayoutDagResource);
+				/* out */pipelineLayoutResourceNode = resourceDag.createNode(pipelineLayoutDagResource, "pipelineLayout");
 				
 				// TODO< make destruction of this dependend on destruction of renderpass ? >
 				
@@ -609,7 +609,7 @@ class GraphicsVulkan {
 			
 			VulkanResourceDagResource!TypesafeVkPipeline pipelineDagResource = new VulkanResourceDagResource!TypesafeVkPipeline(vkDevFacade, createdGraphicsPipeline, allocator, &disposePipeline);
 			
-			/* out */pipelineResourceNode = resourceDag.createNode(pipelineDagResource);
+			/* out */pipelineResourceNode = resourceDag.createNode(pipelineDagResource, "pipeline");
 			
 			// we hold this because else the resourceDag would dispose them
 			/* out */pipelineResourceNode.incrementExternalReferenceCounter();
@@ -1393,18 +1393,10 @@ class GraphicsVulkan {
 		// renderPass for the reset and the actually drawing are comptible to each other
 		createFramebuffer(renderPassReset);
 
-		import std.stdio; writeln("HERE RELEASE");
-		stdout.flush;
 		scope(exit) {
-
-
 			releaseFramebufferResources();
-
-			writeln("HERE AFTER RELEASE");
-			stdout.flush;
 		}
 
-		return; // for testing destruction
 		
 		
 		//////////////////
@@ -1428,9 +1420,14 @@ class GraphicsVulkan {
 			// and rewrite it so its more flexible and works fine with multiple renderpasses/pipelines
 			
 		}
-		scope(exit) releaseResourceNodesImmediately([pipelineLayoutResourceNode, pipelineResourceNode]);
+		scope(exit) {
+			releaseResourceNodesImmediately([pipelineLayoutResourceNode]);
+			releaseResourceNodesImmediately([pipelineResourceNode]);
+		}
 		
 		
+
+
 		//////////////////
 		// allocate command buffers for swapchain image copy and rendering
 		//////////////////
@@ -1459,6 +1456,8 @@ class GraphicsVulkan {
 			
 			vkDevFacade.freeCommandBuffer(commandBufferForClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
+
+		
 		
 		
 		//////////////////
@@ -1783,6 +1782,10 @@ class GraphicsVulkan {
 	protected final void checkForReleasedResourcesAndRelease() {
 		// before destruction of vulkan resources we have to ensure that the decive idles
 	    vkDevFacade.waitIdle();
+
+	    import std.stdio;
+	    writeln("checkForReleasedResourcesAndRelease() call disposeIfPossible()");
+		stdout.flush;
 
 	    // invoke resource dag which cleans up the resources if needed
 	    resourceDag.disposeIfPossible();

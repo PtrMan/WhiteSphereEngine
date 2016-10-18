@@ -111,9 +111,21 @@ class ResourceDag {
 		// dispose without time delay
 		public final void disposeFromExternalImmediatly() {
 			if( dagReferenceCounterCombined == 0 ) {
+
+				import std.stdio;
+				writeln("wasDisposed ... ", wasDisposed);
+
+
 				assert(!wasDisposed);
+
+				writeln(protectedResource);
+				stdout.flush;
 				
 				protectedResource.dispose();
+
+				writeln("after dispose()");
+				stdout.flush;
+
 				wasDisposed = true;
 			}
 		}
@@ -208,6 +220,11 @@ class ResourceDag {
 			}
 		}
 
+		if( true ) {
+			import std.stdio;
+			writeln("disposeIfPossible() enter");
+		}
+
 		for(;;) {
 			bool elementWasDisposedAndRemoved = false;
 			
@@ -240,6 +257,12 @@ class ResourceDag {
 				break;
 			}
 		}
+
+		if( true ) {
+			import std.stdio;
+			writeln("disposeIfPossible() exit");
+		}
+
 	}
 	
 	// TODO< maybe its better to first dispose the parent and then the childs and so on >
