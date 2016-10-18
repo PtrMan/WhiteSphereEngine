@@ -81,8 +81,31 @@ class ResourceDag {
 		}
 		
 		public final void decrementExternalReferenceCounter() {
+			import std.stdio;
+			writeln("decrementExternalReferenceCounter() before assert");
+			stdout.flush;
+
+			writeln("human ", humanReadableDescription, " ref ", dagReferenceCounterExternal);
+			stdout.flush;
+
+
 			assert(dagReferenceCounterExternal >= 1);
+
+			writeln("decrementExternalReferenceCounter() after assert");
+			stdout.flush;
 			dagReferenceCounterExternal--;
+
+			writeln("decrementExternalReferenceCounter() after decrement");
+			stdout.flush;
+
+			import std.stdio;
+			writeln("decrementExternalReferenceCounter()");
+			stdout.flush;
+		}
+
+		protected final void decrementInternalReferenceCounter() {
+			assert(dagReferenceCounterInternal >= 1);
+			dagReferenceCounterInternal--;
 		}
 
 		// dispose without time delay
@@ -115,6 +138,15 @@ class ResourceDag {
 					childResourceIndices[childResourceIndexIndex]--; // decrement index by one because an element before it was removed
 				}
 			}
+		}
+
+		final void dumpDebug(void delegate(string message) log) {
+			import std.format : format;
+
+			log("humanReadableDescription=%s".format(humanReadableDescription));
+			log("resourceDagIndex=%s".format(resourceDagIndex));
+			log("childResourceIndices=%s".format(childResourceIndices));
+			log("dagReferenceCounterInternal) + dagReferenceCounterExternal=(%s)+%s".format(dagReferenceCounterInternal, dagReferenceCounterExternal));
 		}
 
 		public final @property IResource resource() {
@@ -161,27 +193,43 @@ class ResourceDag {
 			}
 		}
 
+		// this makes sure that after removal all indices of the elements are correct
+		void innerFnFixUpElementIndices() {
+			foreach( iterationResourceNodeIndex, iterationResourceNode; resourceNodes ) {
+				iterationResourceNode.resourceDagIndex = iterationResourceNodeIndex;
+			}
+		}
+
+		// decrements all internal counters of all childs of this node
+		void innerFnDecrementInternalReferenceCountersOfChildrenOfNode(ResourceNode resourceNode) {
+			foreach( childIndex; resourceNode.childResourceIndices ) {
+				assert(resourceNodes[childIndex].resourceDagIndex == childIndex); // check for corruption
+				resourceNodes[childIndex].decrementInternalReferenceCounter();
+			}
+		}
+
 		for(;;) {
 			bool elementWasDisposedAndRemoved = false;
 			
 			foreach( resourceNodeIndex, iterationResourceNode; resourceNodes ) {
 				if( iterationResourceNode.dagReferenceCounterCombined == 0 ) {
 
-					if( false ) {
+					if( true ) {
 						import std.stdio;
 						writeln("ResourceDag:  begin dispose=", iterationResourceNode.humanReadableDescription);
 					}
 
 					iterationResourceNode.disposeFromExternalImmediatly();
 
-					if( false ) {
+					if( true ) {
 						import std.stdio;
 						writeln("ResourceDag:  end dispose=", iterationResourceNode.humanReadableDescription);
 					}
 
-
+					innerFnDecrementInternalReferenceCountersOfChildrenOfNode(iterationResourceNode);
 					innerFnElementAtIndexWasRemoved(resourceNodeIndex);
 					resourceNodes = resourceNodes.remove(resourceNodeIndex);
+					innerFnFixUpElementIndices();
 					
 					elementWasDisposedAndRemoved = true;
 					break;
@@ -255,6 +303,13 @@ class ResourceDag {
 		resourceNodes ~= createdEntryResourceNode;
 		createdEntryResourceNode.resourceDagIndex = cast(size_t)resourceNodes.length-1;
 		return createdEntryResourceNode;
+	}
+
+	final void dumpDebug(void delegate(string message) log) {
+		foreach( iterationResourceNode; resourceNodes ) {
+			iterationResourceNode.dumpDebug(log);
+			log("---");
+		}
 	}
 
 	private ResourceNode[] resourceNodes;

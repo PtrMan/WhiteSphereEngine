@@ -102,6 +102,9 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
+
+
+
 		VulkanDelegates *vulkanDelegates = new VulkanDelegates;
 
 		Matrix44Type projectionMatrix = new Matrix44Type();
@@ -190,13 +193,16 @@ class GraphicsVulkan {
 		
 		size_t semaphoresInitialAllocationSize = 5;
 		StackResourceAllocator!TypesafeVkSemaphore chainingSemaphoreAllocator = new StackResourceAllocator!TypesafeVkSemaphore(&allocateSemaphores, &destroySemaphores, semaphoresInitialAllocationSize);
+		
+		
+
+
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
 			vkDevFacade.waitIdle();
 			
 			chainingSemaphoreAllocator.dispose();
 		}
-
 
 
 
@@ -316,6 +322,15 @@ class GraphicsVulkan {
 			VkResult vulkanResult;
 			
 			VkExtent3D framebufferImageExtent = {300, 300, 1};
+
+			import std.stdio;
+			writeln("enter createFramebuffer()");
+			stdout.flush;
+
+			scope(exit) {
+				writeln("exit createFramebuffer()");
+				stdout.flush;
+			}
 			
 			
 			
@@ -375,7 +390,7 @@ class GraphicsVulkan {
 					TypesafeVkImageView createdImageView = vkDevFacade.createImageView(createImageViewArguments, allocator);
 						
 					VulkanResourceDagResource!TypesafeVkImageView imageViewDagResource = new VulkanResourceDagResource!TypesafeVkImageView(vkDevFacade, createdImageView, allocator, &disposeImageView);
-					imageViewResourceNode = resourceDag.createNode(imageViewDagResource);
+					imageViewResourceNode = resourceDag.createNode(imageViewDagResource, "ImageView of framebuffer");
 					
 					// we hold this because else the resourceDag would dispose them
 					imageViewResourceNode.incrementExternalReferenceCounter();
@@ -401,7 +416,7 @@ class GraphicsVulkan {
 					TypesafeVkFramebuffer createdFramebuffer = vkDevFacade.createFramebuffer(createFramebufferArguments, allocator);
 					
 					VulkanResourceDagResource!TypesafeVkFramebuffer framebufferDagResource = new VulkanResourceDagResource!TypesafeVkFramebuffer(vkDevFacade, createdFramebuffer, allocator, &disposeFramebuffer);
-					ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource);
+					ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource, "framebuffer of framebuffer");
 					imageViewResourceNode.addChild(framebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
 					framebufferResourceNode.addChild(renderPassResourceNode); // link it because it depends on the renderpass
 					
@@ -409,6 +424,25 @@ class GraphicsVulkan {
 				}
 				
 			
+			}
+		}
+
+		void releaseFramebufferResources() {
+			scope(exit) {
+				// release memory
+				resourceFree(framebufferImageResource);
+
+				// destroy image
+				vkDevFacade.waitIdle();
+				vkDevFacade.destroyImage(framebufferImageResource.resource.value);
+				framebufferImageResource.resource.invalidate();
+			}
+
+			scope(exit) {
+				// this should cleap up the framebufferFramebufferResourceNodes too, because framebufferImageViewsResourceNodes has it as a child
+				releaseResourceNodesImmediately(framebufferImageViewsResourceNodes);
+				framebufferImageViewsResourceNodes.length = 0;
+
 			}
 		}
 		
@@ -1240,30 +1274,19 @@ class GraphicsVulkan {
 		
 		
 		
-		// resource managment helpers
-		static void releaseResourceNodes(ResourceDag.ResourceNode[] resourceNodes) {
-			foreach( iterationResourceNode; resourceNodes ) {
-				iterationResourceNode.decrementExternalReferenceCounter();
-			}
-		}
+		
 
-		void releaseResourceNodesImmediately(ResourceDag.ResourceNode[] resourceNodes) {
-			releaseResourceNodes(resourceNodes);
+
+		
+		
+		
+		
+		
+
+		
+		scope(exit) {
 			checkForReleasedResourcesAndRelease();
 		}
-
-
-		
-		
-		void releaseFramebufferResources() {
-			scope(exit) vkDevFacade.destroyImage(framebufferImageResource.resource.value);
-			
-			scope(exit) releaseResourceNodes(framebufferImageViewsResourceNodes);
-		}
-		
-		
-		
-		scope(exit) checkForReleasedResourcesAndRelease();
 		
 		
 		/////////////////
@@ -1308,7 +1331,6 @@ class GraphicsVulkan {
 
 
 
-
 		//////////////////
 		// create test texture, view and sampler
 		//////////////////
@@ -1340,7 +1362,7 @@ class GraphicsVulkan {
 		//////////////////
 		// create renderPasses
 		//////////////////
-		
+
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassResetWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
@@ -1353,9 +1375,14 @@ class GraphicsVulkan {
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createRenderpass(jsonValue, /*out*/ renderPassDrawover);
 		}
-		scope(exit) releaseResourceNodesImmediately([renderPassDrawover]);
+		scope(exit) {
+			releaseResourceNodesImmediately([renderPassDrawover]);
+		}
 
-		return; // for testing destruction
+		
+
+		
+
 		
 		
 		/////////////////
@@ -1365,10 +1392,19 @@ class GraphicsVulkan {
 		// we only give it the renderPass of the reset because 
 		// renderPass for the reset and the actually drawing are comptible to each other
 		createFramebuffer(renderPassReset);
-		scope(exit) releaseFramebufferResources();
+
+		import std.stdio; writeln("HERE RELEASE");
+		stdout.flush;
+		scope(exit) {
 
 
+			releaseFramebufferResources();
 
+			writeln("HERE AFTER RELEASE");
+			stdout.flush;
+		}
+
+		return; // for testing destruction
 		
 		
 		//////////////////
@@ -1690,7 +1726,59 @@ class GraphicsVulkan {
 	}
 	
 	
-	
+	// resource managment helpers
+	protected static void releaseResourceNodes(ResourceDag.ResourceNode[] resourceNodes) {
+		foreach( iterationResourceNode; resourceNodes ) {
+			import std.stdio;
+			writeln(iterationResourceNode);
+			stdout.flush;
+
+			iterationResourceNode.decrementExternalReferenceCounter();
+			writeln("releaseResourceNodes() after decrementExternalReferenceCounter()");
+			stdout.flush;
+
+		}
+	}
+
+	protected void releaseResourceNodesImmediately(ResourceDag.ResourceNode[] resourceNodes) {
+		import std.stdio;
+		writeln("releaseResourceNodesImmediately() enter");
+		stdout.flush;
+
+		writeln("   releaseResourceNodesImmediately() before decrement");
+		stdout.flush;
+
+		resourceDag.dumpDebug((string message) {
+			writeln(message);
+			stdout.flush;
+		});
+
+		writeln("   releaseResourceNodesImmediately() decrement");
+		stdout.flush;
+
+		releaseResourceNodes(resourceNodes);
+		writeln("   releaseResourceNodesImmediately() decrement done");
+		stdout.flush;
+
+		resourceDag.dumpDebug((string message) {
+			writeln(message);
+			stdout.flush;
+		});
+
+
+		writeln("   releaseResourceNodesImmediately() decrement done, call checkForReleasedResourcesAndRelease()");
+		stdout.flush;
+
+		checkForReleasedResourcesAndRelease();
+
+		resourceDag.dumpDebug((string message) {
+			writeln(message);
+			stdout.flush;
+		});
+
+		writeln("releaseResourceNodesImmediately() exit");
+		stdout.flush;
+	}
 	
 	protected final void checkForReleasedResourcesAndRelease() {
 		// before destruction of vulkan resources we have to ensure that the decive idles
