@@ -52,7 +52,8 @@ class TestTask : Task {
 
 
 	override void doTask(Scheduler scheduler, out uint delay, out Task.EnumTaskStates state) {
-		vulkanDelegates.refillCommandBufferForTransform(commandBuffer, mvpMatrix, decoratedMeshToRender);
+		Vector2ui imageExtent = Vector2ui.make(500, 400);// TODO< grab image extent from some context >
+		vulkanDelegates.refillCommandBufferForTransform(commandBuffer, mvpMatrix, decoratedMeshToRender, imageExtent);
 
 		state = Task.EnumTaskStates.WAITNEXTFRAME; // execute task on next frame
 	}
@@ -63,7 +64,7 @@ class TestTask : Task {
 
 // holds all delegates which can be called by the engine or engine-client code
 struct VulkanDelegates {
-	alias void delegate(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender) RefillCommandBufferForTransformType;
+	alias void delegate(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender, Vector2ui imageExtent) RefillCommandBufferForTransformType;
 
 	RefillCommandBufferForTransformType refillCommandBufferForTransform;
 }
@@ -206,8 +207,8 @@ class GraphicsVulkan {
 
 
 
-		void createDepthResources() {
-			VkExtent3D depthImageExtent = {300, 300, 1};
+		void createDepthResources(Vector2ui depthBufferSize) {
+			VkExtent3D depthImageExtent = {depthBufferSize.x, depthBufferSize.y, 1};
 
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
@@ -318,21 +319,10 @@ class GraphicsVulkan {
 		}
 		
 		
-		void createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode) {
+		void createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode, Vector2ui framebufferSize) {
 			VkResult vulkanResult;
 			
-			VkExtent3D framebufferImageExtent = {300, 300, 1};
-
-			import std.stdio;
-			writeln("enter createFramebuffer()");
-			stdout.flush;
-
-			scope(exit) {
-				writeln("exit createFramebuffer()");
-				stdout.flush;
-			}
-			
-			
+			VkExtent3D framebufferImageExtent = {framebufferSize.x, framebufferSize.y, 1};
 			
 			VkImageUsageFlagBits usageFlags =
 				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | //
@@ -407,8 +397,8 @@ class GraphicsVulkan {
 					flags = 0;
 					renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
 					attachments = [imageViewForFramebuffer, depthBufferImageView];
-					width = 300;
-					height = 300;
+					width = framebufferSize.x;
+					height = framebufferSize.y;
 				}
 				
 				{ // brace to scope the allocator
@@ -448,7 +438,7 @@ class GraphicsVulkan {
 		
 		
 		
-		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass, out ResourceDag.ResourceNode pipelineResourceNode, out ResourceDag.ResourceNode pipelineLayoutResourceNode) {
+		void createPipelineWithRenderPass(JsonValue jsonValue, TypesafeVkRenderPass renderPass, Vector2ui size, out ResourceDag.ResourceNode pipelineResourceNode, out ResourceDag.ResourceNode pipelineLayoutResourceNode) {
 			VkResult vulkanResult;
 			
 			VkPipelineLayout createPipelineLayout() {
@@ -510,11 +500,11 @@ class GraphicsVulkan {
 			
 			
 			
-			VkViewport viewport = DevicelessFacade.makeVkViewport(SpatialVectorStruct!(2, float).make(cast(float)300, cast(float)300));
+			VkViewport viewport = DevicelessFacade.makeVkViewport(SpatialVectorStruct!(2, float).make(cast(float)size.x, cast(float)size.y));
 			
 			VkRect2D scissor;
 			scissor.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-			scissor.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+			scissor.extent = DevicelessFacade.makeVkExtent2D(size.x, size.y);
 			
 			VkViewport[1] viewports = [viewport];
 			VkRect2D[1] scissors = [scissor];
@@ -616,7 +606,7 @@ class GraphicsVulkan {
 		}
 		
 		
-		void refillCommandBufferForTransform(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender) {
+		void refillCommandBufferForTransform(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender, Vector2ui imageExtent) {
 			VkResult vulkanResult;
 			
 			VkClearValue clearValues[2];
@@ -639,7 +629,7 @@ class GraphicsVulkan {
 				with(renderPassBeginInfo) {
 					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(imageExtent.x, imageExtent.y);
 					clearValueCount = cast(uint32_t)clearValues.length;
 					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 				}
@@ -656,8 +646,8 @@ class GraphicsVulkan {
 				with(viewport) {
 					x = 0.0f,
 					y = 0.0f,
-					width = cast(float)300,
-					height = cast(float)300,
+					width = cast(float)imageExtent.x,
+					height = cast(float)imageExtent.y,
 					minDepth = 0.0f,
 					maxDepth = 0.0f;
 				}
@@ -666,8 +656,8 @@ class GraphicsVulkan {
 				with(scissor) {
 					offset.x = 0,
 					offset.y = 0,
-					extent.width = 300,
-					extent.height = 300;
+					extent.width = imageExtent.x,
+					extent.height = imageExtent.y;
 				}
 
 				vkCmdSetViewport(cast(VkCommandBuffer)commandBuffer, 0, 1, &viewport);
@@ -946,7 +936,7 @@ class GraphicsVulkan {
 
 		
 		// function just for the example code, needs to get refactored later
-		void recordingCommandBuffers() {
+		void recordingCommandBuffers(Vector2ui viewportSize) {
 			VkResult vulkanResult;
 			
 			
@@ -1050,11 +1040,11 @@ class GraphicsVulkan {
 						with(regions[0]) {
 							srcSubresource = imageSubresourceLayersForBlit;
 							with(srcOffsets[0]) {x=y=z=0;}
-							with(srcOffsets[1]) {x=300;y=300;z=1;}
+							with(srcOffsets[1]) {x=viewportSize.x;y=viewportSize.y;z=1;}
 							
 							dstSubresource = imageSubresourceLayersForBlit;
 							with(dstOffsets[0]) {x=0;y=0;z=0;}
-							with(dstOffsets[1]) {x=300;y=300;z=1;}
+							with(dstOffsets[1]) {x=viewportSize.x;y=viewportSize.y;z=1;}
 						}
 
 
@@ -1091,7 +1081,7 @@ class GraphicsVulkan {
 				with(renderPassBeginInfo) {
 					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-					renderArea.extent = DevicelessFacade.makeVkExtent2D(300, 300);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(viewportSize.x, viewportSize.y);
 					clearValueCount = cast(uint32_t)clearValues.length;
 					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 				}
@@ -1349,7 +1339,7 @@ class GraphicsVulkan {
 		//////////////////
 		// create depth resources
 		//////////////////
-		createDepthResources();
+		createDepthResources(Vector2ui.make(500, 400));
 		scope(exit) releaseDepthResources();
 
 		
@@ -1391,7 +1381,7 @@ class GraphicsVulkan {
 
 		// we only give it the renderPass of the reset because 
 		// renderPass for the reset and the actually drawing are comptible to each other
-		createFramebuffer(renderPassReset);
+		createFramebuffer(renderPassReset, Vector2ui.make(500, 400));
 
 		scope(exit) {
 			releaseFramebufferResources();
@@ -1409,6 +1399,7 @@ class GraphicsVulkan {
 			createPipelineWithRenderPass(
 				jsonValue,
 				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassReset.resource).resource,
+				Vector2ui.make(500, 400),
 				/*out*/ pipelineResourceNode,
 				/*out*/ pipelineLayoutResourceNode
 			);
@@ -1457,7 +1448,7 @@ class GraphicsVulkan {
 			vkDevFacade.freeCommandBuffer(commandBufferForClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
 
-		
+
 		
 		
 		//////////////////
@@ -1587,7 +1578,7 @@ class GraphicsVulkan {
 		//////////////////
 		// record command buffers
 		
-		recordingCommandBuffers();
+		recordingCommandBuffers(Vector2ui.make(500, 400));
 		
 		
 		
