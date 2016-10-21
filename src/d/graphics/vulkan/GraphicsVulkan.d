@@ -103,7 +103,7 @@ class GraphicsVulkan {
 	
 	Camera screenviewCamera;
 
-	Instanced *testInstanced;
+	Instanced*[] instancedArray;
 	
 	
 	public final this(ResourceDag resourceDag) {
@@ -128,8 +128,6 @@ class GraphicsVulkan {
 	
 	protected final void vulkanSetupRendering() {
 		Camera screenviewCamera;
-		Instanced *testInstanced;
-
 
 		VulkanDelegates *vulkanDelegates = new VulkanDelegates;
 
@@ -1134,7 +1132,7 @@ class GraphicsVulkan {
 			{
 				fillCommandBufferTask = new FillCommandBufferTask;
 
-				fillCommandBufferTask.instancedToRender = testInstanced;
+				// we dont set instancedToRender because it gets set for every object in a loop
 				fillCommandBufferTask.usedCamera = screenviewCamera; // used to calculate the model view projection matrix
 				fillCommandBufferTask.projectionMatrix = projectionMatrix;
 
@@ -1213,30 +1211,30 @@ class GraphicsVulkan {
 				}
 				
 
-				// somewhere before drawing we have to refill our commandbuffers, this can happen at any time with any syncronisation
-				// but all commandbuffers have to be refilled before drawing
-				schedulerSubsystem.doIt();
 				
-				//TypesafeVkSemaphore chainSemaphore2 = chainingSemaphoreAllocator.allocateOne();
-				
-				
-				// we loop over all refill tasks
-				foreach( iterationRefillTask; [fillCommandBufferTask] ) {
-					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
-					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
-					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
-					TypesafeVkCommandBuffer[1] commandBuffers = [iterationRefillTask.commandBuffer];
-					DevicelessFacade.queueSubmit(
-						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
-						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
-						cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
-					);
-					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
-					
-					
-					doublebufferedChainSemaphoresIndex++; // doublebufferedCahinSemaphores.swap();
-				}
+				{
+					// for rendering the instanced we just loop over them, call the refill task and send it all to the graphicscard
 
+					foreach( iterationInstanced; instancedArray ) {
+						fillCommandBufferTask.instancedToRender = iterationInstanced;
+						schedulerSubsystem.doIt();
+
+						VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
+						TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
+						TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
+						TypesafeVkCommandBuffer[1] commandBuffers = [fillCommandBufferTask.commandBuffer];
+						DevicelessFacade.queueSubmit(
+							cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
+							waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+							cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
+						);
+						vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
+						
+						
+						doublebufferedChainSemaphoresIndex++;
+					}
+				}
+				
 				
 				
 				TypesafeVkSemaphore chainSemaphore3 = chainingSemaphoreAllocator.allocateOne();
@@ -1277,8 +1275,6 @@ class GraphicsVulkan {
 				}
 				
 				semaphorePairIndex = (semaphorePairIndex+1) % vulkanContext.swapChain.semaphorePairs.length;
-
-				break;
 			} while (vulkanResult >= 0);
 		
 		}
@@ -1586,12 +1582,18 @@ class GraphicsVulkan {
 		(cast(CameraWithoutIndirection)screenviewCamera).position = Vector3p.make(0.0, 0.0, 0.0);
 		// TODO< set up and side vector of the camera >
 
-		// initialize test instanced
-		import whiteSphereEngine.common.BakedValueIndirection;
-		Vector3p *testInstancedPosition = new Vector3p;
-		*testInstancedPosition = Vector3p.make(0, 0, -0.8);
-		testInstanced = Instanced.makeGc(decoratedMeshes[1], new BakedValueIndirection!Vector3p(testInstancedPosition));
-
+		// initialize test instances
+		{
+			import whiteSphereEngine.common.BakedValueIndirection;
+			Vector3p *testInstanced1Position = new Vector3p;
+			*testInstanced1Position = Vector3p.make(0, 0, -0.8);
+			Instanced *testInstanced1 = Instanced.makeGc(decoratedMeshes[1], new BakedValueIndirection!Vector3p(testInstanced1Position));
+			Vector3p *testInstanced2Position = new Vector3p;
+			*testInstanced2Position = Vector3p.make(1.2, 0, -1.6);
+			Instanced *testInstanced2 = Instanced.makeGc(decoratedMeshes[1], new BakedValueIndirection!Vector3p(testInstanced2Position));
+			instancedArray = [testInstanced1, testInstanced2];
+		}
+		
 
 		
 		

@@ -70,4 +70,10 @@ class Scheduler {
 			tasks = tasks.remove(tasks.indexOf(pTask));
 		}
 	}
+
+	final void flushTasksSync() {
+		synchronized(sync) {
+			tasks.length = 0;
+		}
+	}
 }
