@@ -19,6 +19,10 @@ import graphics.vulkan.resourceManagement.StackResourceAllocator;
 import graphics.vulkan.VulkanResourceWithMemoryDecoration;
 import graphics.vulkan.VulkanDecoratedMesh;
 
+import whiteSphereEngine.graphics.Camera;
+import whiteSphereEngine.graphics.Instanced : Instanced;
+
+
 import common.ResourceDag;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
@@ -41,13 +45,33 @@ import whiteSphereEngine.scheduler.Scheduler;
 
 import whiteSphereEngine.graphics.vulkan.helpers.CommandBufferScope;
 
-// class for simple functionality of one single task
-// the task has to just fill one fixed commandbuffer
+// refills the assigned (thread local) commandbuffer with new content.
+// Grabs all information from the instanced which will be rendered.
+class FillCommandBufferTask : Task {
+	Instanced *instancedToRender;
+	Camera usedCamera; // used to calculate the model view projection matrix
+	Matrix44Type projectionMatrix;
 
-class TestTask : Task {
 	TypesafeVkCommandBuffer commandBuffer;
-	Matrix44Type mvpMatrix;
-	VulkanDecoratedMesh decoratedMeshToRender;
+
+	// is an property for more readable code
+	protected final @property Matrix44Type mvpMatrix() const {
+		Vector3p relativePositionOfInstanced = instancedToRender.position - usedCamera.position;
+		Vector3f relativePositionOfInstancedAsFloat = Vector3f.make(cast(float)relativePositionOfInstanced.x, cast(float)relativePositionOfInstanced.y, cast(float)relativePositionOfInstanced.z); // TODO< put this into a helper function or find helper function which does this >
+
+		// TODO< orientation for the model matrix >
+		Matrix44Type modelMatrix = createTranslation!float(relativePositionOfInstancedAsFloat.x, relativePositionOfInstancedAsFloat.y, relativePositionOfInstancedAsFloat.z);
+		Matrix44Type resultMvpMatrix = new Matrix44Type;
+		mul!(float, 4, 4)(projectionMatrix, modelMatrix, resultMvpMatrix);
+		return resultMvpMatrix;
+	}
+	
+	// returns the decorated mesh for the filling of the command buffer 
+	// is an property for an more readable code
+	protected final @property VulkanDecoratedMesh decoratedMeshToRender() const {
+		return cast(VulkanDecoratedMesh)instancedToRender.abstractDecoratedMesh;
+	}
+	
 	VulkanDelegates *vulkanDelegates;
 
 
@@ -69,8 +93,6 @@ struct VulkanDelegates {
 	RefillCommandBufferForTransformType refillCommandBufferForTransform;
 }
 
-
-
 // some parts are from
 // https://av.dfki.de/~jhenriques/development.html#tutorial_011
 // (really copyleft as stated on the site)
@@ -79,7 +101,9 @@ class GraphicsVulkan {
 	// calculate the size in bytes of a 4x4 matrix
 	protected enum size_t SIZEOFMATRIXDATA = Matrix44Type.Type.sizeof * Matrix44Type.RAWDATALENGTH;
 	
-	
+	Camera screenviewCamera;
+
+	Instanced *testInstanced;
 	
 	
 	public final this(ResourceDag resourceDag) {
@@ -103,7 +127,8 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
-
+		Camera screenviewCamera;
+		Instanced *testInstanced;
 
 
 		VulkanDelegates *vulkanDelegates = new VulkanDelegates;
@@ -1104,21 +1129,18 @@ class GraphicsVulkan {
 		
 		void loop() {
 			// task to test refilling of command buffer
-			TestTask testTask;
+			FillCommandBufferTask fillCommandBufferTask;
 
 			{
-				Matrix44Type modelMatrix = createTranslation!float(0.0f, 0.0f, -0.6f);//uncommented because we want to test projection  createIdentity!float();
+				fillCommandBufferTask = new FillCommandBufferTask;
 
-				Matrix44Type mvpMatrix = new Matrix44Type;
-				mul(projectionMatrix, modelMatrix, mvpMatrix);
+				fillCommandBufferTask.instancedToRender = testInstanced;
+				fillCommandBufferTask.usedCamera = screenviewCamera; // used to calculate the model view projection matrix
+				fillCommandBufferTask.projectionMatrix = projectionMatrix;
 
+				fillCommandBufferTask.vulkanDelegates = vulkanDelegates; // point at the delegates
 
-				testTask = new TestTask;
-				testTask.vulkanDelegates = vulkanDelegates; // point at the delegates
-
-				testTask.commandBuffer = commandBufferForRendering; // for testing our only command buffer, LATER we need a task for each asyncronous refilling of an command buffer
-				testTask.mvpMatrix = mvpMatrix;
-				testTask.decoratedMeshToRender = decoratedMeshes[1]; // we just render the mesh for testing
+				fillCommandBufferTask.commandBuffer = commandBufferForRendering; // for testing our only command buffer, LATER we need a task for each asyncronous refilling of an command buffer
 			}
 
 
@@ -1126,7 +1148,7 @@ class GraphicsVulkan {
 			import whiteSphereEngine.scheduler.SchedulerSubsystem;
 
 			SchedulerSubsystem schedulerSubsystem = new SchedulerSubsystem;
-			schedulerSubsystem.addTaskSync(testTask);
+			schedulerSubsystem.addTaskSync(fillCommandBufferTask);
 
 
 			VkResult vulkanResult;
@@ -1199,7 +1221,7 @@ class GraphicsVulkan {
 				
 				
 				// we loop over all refill tasks
-				foreach( iterationRefillTask; [testTask] ) {
+				foreach( iterationRefillTask; [fillCommandBufferTask] ) {
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
 					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
@@ -1557,6 +1579,20 @@ class GraphicsVulkan {
 			}
 			decoratedMeshes.length = 0;
 		}
+
+
+		// create standard camera
+		screenviewCamera = new CameraWithoutIndirection();
+		(cast(CameraWithoutIndirection)screenviewCamera).position = Vector3p.make(0.0, 0.0, 0.0);
+		// TODO< set up and side vector of the camera >
+
+		// initialize test instanced
+		import whiteSphereEngine.common.BakedValueIndirection;
+		Vector3p *testInstancedPosition = new Vector3p;
+		*testInstancedPosition = Vector3p.make(0, 0, -0.8);
+		testInstanced = Instanced.makeGc(decoratedMeshes[1], new BakedValueIndirection!Vector3p(testInstancedPosition));
+
+
 		
 		
 		

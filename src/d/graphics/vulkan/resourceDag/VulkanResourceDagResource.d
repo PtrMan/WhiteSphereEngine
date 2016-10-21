@@ -20,6 +20,12 @@ class VulkanResourceDagResource(ResourceType) : ResourceDag.IResource {
 	}
 	
 	public void dispose() {
+		import std.stdio;
+		writeln("VulkanResourceDagResource.dispose() wasDisposed=", wasDisposed);
+		writeln("VulkanResourceDagResource.dispose() disposalDelegate=", disposalDelegate);
+			stdout.flush;
+
+
 		assert(!wasDisposed);
 		wasDisposed = true;
 		
@@ -73,5 +79,5 @@ void disposeShaderModule(VulkanDeviceFacade vkDevFacade, TypesafeVkShaderModule 
 */
 
 void disposePipeline(VulkanDeviceFacade vkDevFacade, TypesafeVkPipeline pipeline, const(VkAllocationCallbacks*) allocator) {
-	vkDevFacade.disposePipeline(pipeline, allocator);
+	vkDevFacade.destroyPipeline(pipeline, allocator);
 }
