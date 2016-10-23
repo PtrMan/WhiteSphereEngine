@@ -178,7 +178,7 @@ class GraphicsVulkan {
 		
 		
 
-		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
+		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource;
 		TypesafeVkImageView depthBufferImageView;
 		VkFormat depthImageFormat;
 
@@ -254,10 +254,8 @@ class GraphicsVulkan {
 
 
 
-
-
-		void createDepthResources(Vector2ui depthBufferSize) {
-			VkExtent3D depthImageExtent = {depthBufferSize.x, depthBufferSize.y, 1};
+		VulkanResourceWithMemoryDecoration!TypesafeVkImage createDepthImage(Vector2ui depthBufferExtent) {
+			VkExtent3D depthImageExtent = {depthBufferExtent.x, depthBufferExtent.y, 1};
 
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
@@ -280,6 +278,7 @@ class GraphicsVulkan {
 			createImageArguments.queueFamilyIndexCount = 2;
 			createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
 			
+			VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
 			depthbufferImageResource.resource = vkDevFacade.createImage(createImageArguments);
 
 			/////
@@ -290,6 +289,12 @@ class GraphicsVulkan {
 			// transition layout
 			transitionImageLayout(depthbufferImageResource.resource.value, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
+			return depthbufferImageResource;
+		}
+
+
+		void createDepthResources(Vector2ui depthBufferExtent) {
+			depthbufferImageResource = createDepthImage(depthBufferExtent);
 
 			VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments = VulkanDeviceFacade.CreateImageViewArguments.make();
 			with(createImageViewArguments) {
