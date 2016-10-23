@@ -80,6 +80,8 @@ VkPipelineColorBlendStateCreateInfo convertForPipelineColorBlendStateCreateInfo(
 struct AttachmentDescriptionContext {
 	VkFormat colorFormat; // the format of the color image
 	VkFormat depthFormat; // the format of the depth image
+
+	VkFormat[string] deferredFormats; // indexed by the type of the image used for the deferred renderer
 }
 
 VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue, AttachmentDescriptionContext attachmentDescriptionContext) {
@@ -97,11 +99,17 @@ VkAttachmentDescription convertForAtachmentDescription(JsonValue jsonValue, Atta
 		"format" // ignore
 	)(jsonValue);
 
-	if( jsonValue["format"].str == "depthFormat()" ) {
+	const string jsonFormatString = jsonValue["format"].str;
+
+	if( jsonFormatString == "depthFormat()" ) {
 		result.format = attachmentDescriptionContext.depthFormat;
 	}
-	else if( jsonValue["format"].str == "colorFormat()" ) {
+	else if( jsonFormatString == "colorFormat()" ) {
 		result.format = attachmentDescriptionContext.colorFormat;
+	}
+	else if( jsonFormatString.length > 17 && jsonFormatString[0..17] == "format(deferred, " ) {
+		string key = jsonFormatString[17..jsonFormatString.length-1];
+		result.format = attachmentDescriptionContext.deferredFormats[key];
 	}
 	else {
 		result.format = cast(VkFormat)jsonValue["format"].str.to!(erupted.types.VkFormat);

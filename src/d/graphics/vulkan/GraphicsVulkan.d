@@ -139,6 +139,8 @@ class GraphicsVulkan {
 		
 		ResourceDag.ResourceNode renderPassReset;
 		ResourceDag.ResourceNode renderPassDrawover;
+
+		ResourceDag.ResourceNode renderPassDeferredReset;
 		
 		
 		ResourceDag.ResourceNode pipelineResourceNode;
@@ -150,7 +152,11 @@ class GraphicsVulkan {
 		TypesafeVkCommandBuffer commandBufferForRendering;
 		TypesafeVkCommandBuffer commandBufferForClear;
 
-		VkFormat framebufferImageFormat;
+		VkFormat framebufferColorImageFormat;
+		VkFormat deferredRendererDiffuseFormat; // for diffuse color
+		VkFormat deferredRendererBFormat; // for normals
+		VkFormat deferredRendererCFormat; // for depth
+		
 
 		
 		
@@ -179,6 +185,8 @@ class GraphicsVulkan {
 
 		// statically allocated
 		TypesafeVkDescriptorPool descriptorPool;
+
+		VulkanResourceWithMemoryDecoration!TypesafeVkImage[] deferredRendererImageResource;
 
 
 
@@ -294,12 +302,13 @@ class GraphicsVulkan {
 		}
 
 
-		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode) {
+		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode, VkFormat[string] deferredFormats) {
 			VkResult vulkanResult;
 			
 			AttachmentDescriptionContext attachmentDescriptionContext; // helper which contains some context for the conversion of the attachment description for special json values
-			attachmentDescriptionContext.colorFormat = framebufferImageFormat;
+			attachmentDescriptionContext.colorFormat = framebufferColorImageFormat;
 			attachmentDescriptionContext.depthFormat = depthImageFormat;
+			attachmentDescriptionContext.deferredFormats = deferredFormats;
 			
 			VkAttachmentDescription[] attachmentDescriptions;
 			foreach( iterationJsonValue; jsonValue["attachmentDescriptions"].array ) {
@@ -331,16 +340,104 @@ class GraphicsVulkan {
 
 		void findBestFramebufferFormat() {
 			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
-			  VK_FORMAT_FEATURE_BLIT_SRC_BIT | // because we need to blit
-			  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
-			  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
+				VK_FORMAT_FEATURE_BLIT_SRC_BIT | // because we need to blit
+				VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | // must support an image view
+				VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; // must support an attachment (or a destination) for the framebuffer
 
 			// must be UNORM because else blitting to UNORM fails
 			// TODO< make sure that a unorm format is selected for the swapchain image! >
 			VkFormat[] preferedFormats = [VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_B8G8R8A8_UNORM];
-			framebufferImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormats, requiredFramebufferImageFormatFeatures, "Framebuffer");
+			framebufferColorImageFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormats, requiredFramebufferImageFormatFeatures, "Framebuffer");
 		}
 		
+		void findBestDeferredRendererFormats() {
+			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
+				VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; // must support an image view
+
+			VkFormat[] preferedFormatsForDeferredRendererDiffuseFormat = [VK_FORMAT_R16G16B16A16_SFLOAT];
+			VkFormat[] preferedFormatsForDeferredRenderB = [VK_FORMAT_R16G16B16A16_SFLOAT]; // for normals
+			VkFormat[] preferedFormatsForDeferredRenderC = [VK_FORMAT_R32_SFLOAT]; // for depth
+
+			deferredRendererDiffuseFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormatsForDeferredRendererDiffuseFormat, requiredFramebufferImageFormatFeatures, "Framebuffer");
+			deferredRendererBFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormatsForDeferredRenderB, requiredFramebufferImageFormatFeatures, "Framebuffer"); // for normals
+			deferredRendererCFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormatsForDeferredRenderC, requiredFramebufferImageFormatFeatures, "Framebuffer"); // for depth
+		}
+
+
+		void createDeferredRendererResources(Vector2ui framebufferSize) {
+			VkResult vulkanResult;
+
+			VkExtent3D framebufferImageExtent = {framebufferSize.x, framebufferSize.y, 1};
+
+			VkImageUsageFlagBits usageFlags =
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+			assert(deferredRendererDiffuseFormat != VK_FORMAT_UNDEFINED);
+			assert(deferredRendererBFormat != VK_FORMAT_UNDEFINED);
+			assert(deferredRendererCFormat != VK_FORMAT_UNDEFINED);
+			
+			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
+			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
+			
+			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
+
+			VkFormat[] formats = [deferredRendererDiffuseFormat, deferredRendererBFormat, deferredRendererCFormat];
+
+			deferredRendererImageResource.length = formats.length;
+			foreach( i; 0..deferredRendererImageResource.length ) {
+				deferredRendererImageResource[i] = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
+			}
+
+			foreach( i; 0..formats.length ) {
+				VkFormat format = formats[i];
+
+				// for image creation we actually have to check if the extent is valid (should always be the case)
+				// TODO< vkGetPhysicalDeviceImageFormatProperties >
+				
+				// create image (as a "render target")
+
+				VulkanDeviceFacade.CreateImageArguments createImageArguments;
+				createImageArguments.format = format;
+				createImageArguments.extent = framebufferImageExtent;
+				createImageArguments.usage = usageFlags;
+				createImageArguments.queueFamilyIndexCount = 2;
+				createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
+
+				deferredRendererImageResource[i].resource = vkDevFacade.createImage(createImageArguments);
+				
+				/////
+				// allocate and bind memory
+				resourceQueryAllocateBind(deferredRendererImageResource[i], VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, "image");
+				
+				////////////////////
+				// transition layout
+				transitionImageLayout(deferredRendererImageResource[i].resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+			}
+
+			// TODO< create image views >
+		}
+
+		void releaseDeferredRendererResources() {
+			scope(exit) {
+				foreach( i; 0..deferredRendererImageResource.length ) {
+					// release memory
+					resourceFree(deferredRendererImageResource[i]);
+
+					// destroy image
+					vkDevFacade.waitIdle();
+					vkDevFacade.destroyImage(deferredRendererImageResource[i].resource.value);
+					deferredRendererImageResource[i].resource.invalidate();
+				}
+
+				deferredRendererImageResource.length = 0;
+			}
+
+			scope(exit) {
+				// TODO< destroy views >
+
+			}
+		}
+
 		
 		void createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode, Vector2ui framebufferSize) {
 			VkResult vulkanResult;
@@ -352,7 +449,7 @@ class GraphicsVulkan {
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			
 
-			assert(framebufferImageFormat != VK_FORMAT_UNDEFINED, "we must already have determined the framebufferImageFormat!");			
+			assert(framebufferColorImageFormat != VK_FORMAT_UNDEFINED, "we must already have determined the framebufferColorImageFormat!");			
 			
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
@@ -368,7 +465,7 @@ class GraphicsVulkan {
 				// create image (as a "render target")
 
 				VulkanDeviceFacade.CreateImageArguments createImageArguments;
-				createImageArguments.format = framebufferImageFormat;
+				createImageArguments.format = framebufferColorImageFormat;
 				createImageArguments.extent = framebufferImageExtent;
 				createImageArguments.usage = usageFlags;
 				createImageArguments.queueFamilyIndexCount = 2;
@@ -398,7 +495,7 @@ class GraphicsVulkan {
 						flags = 0;
 						image = framebufferImageResource.resource.value;
 						viewType = VK_IMAGE_VIEW_TYPE_2D;
-						format = framebufferImageFormat;
+						format = framebufferColorImageFormat;
 					}
 					TypesafeVkImageView createdImageView = vkDevFacade.createImageView(createImageViewArguments, allocator);
 						
@@ -1366,25 +1463,42 @@ class GraphicsVulkan {
 		// * creation of renderpasses
 		// * creation of framebuffer
 		findBestFramebufferFormat();
+		findBestDeferredRendererFormats();
 		
 		//////////////////
 		// create renderPasses
 		//////////////////
 
+
+		VkFormat[string] deferredFormats = [
+			"diffuse" : deferredRendererDiffuseFormat,
+			"normal" : deferredRendererBFormat,
+			"depth" : deferredRendererCFormat
+		];
+
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassResetWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ renderPassReset);
+			createRenderpass(jsonValue, /*out*/ renderPassReset, deferredFormats);
 		}
 		scope(exit) releaseResourceNodesImmediately([renderPassReset]);
 
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassDrawoverWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ renderPassDrawover);
+			createRenderpass(jsonValue, /*out*/ renderPassDrawover, deferredFormats);
 		}
 		scope(exit) {
 			releaseResourceNodesImmediately([renderPassDrawover]);
+		}
+
+		{
+			string path = "resources/engine/graphics/configuration/preset/renderpassDeferredReset.json";
+			JsonValue jsonValue = readJsonEngineResource(path);
+			createRenderpass(jsonValue, /*out*/ renderPassDeferredReset, deferredFormats);
+		}
+		scope(exit) {
+			releaseResourceNodesImmediately([renderPassDeferredReset]);
 		}
 
 		
@@ -1405,6 +1519,15 @@ class GraphicsVulkan {
 			releaseFramebufferResources();
 		}
 
+		//////////////////
+		// deferred renderer
+		//////////////////
+
+		createDeferredRendererResources(Vector2ui.make(500, 400));
+
+		scope(exit) {
+			releaseDeferredRendererResources();
+		}
 		
 		
 		//////////////////
