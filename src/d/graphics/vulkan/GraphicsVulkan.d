@@ -2,6 +2,9 @@ module graphics.vulkan.GraphicsVulkan;
 
 import std.stdint;
 import std.exception : enforce;
+import std.algorithm.iteration : map;
+import std.array : array;
+import std.format : format;
 
 import Exceptions;
 import api.vulkan.Vulkan;
@@ -157,6 +160,9 @@ class GraphicsVulkan {
 		VkFormat deferredRendererDiffuseFormat; // for diffuse color
 		VkFormat deferredRendererBFormat; // for normals
 		VkFormat deferredRendererCFormat; // for depth
+
+		ResourceDag.ResourceNode deferredFramebufferResourceNode;
+		ResourceDag.ResourceNode[] deferredRendererImageViewsResourceNodes;
 		
 
 		
@@ -239,14 +245,38 @@ class GraphicsVulkan {
 
 
 
+
+		// TODO< move into own class >
+		// API abstraction for the creation of a framebuffer
+		ResourceDag.ResourceNode createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode, TypesafeVkImageView[] attachments, Vector2ui framebufferExtent, string usage = "") {
+			VulkanDeviceFacade.CreateFramebufferArguments createFramebufferArguments = VulkanDeviceFacade.CreateFramebufferArguments.init;
+			with(createFramebufferArguments) {
+				flags = 0;
+				renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
+				width = framebufferExtent.x;
+				height = framebufferExtent.y;
+			}
+			createFramebufferArguments.attachments = attachments;
+			
+			{ // brace to scope the allocator
+				const(VkAllocationCallbacks*) allocator = null;
+				TypesafeVkFramebuffer createdFramebuffer = vkDevFacade.createFramebuffer(createFramebufferArguments, allocator);
+				
+				VulkanResourceDagResource!TypesafeVkFramebuffer framebufferDagResource = new VulkanResourceDagResource!TypesafeVkFramebuffer(vkDevFacade, createdFramebuffer, allocator, &disposeFramebuffer);
+				ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource, "framebuffer " ~ usage);
+				return framebufferResourceNode;
+			}
+		}
+
+
+
+
 		void createDepthResources(Vector2ui depthBufferSize) {
 			VkExtent3D depthImageExtent = {depthBufferSize.x, depthBufferSize.y, 1};
 
 			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
 			
-			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
-
 			VkFormatFeatureFlagBits requiredDepthImageFormatFeatures =
 				VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			VkImageUsageFlagBits usageFlags =
@@ -365,10 +395,10 @@ class GraphicsVulkan {
 		}
 
 
-		void createDeferredRendererResources(Vector2ui framebufferSize) {
+		void createDeferredRendererResources(Vector2ui framebufferExtent) {
 			VkResult vulkanResult;
 
-			VkExtent3D framebufferImageExtent = {framebufferSize.x, framebufferSize.y, 1};
+			VkExtent3D framebufferImageExtent = {framebufferExtent.x, framebufferExtent.y, 1};
 
 			VkImageUsageFlagBits usageFlags =
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -377,11 +407,7 @@ class GraphicsVulkan {
 			assert(deferredRendererBFormat != VK_FORMAT_UNDEFINED);
 			assert(deferredRendererCFormat != VK_FORMAT_UNDEFINED);
 			
-			uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
-			uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
 			
-			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
-
 			VkFormat[] formats = [deferredRendererDiffuseFormat, deferredRendererBFormat, deferredRendererCFormat];
 
 			deferredRendererImageResource.length = formats.length;
@@ -390,7 +416,8 @@ class GraphicsVulkan {
 			}
 
 			foreach( i; 0..formats.length ) {
-				VkFormat format = formats[i];
+				uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
+				uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
 
 				// for image creation we actually have to check if the extent is valid (should always be the case)
 				// TODO< vkGetPhysicalDeviceImageFormatProperties >
@@ -398,7 +425,7 @@ class GraphicsVulkan {
 				// create image (as a "render target")
 
 				VulkanDeviceFacade.CreateImageArguments createImageArguments;
-				createImageArguments.format = format;
+				createImageArguments.format = formats[i];
 				createImageArguments.extent = framebufferImageExtent;
 				createImageArguments.usage = usageFlags;
 				createImageArguments.queueFamilyIndexCount = 2;
@@ -415,7 +442,43 @@ class GraphicsVulkan {
 				transitionImageLayout(deferredRendererImageResource[i].resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 			}
 
-			// TODO< create image views >
+			// create image views
+			foreach( i; 0..formats.length ) {
+				{ // brace to scope the allocator
+					const(VkAllocationCallbacks*) allocator = null;
+					
+					VulkanDeviceFacade.CreateImageViewArguments createImageViewArguments = VulkanDeviceFacade.CreateImageViewArguments.make();
+					with(createImageViewArguments) {
+						flags = 0;
+						image = deferredRendererImageResource[i].resource.value;
+						viewType = VK_IMAGE_VIEW_TYPE_2D;
+						format = formats[i];
+					}
+					TypesafeVkImageView createdImageView = vkDevFacade.createImageView(createImageViewArguments, allocator);
+						
+					VulkanResourceDagResource!TypesafeVkImageView imageViewDagResource = new VulkanResourceDagResource!TypesafeVkImageView(vkDevFacade, createdImageView, allocator, &disposeImageView);
+					ResourceDag.ResourceNode imageViewResourceNode = resourceDag.createNode(imageViewDagResource, "ImageView of image used for deferred renderer");
+					
+					// we hold this because else the resourceDag would dispose them
+					imageViewResourceNode.incrementExternalReferenceCounter();
+					
+					deferredRendererImageViewsResourceNodes ~= imageViewResourceNode;
+				}
+			}
+
+
+			// create framebuffer
+			
+			TypesafeVkImageView[] attachments = deferredRendererImageViewsResourceNodes.map!(v => (cast(VulkanResourceDagResource!TypesafeVkImageView)v.resource).resource).array;
+			deferredFramebufferResourceNode = createFramebuffer(renderPassDeferredReset, attachments, framebufferExtent, "deferred renderer");
+			
+			foreach( iterationImageView; deferredRendererImageViewsResourceNodes ) {
+				iterationImageView.addChild(deferredFramebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
+			}
+			
+			deferredFramebufferResourceNode.addChild(renderPassDeferredReset); // link it because it depends on the renderpass
+			
+			// TODO< maybe the resource counter is messed up >
 		}
 
 		void releaseDeferredRendererResources() {
@@ -437,13 +500,20 @@ class GraphicsVulkan {
 				// TODO< destroy views >
 
 			}
+
+			scope(exit) {
+				// TODO< destroy framebuffer >
+			}
 		}
 
+
+
+
 		
-		void createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode, Vector2ui framebufferSize) {
+		void createFramebufferWithImageviews(ResourceDag.ResourceNode renderPassResourceNode, Vector2ui framebufferExtent) {
 			VkResult vulkanResult;
 			
-			VkExtent3D framebufferImageExtent = {framebufferSize.x, framebufferSize.y, 1};
+			VkExtent3D framebufferImageExtent = {framebufferExtent.x, framebufferExtent.y, 1};
 			
 			VkImageUsageFlagBits usageFlags =
 				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | //
@@ -484,7 +554,7 @@ class GraphicsVulkan {
 			}
 			
 			
-			// create image views
+			// create image views and framebuffers
 			
 			foreach( i; 0..vulkanContext.swapChain.swapchainImages.length ) {
 				ResourceDag.ResourceNode imageViewResourceNode;
@@ -509,36 +579,17 @@ class GraphicsVulkan {
 					framebufferImageViewsResourceNodes ~= imageViewResourceNode;
 				}
 				
-				
-				
 				TypesafeVkImageView imageViewForFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkImageView)imageViewResourceNode.resource).resource;
+				TypesafeVkImageView[] attachments = [imageViewForFramebuffer, depthBufferImageView];
+				ResourceDag.ResourceNode framebufferResourceNode = createFramebuffer(renderPassResourceNode, attachments, framebufferExtent);
+				imageViewResourceNode.addChild(framebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
+				framebufferResourceNode.addChild(renderPassResourceNode); // link it because it depends on the renderpass
 				
-				VulkanDeviceFacade.CreateFramebufferArguments createFramebufferArguments = VulkanDeviceFacade.CreateFramebufferArguments.init;
-				with(createFramebufferArguments) {
-					flags = 0;
-					renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
-					attachments = [imageViewForFramebuffer, depthBufferImageView];
-					width = framebufferSize.x;
-					height = framebufferSize.y;
-				}
-				
-				{ // brace to scope the allocator
-					const(VkAllocationCallbacks*) allocator = null;
-					TypesafeVkFramebuffer createdFramebuffer = vkDevFacade.createFramebuffer(createFramebufferArguments, allocator);
-					
-					VulkanResourceDagResource!TypesafeVkFramebuffer framebufferDagResource = new VulkanResourceDagResource!TypesafeVkFramebuffer(vkDevFacade, createdFramebuffer, allocator, &disposeFramebuffer);
-					ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource, "framebuffer of framebuffer");
-					imageViewResourceNode.addChild(framebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
-					framebufferResourceNode.addChild(renderPassResourceNode); // link it because it depends on the renderpass
-					
-					framebufferFramebufferResourceNodes ~= framebufferResourceNode;
-				}
-				
-			
+				framebufferFramebufferResourceNodes ~= framebufferResourceNode;
 			}
 		}
 
-		void releaseFramebufferResources() {
+		void releaseFramebufferResourcesWithImageViews() {
 			scope(exit) {
 				// release memory
 				resourceFree(framebufferImageResource);
@@ -736,15 +787,15 @@ class GraphicsVulkan {
 			clearValues[1].depthStencil.stencil = 0;
 			
 			
-			TypesafeVkRenderPass renderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDrawover.resource).resource;
+			TypesafeVkRenderPass usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDeferredReset.resource).resource;
 			
-			TypesafeVkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineResourceNode.resource).resource;
+			TypesafeVkPipeline usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
 			
-			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
+			TypesafeVkPipelineLayout usedPipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutDeferredResourceNode.resource).resource;
 			
 			// for actual rendering
 			commandBufferScope(commandBuffer, (TypesafeVkCommandBuffer commandBuffer) {
-				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
+				TypesafeVkFramebuffer usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
 				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
 				with(renderPassBeginInfo) {
@@ -754,13 +805,13 @@ class GraphicsVulkan {
 					clearValueCount = cast(uint32_t)clearValues.length;
 					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 				}
-				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassDrawover;
-				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)usedRenderPass;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)usedFramebuffer;
 				
 				
 				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				
-				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)usedGraphicsPipeline);
 				
 
 				VkViewport viewport;
@@ -801,7 +852,7 @@ class GraphicsVulkan {
 				import math.ConvertMatrix;
 				mvpMatrix.translateToArrayColumRow!(float, 4, 4)(mvpArray);
 
-				vkCmdPushConstants(cast(VkCommandBuffer)commandBuffer, cast(VkPipelineLayout)pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
+				vkCmdPushConstants(cast(VkCommandBuffer)commandBuffer, cast(VkPipelineLayout)usedPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
 				
 				if( decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
 					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBuffer, cast(VkBuffer)decoratedMeshToRender.decoration.vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
@@ -811,7 +862,7 @@ class GraphicsVulkan {
 				}
 
 				static assert( TypesafeVkDescriptorSet.sizeof == VkDescriptorSet.sizeof); // assert because we point to an TypesafeVkDescriptorSet as an VkDescriptorSet pointer
-				vkCmdBindDescriptorSets(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipelineLayout)pipelineLayout, 0, 1, cast(VkDescriptorSet*)descriptorSets.ptr, 0, null);
+				vkCmdBindDescriptorSets(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipelineLayout)usedPipelineLayout, 0, 1, cast(VkDescriptorSet*)descriptorSets.ptr, 0, null);
 				
 				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBuffer, decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
 				
@@ -1514,10 +1565,10 @@ class GraphicsVulkan {
 
 		// we only give it the renderPass of the reset because 
 		// renderPass for the reset and the actually drawing are comptible to each other
-		createFramebuffer(renderPassReset, Vector2ui.make(500, 400));
+		createFramebufferWithImageviews(renderPassReset, Vector2ui.make(500, 400));
 
 		scope(exit) {
-			releaseFramebufferResources();
+			releaseFramebufferResourcesWithImageViews();
 		}
 
 		//////////////////
