@@ -143,8 +143,9 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode renderPassDeferredReset;
 		
 		
-		ResourceDag.ResourceNode pipelineResourceNode;
-		ResourceDag.ResourceNode pipelineLayoutResourceNode;
+		ResourceDag.ResourceNode pipelineResourceNode, pipelineLayoutResourceNode;
+
+		ResourceDag.ResourceNode pipelineDeferredResourceNode, pipelineLayoutDeferredResourceNode;
 		
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage framebufferImageResource = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
 		
@@ -1531,7 +1532,7 @@ class GraphicsVulkan {
 		
 		
 		//////////////////
-		// create graphics pipeline
+		// create graphics pipelines
 		//////////////////
 
 		{
@@ -1555,6 +1556,30 @@ class GraphicsVulkan {
 		scope(exit) {
 			releaseResourceNodesImmediately([pipelineLayoutResourceNode]);
 			releaseResourceNodesImmediately([pipelineResourceNode]);
+		}
+
+
+		{
+			string path = "resources/engine/graphics/configuration/preset/pipelineDeferred.json";
+			JsonValue jsonValue = readJsonEngineResource(path);
+			createPipelineWithRenderPass(
+				jsonValue,
+				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDeferredReset.resource).resource,
+				Vector2ui.make(500, 400),
+				/*out*/ pipelineDeferredResourceNode,
+				/*out*/ pipelineLayoutDeferredResourceNode
+			);
+			
+			// TODO TODO TODO< look for hardcoded uses of
+			// -renderpass
+			// -pipeline
+			// -other things in regards to renderpass and pipeline
+			// and rewrite it so its more flexible and works fine with multiple renderpasses/pipelines
+			
+		}
+		scope(exit) {
+			releaseResourceNodesImmediately([pipelineLayoutDeferredResourceNode]);
+			releaseResourceNodesImmediately([pipelineDeferredResourceNode]);
 		}
 		
 		
