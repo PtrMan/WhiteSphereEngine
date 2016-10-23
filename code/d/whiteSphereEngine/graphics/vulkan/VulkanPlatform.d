@@ -1,4 +1,4 @@
-module vulkan.VulkanPlatform;
+module whiteSphereEngine.graphics.vulkan.VulkanPlatform;
 
 import Exceptions;
 import api.vulkan.Vulkan;

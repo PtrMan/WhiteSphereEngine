@@ -1,11 +1,11 @@
-module vulkan.VulkanQueueHelpers;
+module whiteSphereEngine.graphics.vulkan.helpers.VulkanQueueHelpers;
 
 import std.stdint;
 import std.typecons : Tuple;
 
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
-import vulkan.VulkanTools;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanTools;
 import helpers.VariableValidator : VariableValidator;
 
 class QueueInfo {

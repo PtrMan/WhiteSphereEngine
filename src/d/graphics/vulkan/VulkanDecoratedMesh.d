@@ -2,7 +2,7 @@ module graphics.vulkan.VulkanDecoratedMesh;
 
 import graphics.vulkan.VulkanTypesAndEnums;
 import graphics.vulkan.abstraction.VulkanDeviceFacade;
-import graphics.vulkan.VulkanContext;
+import whiteSphereEngine.graphics.vulkan.VulkanContext;
 import graphics.DecoratedMesh;
 import graphics.vulkan.VulkanResourceWithMemoryDecoration;
 import graphics.vulkan.VulkanMemoryAllocator;

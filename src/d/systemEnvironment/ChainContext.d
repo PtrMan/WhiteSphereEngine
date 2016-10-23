@@ -1,7 +1,7 @@
 module systemEnvironment.ChainContext;
 
 import common.LoggerPipe;
-import graphics.vulkan.VulkanContext;
+import whiteSphereEngine.graphics.vulkan.VulkanContext;
 
 // context which is passed between all chain functions for exchainging configuration information
 class ChainContext {

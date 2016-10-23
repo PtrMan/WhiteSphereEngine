@@ -3,7 +3,7 @@ module whiteSphereEngine.graphics.vulkan.helpers.CommandBufferScope;
 import Exceptions;
 import api.vulkan.Vulkan;
 import graphics.vulkan.VulkanTypesAndEnums;
-import vulkan.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 
 alias void delegate(TypesafeVkCommandBuffer commandBuffer) InvokeExcecuteCommandBufferBodyDelegateType;
 

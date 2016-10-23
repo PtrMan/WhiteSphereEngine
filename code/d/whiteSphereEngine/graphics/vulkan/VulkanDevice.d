@@ -1,4 +1,4 @@
-module vulkan.VulkanDevice;
+module whiteSphereEngine.graphics.vulkan.VulkanDevice;
 
 import api.vulkan.Vulkan;
 
@@ -9,10 +9,10 @@ class VulkanDevice {
 	// TODO< check if we do this like this in the OpenGL implementation and rewrite this code here if we allocate memory not over the GC
 	VkPhysicalDevice physicalDevice;
 
-	public VkPhysicalDeviceMemoryProperties* physicalDeviceMemoryProperties = null;
+	VkPhysicalDeviceMemoryProperties* physicalDeviceMemoryProperties = null;
 
 	// TODO< check if we do this like this in the OpenGL implementation and rewrite this code here if we allocate memory not over the GC
-	public VkPhysicalDeviceProperties physicalDeviceProperties;
+	VkPhysicalDeviceProperties physicalDeviceProperties;
 	// TODO< check if we do this like this in the OpenGL implementation and rewrite this code here if we allocate memory not over the GC
-	public VkQueueFamilyProperties[] queueFamilyProperties;
+	VkQueueFamilyProperties[] queueFamilyProperties;
 }

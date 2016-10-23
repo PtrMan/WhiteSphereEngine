@@ -1,4 +1,4 @@
-module vulkan.VulkanSurface;
+module whiteSphereEngine.graphics.vulkan.VulkanSurface;
 
 version(Win32) {
 	import core.sys.windows.windows;

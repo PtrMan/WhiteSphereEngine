@@ -4,7 +4,7 @@ import core.stdc.stdint;
 
 import Exceptions;
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 import graphics.vulkan.VulkanTypesAndEnums;
 
 // hides the device handle and exposes a thin wrapper around the vulkan functions

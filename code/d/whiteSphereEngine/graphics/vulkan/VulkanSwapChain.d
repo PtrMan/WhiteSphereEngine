@@ -5,8 +5,8 @@ import std.format : format;
 
 import Exceptions;
 import api.vulkan.Vulkan;
-import vulkan.VulkanPlatform;
-import vulkan.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.VulkanPlatform;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 import helpers.VariableValidator;
 import common.LoggerPipe;
 import common.IPipe;
@@ -143,8 +143,8 @@ class VulkanSwapChain {
 		import core.memory : GC;
 		import std.conv : to;
 		
-		static import erupted.types;		
-		import vulkan.VulkanTools;
+		static import erupted.types;
+		import whiteSphereEngine.graphics.vulkan.helpers.VulkanTools;
 		
 		assert(device.isValid && arguments.surface.isValid);
 		

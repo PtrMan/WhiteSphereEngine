@@ -5,8 +5,8 @@ import std.typecons : Nullable;
 
 import Exceptions;
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
-import graphics.vulkan.VulkanContext;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.VulkanContext;
 import graphics.vulkan.VulkanTypesAndEnums;
 import common.IDisposable;
 import helpers.VariableValidator;

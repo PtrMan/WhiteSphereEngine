@@ -5,7 +5,7 @@ import systemEnvironment.EnvironmentChain;
 import systemEnvironment.ChainContext;
 
 public void platformVulkan1Libary(ChainContext chainContext, ChainElement[] chainElements, uint chainIndex) {
-	import vulkan.VulkanPlatform;
+	import whiteSphereEngine.graphics.vulkan.VulkanPlatform;
 	
 	initializeVulkanPointers();
 	scope(exit) releaseVulkanLibrary();
@@ -20,14 +20,14 @@ import std.stdint;
 import std.format : format;
 
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
-import vulkan.VulkanDevice;
-import vulkan.VulkanTools;
-import vulkan.VulkanPlatform;
-import vulkan.VulkanSurface;
-import vulkan.QueueManager;
-import vulkan.VulkanQueueHelpers : DeviceQueueInfoHelper, QueueInfo;
-static import vulkan.InitialisationHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.QueueManager;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanQueueHelpers : DeviceQueueInfoHelper, QueueInfo;
+static import whiteSphereEngine.graphics.vulkan.helpers.InitializationHelpers;
+import whiteSphereEngine.graphics.vulkan.VulkanDevice;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanTools;
+import whiteSphereEngine.graphics.vulkan.VulkanPlatform;
+import whiteSphereEngine.graphics.vulkan.VulkanSurface;
 import Exceptions : EngineException;
 import TypedPointerWithLength : TypedPointerWithLength;
 
@@ -106,10 +106,10 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 
 	{
 		VkInstance instance;
-		vulkan.InitialisationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
+		whiteSphereEngine.graphics.vulkan.helpers.InitializationHelpers.initializeInstance(layersToLoadGced, extensionsToLoadGced, deviceExtensionsToLoadGced, cast(const(bool))withSurface, instance);
 		chainContext.vulkan.instance = instance;
 	}
-	scope(exit) vulkan.InitialisationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
+	scope(exit) whiteSphereEngine.graphics.vulkan.helpers.InitializationHelpers.cleanupInstance(chainContext.vulkan.instance.value);
 	
 	
 	// init remaining function pointers for debugging
@@ -140,7 +140,7 @@ public void platformVulkan2DeviceBase(ChainContext chainContext, ChainElement[] 
 	}
 	
 	
-	VulkanDevice[] vulkanDevices = vulkan.InitialisationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
+	VulkanDevice[] vulkanDevices = whiteSphereEngine.graphics.vulkan.helpers.InitializationHelpers.enumerateAllPossibleDevices(chainContext.vulkan.instance.value);
 	
 	import common.IPipe;
 	chainContext.loggerPipe.write(IPipe.EnumLevel.INFO, "", format("i have %s vulkan devices", vulkanDevices.length), "vulkan");

@@ -2,7 +2,7 @@ module EngineEntry;
 
 import graphics.vulkan.GraphicsVulkan;
 import common.ResourceDag;
-import graphics.vulkan.VulkanContext;
+import whiteSphereEngine.graphics.vulkan.VulkanContext;
 
 // defines an entry which does all setup for the engine and gives the control to the engine
 //

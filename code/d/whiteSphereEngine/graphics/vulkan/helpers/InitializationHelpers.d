@@ -1,11 +1,11 @@
-module vulkan.InitialisationHelpers;
+module whiteSphereEngine.graphics.vulkan.helpers.InitializationHelpers;
 
 import std.string : toStringz;
 import std.stdint;
 
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
-import vulkan.VulkanDevice;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.VulkanDevice;
 import TypedPointerWithLength : TypedPointerWithLength;
 import Exceptions;
 

@@ -1,9 +1,9 @@
-module vulkan.VulkanTools;
+module whiteSphereEngine.graphics.vulkan.helpers.VulkanTools;
 
 import std.stdint;
 
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 import Exceptions;
 
 // from https://github.com/SaschaWillems/Vulkan/blob/master/base/vulkantools.cpp

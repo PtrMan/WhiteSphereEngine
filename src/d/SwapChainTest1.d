@@ -7,9 +7,9 @@ import systemEnvironment.Logging;
 import systemEnvironment.Engine;
 
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
-import vulkan.VulkanDevice;
-import vulkan.VulkanTools;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanTools;
+import whiteSphereEngine.graphics.vulkan.VulkanDevice;
 import whiteSphereEngine.graphics.vulkan.VulkanSwapChain;
 
 import std.stdint;

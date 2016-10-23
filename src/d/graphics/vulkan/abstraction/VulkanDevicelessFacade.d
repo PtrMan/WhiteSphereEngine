@@ -5,7 +5,7 @@ import std.string : toStringz;
 
 import Exceptions;
 import api.vulkan.Vulkan;
-import vulkan.VulkanHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 import graphics.vulkan.VulkanTypesAndEnums;
 import linopterixed.linear.Vector;
 

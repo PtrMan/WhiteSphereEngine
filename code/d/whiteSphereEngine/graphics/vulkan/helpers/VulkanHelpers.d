@@ -1,4 +1,4 @@
-module vulkan.VulkanHelpers;
+module whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 
 import core.stdc.string : memset;
 

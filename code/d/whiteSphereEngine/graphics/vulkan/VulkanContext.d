@@ -1,16 +1,15 @@
-module graphics.vulkan.VulkanContext;
+module whiteSphereEngine.graphics.vulkan.VulkanContext;
 
 import std.stdint;
 
 import api.vulkan.Vulkan;
 import memory.NonGcHandle : NonGcHandle;
-import vulkan.VulkanDevice;
-import vulkan.QueueManager;
+import whiteSphereEngine.graphics.vulkan.VulkanDevice;
+import whiteSphereEngine.graphics.vulkan.helpers.QueueManager;
 
 import whiteSphereEngine.graphics.vulkan.VulkanSwapChain;
-import vulkan.VulkanSurface;
+import whiteSphereEngine.graphics.vulkan.VulkanSurface;
 import helpers.VariableValidator;
-import graphics.vulkan.VulkanContext;
 import graphics.vulkan.VulkanMemoryAllocator;
 
 // all vulkan handles, which are set up from the setup code

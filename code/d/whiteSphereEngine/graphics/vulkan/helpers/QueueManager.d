@@ -1,9 +1,9 @@
-module vulkan.QueueManager;
+module whiteSphereEngine.graphics.vulkan.helpers.QueueManager;
 
 import std.typecons : Tuple;
 
 import api.vulkan.Vulkan;
-import vulkan.VulkanQueueHelpers;
+import whiteSphereEngine.graphics.vulkan.helpers.VulkanQueueHelpers;
 
 // bundles the queues and a mechanism to adress them by name
 class QueueManager {
