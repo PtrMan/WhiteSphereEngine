@@ -13,11 +13,12 @@ import whiteSphereEngine.graphics.vulkan.VulkanContext;
 import graphics.vulkan.VulkanMemoryAllocator;
 import graphics.vulkan.abstraction.VulkanDeviceFacade;
 import graphics.vulkan.abstraction.VulkanDevicelessFacade : DevicelessFacade = VulkanDevicelessFacade;
+import graphics.vulkan.abstraction.VulkanJsonReader;
+import whiteSphereEngine.graphics.vulkan.abstraction.VulkanLevel1Abstraction;
 import whiteSphereEngine.graphics.vulkan.helpers.VulkanHelpers;
 import whiteSphereEngine.graphics.vulkan.helpers.VulkanTools;
 import common.IDisposable;
 import helpers.VariableValidator;
-import graphics.vulkan.abstraction.VulkanJsonReader;
 import graphics.vulkan.resourceManagement.StackResourceAllocator;
 import graphics.vulkan.VulkanResourceWithMemoryDecoration;
 import graphics.vulkan.VulkanDecoratedMesh;
@@ -107,6 +108,8 @@ class GraphicsVulkan {
 	Camera screenviewCamera;
 
 	Instanced*[] instancedArray;
+
+	VulkanLevel1Abstraction vulkanLevel1Abstraction;
 	
 	
 	public final this(ResourceDag resourceDag) {
@@ -115,6 +118,12 @@ class GraphicsVulkan {
 	
 	public void setVulkanContext(VulkanContext vulkanContext) {
 		this.vulkanContext = vulkanContext;
+
+		vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
+
+		vulkanLevel1Abstraction.vkDevFacade = vkDevFacade;
+		vulkanLevel1Abstraction.resourceDag = resourceDag;
+		vulkanLevel1Abstraction.allocator = null;
 	}
 	
 	protected ResourceDag resourceDag;
@@ -212,10 +221,7 @@ class GraphicsVulkan {
 
 
 		
-		
-		// TODO< initialize this somewhere outside and only once >
-		vkDevFacade = new VulkanDeviceFacade(vulkanContext.chosenDevice.logicalDevice);
-		
+
 		VulkanDecoratedMesh decoratedMeshes[];
 		
 		TypesafeVkSemaphore[] allocateSemaphores(size_t count) {
@@ -246,27 +252,6 @@ class GraphicsVulkan {
 
 
 
-		// TODO< move into own class >
-		// API abstraction for the creation of a framebuffer
-		ResourceDag.ResourceNode createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode, TypesafeVkImageView[] attachments, Vector2ui framebufferExtent, string usage = "") {
-			VulkanDeviceFacade.CreateFramebufferArguments createFramebufferArguments = VulkanDeviceFacade.CreateFramebufferArguments.init;
-			with(createFramebufferArguments) {
-				flags = 0;
-				renderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassResourceNode.resource).resource;
-				width = framebufferExtent.x;
-				height = framebufferExtent.y;
-			}
-			createFramebufferArguments.attachments = attachments;
-			
-			{ // brace to scope the allocator
-				const(VkAllocationCallbacks*) allocator = null;
-				TypesafeVkFramebuffer createdFramebuffer = vkDevFacade.createFramebuffer(createFramebufferArguments, allocator);
-				
-				VulkanResourceDagResource!TypesafeVkFramebuffer framebufferDagResource = new VulkanResourceDagResource!TypesafeVkFramebuffer(vkDevFacade, createdFramebuffer, allocator, &disposeFramebuffer);
-				ResourceDag.ResourceNode framebufferResourceNode = resourceDag.createNode(framebufferDagResource, "framebuffer " ~ usage);
-				return framebufferResourceNode;
-			}
-		}
 
 
 
@@ -470,7 +455,7 @@ class GraphicsVulkan {
 			// create framebuffer
 			
 			TypesafeVkImageView[] attachments = deferredRendererImageViewsResourceNodes.map!(v => (cast(VulkanResourceDagResource!TypesafeVkImageView)v.resource).resource).array;
-			deferredFramebufferResourceNode = createFramebuffer(renderPassDeferredReset, attachments, framebufferExtent, "deferred renderer");
+			deferredFramebufferResourceNode = vulkanLevel1Abstraction.createFramebuffer(renderPassDeferredReset, attachments, framebufferExtent, "deferred renderer");
 			
 			foreach( iterationImageView; deferredRendererImageViewsResourceNodes ) {
 				iterationImageView.addChild(deferredFramebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
@@ -581,7 +566,7 @@ class GraphicsVulkan {
 				
 				TypesafeVkImageView imageViewForFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkImageView)imageViewResourceNode.resource).resource;
 				TypesafeVkImageView[] attachments = [imageViewForFramebuffer, depthBufferImageView];
-				ResourceDag.ResourceNode framebufferResourceNode = createFramebuffer(renderPassResourceNode, attachments, framebufferExtent);
+				ResourceDag.ResourceNode framebufferResourceNode = vulkanLevel1Abstraction.createFramebuffer(renderPassResourceNode, attachments, framebufferExtent);
 				imageViewResourceNode.addChild(framebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
 				framebufferResourceNode.addChild(renderPassResourceNode); // link it because it depends on the renderpass
 				
