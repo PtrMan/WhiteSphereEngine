@@ -170,8 +170,11 @@ class GraphicsVulkan {
 		VkFormat deferredRendererBFormat; // for normals
 		VkFormat deferredRendererCFormat; // for depth
 
+		VkFormat deferredRendererDepthFormat; // for real depth image
+
 		ResourceDag.ResourceNode deferredFramebufferResourceNode;
 		ResourceDag.ResourceNode[] deferredRendererImageViewsResourceNodes;
+
 		
 
 		
@@ -382,6 +385,13 @@ class GraphicsVulkan {
 			deferredRendererDiffuseFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormatsForDeferredRendererDiffuseFormat, requiredFramebufferImageFormatFeatures, "Framebuffer");
 			deferredRendererBFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormatsForDeferredRenderB, requiredFramebufferImageFormatFeatures, "Framebuffer"); // for normals
 			deferredRendererCFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, preferedFormatsForDeferredRenderC, requiredFramebufferImageFormatFeatures, "Framebuffer"); // for depth
+
+
+
+			VkFormatFeatureFlagBits requiredDepthImageFormatFeatures =
+				VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			// search best format
+			deferredRendererDepthFormat = vulkanHelperFindBestFormatTryThrows(vulkanContext.chosenDevice.physicalDevice, [VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, ], requiredDepthImageFormatFeatures, "Depthbuffer");
 		}
 
 
@@ -390,22 +400,29 @@ class GraphicsVulkan {
 
 			VkExtent3D framebufferImageExtent = {framebufferExtent.x, framebufferExtent.y, 1};
 
-			VkImageUsageFlagBits usageFlags =
+			VkImageUsageFlagBits usageFlagsForColorImage =
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+			VkImageUsageFlagBits usageFlagsForDepthImage =
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
 			assert(deferredRendererDiffuseFormat != VK_FORMAT_UNDEFINED);
 			assert(deferredRendererBFormat != VK_FORMAT_UNDEFINED);
 			assert(deferredRendererCFormat != VK_FORMAT_UNDEFINED);
 			
 			
-			VkFormat[] formats = [deferredRendererDiffuseFormat, deferredRendererBFormat, deferredRendererCFormat];
+			VkFormat[] formats = [deferredRendererDiffuseFormat, deferredRendererBFormat, deferredRendererCFormat, deferredRendererDepthFormat];
 
 			deferredRendererImageResource.length = formats.length;
 			foreach( i; 0..deferredRendererImageResource.length ) {
 				deferredRendererImageResource[i] = new VulkanResourceWithMemoryDecoration!TypesafeVkImage;
 			}
 
+			size_t depthImageIndex = formats.length-1;
+
 			foreach( i; 0..formats.length ) {
+				const bool isDepthImage = i == depthImageIndex;
+
 				uint32_t graphicsQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("graphics").queueFamilyIndex;
 				uint32_t presentQueueFamilyIndex = vulkanContext.queueManager.getDeviceQueueInfoByName("present").queueFamilyIndex;
 
@@ -417,7 +434,7 @@ class GraphicsVulkan {
 				VulkanDeviceFacade.CreateImageArguments createImageArguments;
 				createImageArguments.format = formats[i];
 				createImageArguments.extent = framebufferImageExtent;
-				createImageArguments.usage = usageFlags;
+				createImageArguments.usage = isDepthImage ? usageFlagsForDepthImage : usageFlagsForColorImage;
 				createImageArguments.queueFamilyIndexCount = 2;
 				createImageArguments.pQueueFamilyIndices = cast(immutable(uint32_t)*)[graphicsQueueFamilyIndex, presentQueueFamilyIndex].ptr;
 
@@ -429,11 +446,13 @@ class GraphicsVulkan {
 				
 				////////////////////
 				// transition layout
-				transitionImageLayout(deferredRendererImageResource[i].resource.value, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+				transitionImageLayout(deferredRendererImageResource[i].resource.value, isDepthImage ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 			}
 
 			// create image views
 			foreach( i; 0..formats.length ) {
+				const bool isDepthImage = i == depthImageIndex;
+				
 				{ // brace to scope the allocator
 					const(VkAllocationCallbacks*) allocator = null;
 					
@@ -444,6 +463,12 @@ class GraphicsVulkan {
 						viewType = VK_IMAGE_VIEW_TYPE_2D;
 						format = formats[i];
 					}
+
+					if( isDepthImage ) {
+						createImageViewArguments.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					}
+
+
 					TypesafeVkImageView createdImageView = vkDevFacade.createImageView(createImageViewArguments, allocator);
 						
 					VulkanResourceDagResource!TypesafeVkImageView imageViewDagResource = new VulkanResourceDagResource!TypesafeVkImageView(vkDevFacade, createdImageView, allocator, &disposeImageView);
@@ -465,7 +490,6 @@ class GraphicsVulkan {
 			foreach( iterationImageView; deferredRendererImageViewsResourceNodes ) {
 				iterationImageView.addChild(deferredFramebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
 			}
-			
 			deferredFramebufferResourceNode.addChild(renderPassDeferredReset); // link it because it depends on the renderpass
 			
 			// TODO< maybe the resource counter is messed up >
