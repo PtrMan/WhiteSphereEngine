@@ -220,18 +220,7 @@ IDisposable loadShader(string fileName, VkDevice device, VkShaderStageFlagBits s
 	moduleCreateInfo.pCode = cast(immutable(uint)*)memoryReference.ptr;
 	moduleCreateInfo.flags = 0;
 
-	{
-		import std.stdio : writeln;
-		writeln("HERE");
-	}
-
-	
 	VkResult vulkanResult = vkCreateShaderModule(device, &moduleCreateInfo, null, ptrDestintionShaderModule);
-	
-	{
-		import std.stdio : writeln;
-		writeln("HERE");
-	}
 	
 	if( !vulkanSuccess(vulkanResult) ) {
 		memoryReference.dispose();
