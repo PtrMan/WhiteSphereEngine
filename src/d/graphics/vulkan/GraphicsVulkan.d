@@ -149,10 +149,10 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode[] framebufferImageViewsResourceNodes;
 		ResourceDag.ResourceNode[] framebufferFramebufferResourceNodes;
 		
-		ResourceDag.ResourceNode renderPassReset;
-		ResourceDag.ResourceNode renderPassDrawover;
+		ResourceDag.ResourceNode forwardRendererRenderPassReset;
+		ResourceDag.ResourceNode forwardRendererRenderPassDrawover;
 
-		ResourceDag.ResourceNode renderPassDeferredReset;
+		ResourceDag.ResourceNode deferredRenderRenderPassReset, deferredRenderRenderPassDrawover;
 		
 		
 		ResourceDag.ResourceNode pipelineResourceNode, pipelineLayoutResourceNode;
@@ -163,7 +163,9 @@ class GraphicsVulkan {
 		
 		TypesafeVkCommandBuffer[] commandBuffersForCopy; // no need to manage this with the resource dag, because we need it just once
 		TypesafeVkCommandBuffer commandBufferForRendering;
-		TypesafeVkCommandBuffer commandBufferForClear;
+		TypesafeVkCommandBuffer commandBufferForForwardRendererClear;
+
+		TypesafeVkCommandBuffer commandBufferForDeferredRenderClear;
 
 		VkFormat framebufferColorImageFormat;
 		VkFormat deferredRendererDiffuseFormat; // for diffuse color
@@ -446,13 +448,13 @@ class GraphicsVulkan {
 				
 				////////////////////
 				// transition layout
-				transitionImageLayout(deferredRendererImageResource[i].resource.value, isDepthImage ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+				transitionImageLayout(deferredRendererImageResource[i].resource.value, isDepthImage ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, isDepthImage ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL);
 			}
 
 			// create image views
 			foreach( i; 0..formats.length ) {
 				const bool isDepthImage = i == depthImageIndex;
-				
+
 				{ // brace to scope the allocator
 					const(VkAllocationCallbacks*) allocator = null;
 					
@@ -485,12 +487,12 @@ class GraphicsVulkan {
 			// create framebuffer
 			
 			TypesafeVkImageView[] attachments = deferredRendererImageViewsResourceNodes.map!(v => (cast(VulkanResourceDagResource!TypesafeVkImageView)v.resource).resource).array;
-			deferredFramebufferResourceNode = vulkanLevel1Abstraction.createFramebuffer(renderPassDeferredReset, attachments, framebufferExtent, "deferred renderer");
+			deferredFramebufferResourceNode = vulkanLevel1Abstraction.createFramebuffer(deferredRenderRenderPassReset, attachments, framebufferExtent, "deferred renderer");
 			
 			foreach( iterationImageView; deferredRendererImageViewsResourceNodes ) {
 				iterationImageView.addChild(deferredFramebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
 			}
-			deferredFramebufferResourceNode.addChild(renderPassDeferredReset); // link it because it depends on the renderpass
+			deferredFramebufferResourceNode.addChild(deferredRenderRenderPassReset); // link it because it depends on the renderpass
 			
 			// TODO< maybe the resource counter is messed up >
 		}
@@ -791,49 +793,50 @@ class GraphicsVulkan {
 			/* out */pipelineResourceNode.incrementExternalReferenceCounter();
 		}
 		
-		
-		void refillCommandBufferForTransform(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender, Vector2ui imageExtent) {
+
+		static struct RefillCommandBufferForTransformArguments {
+			TypesafeVkCommandBuffer commandBuffer;
+			Matrix44Type mvpMatrix;
+			VulkanDecoratedMesh decoratedMeshToRender;
+			Vector2ui imageExtent;
+
+			VkClearValue[] clearValues;
+			TypesafeVkRenderPass usedRenderPass;
+			TypesafeVkPipeline usedGraphicsPipeline;
+			TypesafeVkPipelineLayout usedPipelineLayout;
+			TypesafeVkFramebuffer usedFramebuffer;
+
+		}
+
+		void refillCommandBufferForTransformInternal(RefillCommandBufferForTransformArguments arguments) {
 			VkResult vulkanResult;
 			
-			VkClearValue clearValues[2];
-			clearValues[0].color.float32 = [ 1.0f, 0.8f, 0.4f, 0.0f ];
-			clearValues[1].depthStencil.depth = 1.0f;
-			clearValues[1].depthStencil.stencil = 0;
-			
-			
-			TypesafeVkRenderPass usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDeferredReset.resource).resource;
-			
-			TypesafeVkPipeline usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
-			
-			TypesafeVkPipelineLayout usedPipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutDeferredResourceNode.resource).resource;
-			
 			// for actual rendering
-			commandBufferScope(commandBuffer, (TypesafeVkCommandBuffer commandBuffer) {
-				TypesafeVkFramebuffer usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
+			commandBufferScope(arguments.commandBuffer, (TypesafeVkCommandBuffer commandBuffer) {
 				
 				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
 				with(renderPassBeginInfo) {
 					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
-					renderArea.extent = DevicelessFacade.makeVkExtent2D(imageExtent.x, imageExtent.y);
-					clearValueCount = cast(uint32_t)clearValues.length;
-					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(arguments.imageExtent.x, arguments.imageExtent.y);
+					clearValueCount = cast(uint32_t)arguments.clearValues.length;
+					pClearValues = cast(immutable(VkClearValue)*)&arguments.clearValues;
 				}
-				renderPassBeginInfo.renderPass = cast(VkRenderPass)usedRenderPass;
-				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)usedFramebuffer;
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)arguments.usedRenderPass;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)arguments.usedFramebuffer;
 				
 				
 				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				
-				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)usedGraphicsPipeline);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)arguments.usedGraphicsPipeline);
 				
 
 				VkViewport viewport;
 				with(viewport) {
 					x = 0.0f,
 					y = 0.0f,
-					width = cast(float)imageExtent.x,
-					height = cast(float)imageExtent.y,
+					width = cast(float)arguments.imageExtent.x,
+					height = cast(float)arguments.imageExtent.y,
 					minDepth = 0.0f,
 					maxDepth = 0.0f;
 				}
@@ -842,8 +845,8 @@ class GraphicsVulkan {
 				with(scissor) {
 					offset.x = 0,
 					offset.y = 0,
-					extent.width = imageExtent.x,
-					extent.height = imageExtent.y;
+					extent.width = arguments.imageExtent.x,
+					extent.height = arguments.imageExtent.y;
 				}
 
 				vkCmdSetViewport(cast(VkCommandBuffer)commandBuffer, 0, 1, &viewport);
@@ -856,33 +859,57 @@ class GraphicsVulkan {
 				VkBuffer[COUNTOFBUFFERS] vertexBuffersToBind;
 				VkDeviceSize[COUNTOFBUFFERS] offsets; // is automatically initialized to zero
 
-				enforce(decoratedMeshToRender.decoration.vbosOfBuffers.length <= COUNTOFBUFFERS, "Number of buffers must be <= COUNTOFBUFFERS");
-				foreach( bufferIndex, iterationBuffer; decoratedMeshToRender.decoration.vbosOfBuffers ) {
+				enforce(arguments.decoratedMeshToRender.decoration.vbosOfBuffers.length <= COUNTOFBUFFERS, "Number of buffers must be <= COUNTOFBUFFERS");
+				foreach( bufferIndex, iterationBuffer; arguments.decoratedMeshToRender.decoration.vbosOfBuffers ) {
 					vertexBuffersToBind[bufferIndex] = cast(VkBuffer)iterationBuffer.resource.value;
 				}
-				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBuffer, 0, decoratedMeshToRender.decoration.vbosOfBuffers.length, vertexBuffersToBind.ptr, offsets.ptr);
+				vkCmdBindVertexBuffers(cast(VkCommandBuffer)commandBuffer, 0, arguments.decoratedMeshToRender.decoration.vbosOfBuffers.length, vertexBuffersToBind.ptr, offsets.ptr);
 				
 				float[16] mvpArray;
 				import math.ConvertMatrix;
-				mvpMatrix.translateToArrayColumRow!(float, 4, 4)(mvpArray);
+				arguments.mvpMatrix.translateToArrayColumRow!(float, 4, 4)(mvpArray);
 
-				vkCmdPushConstants(cast(VkCommandBuffer)commandBuffer, cast(VkPipelineLayout)usedPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
+				vkCmdPushConstants(cast(VkCommandBuffer)commandBuffer, cast(VkPipelineLayout)arguments.usedPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, SIZEOFMATRIXDATA, cast(immutable(void)*)mvpArray.ptr);
 				
-				if( decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
-					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBuffer, cast(VkBuffer)decoratedMeshToRender.decoration.vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
+				if( arguments.decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.dataType == AbstractMeshComponent.EnumDataType.UINT32 ) {
+					vkCmdBindIndexBuffer(cast(VkCommandBuffer)commandBuffer, cast(VkBuffer)arguments.decoratedMeshToRender.decoration.vboIndexBufferResource.resource.value, 0, VK_INDEX_TYPE_UINT32);
 				}
 				else {
 					throw new EngineException(true, true, "Vulkan Renderer - index buffer not implemented for non-uint32bit !");
 				}
 
 				static assert( TypesafeVkDescriptorSet.sizeof == VkDescriptorSet.sizeof); // assert because we point to an TypesafeVkDescriptorSet as an VkDescriptorSet pointer
-				vkCmdBindDescriptorSets(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipelineLayout)usedPipelineLayout, 0, 1, cast(VkDescriptorSet*)descriptorSets.ptr, 0, null);
+				vkCmdBindDescriptorSets(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipelineLayout)arguments.usedPipelineLayout, 0, 1, cast(VkDescriptorSet*)descriptorSets.ptr, 0, null);
 				
-				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBuffer, decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
+				vkCmdDrawIndexed(cast(VkCommandBuffer)commandBuffer, arguments.decoratedMeshToRender.decoratedMesh.indexBufferMeshComponent.length, 1, 0, 0, 0);
 				
 				
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
 			});
+		}
+
+		void refillCommandBufferForTransform(TypesafeVkCommandBuffer commandBuffer, Matrix44Type mvpMatrix, VulkanDecoratedMesh decoratedMeshToRender, Vector2ui imageExtent) {
+			VkClearValue clearValues[4];
+			clearValues[0].color.float32 = [ 1.0f, 0.0f, 0.0f, 0.0f ];
+			clearValues[1].color.float32 = [ 0.0f, 0.0f, 0.0f, 0.0f ];
+			clearValues[2].color.float32 = [ 0.0f, 0.0f, 0.0f, 0.0f ];
+			clearValues[3].depthStencil.depth = 1.0f;
+			clearValues[3].depthStencil.stencil = 0;
+
+			RefillCommandBufferForTransformArguments arguments;
+			arguments.commandBuffer = commandBuffer;
+			arguments.mvpMatrix = mvpMatrix;
+			arguments.decoratedMeshToRender = decoratedMeshToRender;
+			arguments.imageExtent = imageExtent;
+			with(arguments) {
+				usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.resource).resource;
+				usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
+				usedPipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutDeferredResourceNode.resource).resource;
+				usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)deferredFramebufferResourceNode.resource).resource;
+			}
+			arguments.clearValues = clearValues;
+			
+			refillCommandBufferForTransformInternal(arguments);
 		}
 		vulkanDelegates.refillCommandBufferForTransform = &refillCommandBufferForTransform;
 		scope(exit) vulkanDelegates.refillCommandBufferForTransform = null; // invalidate because out of scope it's no more valid
@@ -1146,8 +1173,8 @@ class GraphicsVulkan {
 			VkQueue graphicsQueue = vulkanContext.queueManager.getQueueByName("graphics");
 			VkQueue presentQueue = vulkanContext.queueManager.getQueueByName("present");
 			
-			TypesafeVkRenderPass renderPassReset = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassReset.resource).resource;
-			TypesafeVkRenderPass renderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDrawover.resource).resource;
+			TypesafeVkRenderPass forwardRendererRenderPassReset = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)forwardRendererRenderPassReset.resource).resource;
+			TypesafeVkRenderPass forwardRendererRenderPassDrawover = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)forwardRendererRenderPassDrawover.resource).resource;
 			
 			TypesafeVkPipeline graphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineResourceNode.resource).resource;
 
@@ -1260,7 +1287,7 @@ class GraphicsVulkan {
 			
 			
 			// for clearing the screen
-			commandBufferScope(commandBufferForClear, (TypesafeVkCommandBuffer commandBuffer) {
+			commandBufferScope(commandBufferForForwardRendererClear, (TypesafeVkCommandBuffer commandBuffer) {
 				TypesafeVkFramebuffer framebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)framebufferFramebufferResourceNodes[0].resource).resource;
 				
 				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
@@ -1271,21 +1298,46 @@ class GraphicsVulkan {
 					clearValueCount = cast(uint32_t)clearValues.length;
 					pClearValues = cast(immutable(VkClearValue)*)&clearValues;
 				}
-				renderPassBeginInfo.renderPass = cast(VkRenderPass)renderPassReset;
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)forwardRendererRenderPassReset;
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)framebuffer;
 				
 				
 				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)graphicsPipeline);
-				
 				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
 			});
-			
-			
-			
-			
-			
-			TypesafeVkPipelineLayout pipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutResourceNode.resource).resource;
+
+
+			VkClearValue deferredRendererClearValues[4];
+			deferredRendererClearValues[0].color.float32 = [ 1.0f, 0.0f, 0.0f, 0.0f ];
+			deferredRendererClearValues[1].color.float32 = [ 0.0f, 0.0f, 0.0f, 0.0f ];
+			deferredRendererClearValues[2].color.float32 = [ 0.0f, 0.0f, 0.0f, 0.0f ];
+			deferredRendererClearValues[3].depthStencil.depth = 1.0f;
+			deferredRendererClearValues[3].depthStencil.stencil = 0;
+
+			commandBufferScope(commandBufferForDeferredRenderClear, (TypesafeVkCommandBuffer commandBuffer) {
+				TypesafeVkPipeline usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
+				TypesafeVkFramebuffer usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)deferredFramebufferResourceNode.resource).resource;
+				TypesafeVkRenderPass usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.resource).resource;
+
+				VkClearValue[] usedClearValues = deferredRendererClearValues;
+
+				VkRenderPassBeginInfo renderPassBeginInfo = VkRenderPassBeginInfo.init;
+				with(renderPassBeginInfo) {
+					sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
+					renderArea.extent = DevicelessFacade.makeVkExtent2D(viewportSize.x, viewportSize.y);
+					clearValueCount = cast(uint32_t)usedClearValues.length;
+					pClearValues = cast(immutable(VkClearValue)*)&usedClearValues;
+				}
+				renderPassBeginInfo.renderPass = cast(VkRenderPass)usedRenderPass;
+				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)usedFramebuffer;
+				
+				
+				vkCmdBeginRenderPass(cast(VkCommandBuffer)commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBindPipeline(cast(VkCommandBuffer)commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cast(VkPipeline)usedGraphicsPipeline);
+				vkCmdEndRenderPass(cast(VkCommandBuffer)commandBuffer);
+			});
 		}
 		
 		void loop() {
@@ -1360,11 +1412,11 @@ class GraphicsVulkan {
 				size_t doublebufferedChainSemaphoresIndex = 0;
 				
 				
-				{ // do clearing work and wait for it
+				{ // do clearing work for forward renderer and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [cast(TypesafeVkSemaphore)vulkanContext.swapChain.semaphorePairs[semaphorePairIndex].chainSemaphore];
 					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[0]];
-					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForClear];
+					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForForwardRendererClear];
 					DevicelessFacade.queueSubmit(
 						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
 						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
@@ -1372,6 +1424,23 @@ class GraphicsVulkan {
 					);
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
+
+				/*
+				{ // do clearing work for deferred renderer and wait for it
+					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
+					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
+					TypesafeVkSemaphore[1] signalSemaphores = [doublebufferedChainSemaphores[(doublebufferedChainSemaphoresIndex+1) % 2]];
+					TypesafeVkCommandBuffer[1] commandBuffers = [cast(TypesafeVkCommandBuffer)commandBufferForDeferredRenderClear];
+					DevicelessFacade.queueSubmit(
+						cast(TypesafeVkQueue)vulkanContext.queueManager.getQueueByName("graphics"),
+						waitSemaphores, signalSemaphores, commandBuffers, waitDstStageMasks,
+						cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence
+					);
+					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
+
+					doublebufferedChainSemaphoresIndex++;
+				}
+				*/
 				
 
 				
@@ -1545,29 +1614,36 @@ class GraphicsVulkan {
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassResetWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ renderPassReset, deferredFormats);
+			createRenderpass(jsonValue, /*out*/ forwardRendererRenderPassReset, deferredFormats);
 		}
-		scope(exit) releaseResourceNodesImmediately([renderPassReset]);
+		scope(exit) releaseResourceNodesImmediately([forwardRendererRenderPassReset]);
 
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassDrawoverWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ renderPassDrawover, deferredFormats);
+			createRenderpass(jsonValue, /*out*/ forwardRendererRenderPassDrawover, deferredFormats);
 		}
 		scope(exit) {
-			releaseResourceNodesImmediately([renderPassDrawover]);
+			releaseResourceNodesImmediately([forwardRendererRenderPassDrawover]);
 		}
 
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassDeferredReset.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ renderPassDeferredReset, deferredFormats);
+			createRenderpass(jsonValue, /*out*/ deferredRenderRenderPassReset, deferredFormats);
 		}
 		scope(exit) {
-			releaseResourceNodesImmediately([renderPassDeferredReset]);
+			releaseResourceNodesImmediately([deferredRenderRenderPassReset]);
 		}
 
-		
+		{
+			string path = "resources/engine/graphics/configuration/preset/renderpassDeferredDrawover.json";
+			JsonValue jsonValue = readJsonEngineResource(path);
+			createRenderpass(jsonValue, /*out*/ deferredRenderRenderPassDrawover, deferredFormats);
+		}
+		scope(exit) {
+			releaseResourceNodesImmediately([deferredRenderRenderPassDrawover]);
+		}
 
 		
 
@@ -1579,7 +1655,7 @@ class GraphicsVulkan {
 
 		// we only give it the renderPass of the reset because 
 		// renderPass for the reset and the actually drawing are comptible to each other
-		createFramebufferWithImageviews(renderPassReset, Vector2ui.make(500, 400));
+		createFramebufferWithImageviews(forwardRendererRenderPassReset, Vector2ui.make(500, 400));
 
 		scope(exit) {
 			releaseFramebufferResourcesWithImageViews();
@@ -1605,7 +1681,7 @@ class GraphicsVulkan {
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createPipelineWithRenderPass(
 				jsonValue,
-				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassReset.resource).resource,
+				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)forwardRendererRenderPassReset.resource).resource,
 				Vector2ui.make(500, 400),
 				/*out*/ pipelineResourceNode,
 				/*out*/ pipelineLayoutResourceNode
@@ -1629,7 +1705,7 @@ class GraphicsVulkan {
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createPipelineWithRenderPass(
 				jsonValue,
-				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)renderPassDeferredReset.resource).resource,
+				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.resource).resource,
 				Vector2ui.make(500, 400),
 				/*out*/ pipelineDeferredResourceNode,
 				/*out*/ pipelineLayoutDeferredResourceNode
@@ -1671,12 +1747,20 @@ class GraphicsVulkan {
 			vkDevFacade.freeCommandBuffer(commandBufferForRendering, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
 		
-		commandBufferForClear = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
+		commandBufferForForwardRendererClear = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		scope(exit) {
 			// before destruction of vulkan resources we have to ensure that the decive idles
 			vkDevFacade.waitIdle();
 			
-			vkDevFacade.freeCommandBuffer(commandBufferForClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
+			vkDevFacade.freeCommandBuffer(commandBufferForForwardRendererClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
+		}
+
+		commandBufferForDeferredRenderClear = vkDevFacade.allocateCommandBuffer(cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
+		scope(exit) {
+			// before destruction of vulkan resources we have to ensure that the decive idles
+			vkDevFacade.waitIdle();
+			
+			vkDevFacade.freeCommandBuffer(commandBufferForDeferredRenderClear, cast(TypesafeVkCommandPool)vulkanContext.commandPoolsByQueueName["graphics"].value);
 		}
 
 

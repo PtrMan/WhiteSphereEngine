@@ -39,6 +39,7 @@ private extern(System) VkBool32 vulkanDebugCallback2(VkFlags msgFlags, VkDebugRe
 	import std.stdio;
 	
 	writeln("vulkan debug: layerprefix=", convertCStringToD(pLayerPrefix), " message=", convertCStringToD(pMsg));
+	stdout.flush;
 	return 1;
 }
 

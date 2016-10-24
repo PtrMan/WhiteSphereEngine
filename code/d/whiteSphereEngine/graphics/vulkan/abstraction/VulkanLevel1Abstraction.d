@@ -12,7 +12,7 @@ import graphics.vulkan.abstraction.VulkanDeviceFacade;
 import graphics.vulkan.resourceDag.VulkanResourceDagResource;
 
 // Is an abstraction layer over layer0
-// which introduces the useage of the resource-dag and some variables
+// which introduces the useage of the resource-dag and the allocator and the device facade
 struct VulkanLevel1Abstraction {
 	// API abstraction for the creation of a framebuffer
 	ResourceDag.ResourceNode createFramebuffer(ResourceDag.ResourceNode renderPassResourceNode, TypesafeVkImageView[] attachments, Vector2ui framebufferExtent, string usage = "") {
