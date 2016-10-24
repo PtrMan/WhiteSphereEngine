@@ -1425,7 +1425,7 @@ class GraphicsVulkan {
 					vkDevFacade.fenceWaitAndReset(cast(TypesafeVkFence)vulkanContext.swapChain.context.additionalFence);
 				}
 
-				/*
+				
 				{ // do clearing work for deferred renderer and wait for it
 					VkPipelineStageFlags[1] waitDstStageMasks = [VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT];
 					TypesafeVkSemaphore[1] waitSemaphores = [doublebufferedChainSemaphores[doublebufferedChainSemaphoresIndex % 2]];
@@ -1440,7 +1440,7 @@ class GraphicsVulkan {
 
 					doublebufferedChainSemaphoresIndex++;
 				}
-				*/
+				
 				
 
 				
