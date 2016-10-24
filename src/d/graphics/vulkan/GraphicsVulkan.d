@@ -22,6 +22,7 @@ import helpers.VariableValidator;
 import graphics.vulkan.resourceManagement.StackResourceAllocator;
 import graphics.vulkan.VulkanResourceWithMemoryDecoration;
 import graphics.vulkan.VulkanDecoratedMesh;
+import whiteSphereEngine.common.ScopedResource;
 
 import whiteSphereEngine.graphics.Camera;
 import whiteSphereEngine.graphics.Instanced : Instanced;
@@ -139,6 +140,53 @@ class GraphicsVulkan {
 	}
 	
 	protected final void vulkanSetupRendering() {
+		VkFormat framebufferColorImageFormat;
+		VkFormat depthImageFormat;
+
+		VkFormat deferredRendererDiffuseFormat; // for diffuse color
+		VkFormat deferredRendererBFormat; // for normals
+		VkFormat deferredRendererCFormat; // for depth
+
+		VkFormat deferredRendererDepthFormat; // for real depth image
+
+		// deferredFormatsCreator is an delegate which gets called to create the dictionary with the formats for the deferred renderer
+		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode, VkFormat[string] delegate() deferredFormatsCreator) {
+			VkResult vulkanResult;
+			
+			AttachmentDescriptionContext attachmentDescriptionContext; // helper which contains some context for the conversion of the attachment description for special json values
+			attachmentDescriptionContext.colorFormat = framebufferColorImageFormat;
+			attachmentDescriptionContext.depthFormat = depthImageFormat;
+			attachmentDescriptionContext.deferredFormats = deferredFormatsCreator();
+			
+			VkAttachmentDescription[] attachmentDescriptions;
+			foreach( iterationJsonValue; jsonValue["attachmentDescriptions"].array ) {
+				attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonValue, attachmentDescriptionContext);
+			}
+			
+			VkSubpassDescription[] subpassDescriptions;
+			foreach( iterationJsonValue; jsonValue["subpassDescriptions"].array ) {
+				subpassDescriptions ~= convertForSubpassDescription(iterationJsonValue);
+			}
+			
+			
+			const(VkAllocationCallbacks*) allocator = null;
+			
+			VulkanDeviceFacade.CreateRenderPassArguments createRenderPassArguments = VulkanDeviceFacade.CreateRenderPassArguments.init;
+			createRenderPassArguments.flags = 0;
+			createRenderPassArguments.attachmentDescriptions = attachmentDescriptions;
+			createRenderPassArguments.subpassDescriptions = subpassDescriptions;
+			createRenderPassArguments.subpassDependencies = [];
+			TypesafeVkRenderPass renderPass = vkDevFacade.createRenderPass(createRenderPassArguments, allocator);
+			
+			VulkanResourceDagResource!TypesafeVkRenderPass renderPassDagResource = new VulkanResourceDagResource!TypesafeVkRenderPass(vkDevFacade, renderPass, allocator, &disposeRenderPass);
+			renderPassResourceNode = resourceDag.createNode(renderPassDagResource, "RenderPass");
+			
+			// we hold this because else the resourceDag would dispose them
+			renderPassResourceNode.incrementExternalReferenceCounter();
+		}
+
+
+
 		Camera screenviewCamera;
 
 		VulkanDelegates *vulkanDelegates = new VulkanDelegates;
@@ -152,8 +200,41 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode forwardRendererRenderPassReset;
 		ResourceDag.ResourceNode forwardRendererRenderPassDrawover;
 
-		ResourceDag.ResourceNode deferredRenderRenderPassReset, deferredRenderRenderPassDrawover;
+		ResourceDag.ResourceNode /*deferredRenderRenderPassReset,*/ deferredRenderRenderPassDrawover;
 		
+		
+
+		ScopedResource!(ResourceDag.ResourceNode).Arguments scopedResourceArgumentsForResourceNode;
+		scopedResourceArgumentsForResourceNode = ScopedResource!(ResourceDag.ResourceNode).Arguments.init;
+		with(scopedResourceArgumentsForResourceNode) {
+			constructor = () {
+				ResourceDag.ResourceNode result;
+
+				string path = "resources/engine/graphics/configuration/preset/renderpassDeferredReset.json";
+				JsonValue jsonValue = readJsonEngineResource(path);
+				createRenderpass(jsonValue, /*out*/ result, /* delegate which returns the formats for the deferred renderer */() {
+					VkFormat[string] deferredFormats = [
+						"diffuse" : deferredRendererDiffuseFormat,
+						"normal" : deferredRendererBFormat,
+						"depth" : deferredRendererCFormat
+					];
+
+					return deferredFormats;
+				});
+				return result;
+			};
+
+			destructor = (ResourceDag.ResourceNode toDestroy) {
+				releaseResourceNodesImmediately([toDestroy]);
+			};
+		}
+		ScopedResource!(ResourceDag.ResourceNode) deferredRenderRenderPassReset = ScopedResource!(ResourceDag.ResourceNode)(scopedResourceArgumentsForResourceNode);
+		
+		
+		
+
+
+
 		
 		ResourceDag.ResourceNode pipelineResourceNode, pipelineLayoutResourceNode;
 
@@ -167,12 +248,7 @@ class GraphicsVulkan {
 
 		TypesafeVkCommandBuffer commandBufferForDeferredRenderClear;
 
-		VkFormat framebufferColorImageFormat;
-		VkFormat deferredRendererDiffuseFormat; // for diffuse color
-		VkFormat deferredRendererBFormat; // for normals
-		VkFormat deferredRendererCFormat; // for depth
-
-		VkFormat deferredRendererDepthFormat; // for real depth image
+		
 
 		ResourceDag.ResourceNode deferredFramebufferResourceNode;
 		ResourceDag.ResourceNode[] deferredRendererImageViewsResourceNodes;
@@ -185,7 +261,7 @@ class GraphicsVulkan {
 
 		VulkanResourceWithMemoryDecoration!TypesafeVkImage depthbufferImageResource;
 		TypesafeVkImageView depthBufferImageView;
-		VkFormat depthImageFormat;
+		
 
 
 		// TODO< dictionary array for the staging images, indexed by format and size
@@ -328,42 +404,6 @@ class GraphicsVulkan {
 		}
 
 
-		void createRenderpass(JsonValue jsonValue, out ResourceDag.ResourceNode renderPassResourceNode, VkFormat[string] deferredFormats) {
-			VkResult vulkanResult;
-			
-			AttachmentDescriptionContext attachmentDescriptionContext; // helper which contains some context for the conversion of the attachment description for special json values
-			attachmentDescriptionContext.colorFormat = framebufferColorImageFormat;
-			attachmentDescriptionContext.depthFormat = depthImageFormat;
-			attachmentDescriptionContext.deferredFormats = deferredFormats;
-			
-			VkAttachmentDescription[] attachmentDescriptions;
-			foreach( iterationJsonValue; jsonValue["attachmentDescriptions"].array ) {
-				attachmentDescriptions ~= convertForAtachmentDescription(iterationJsonValue, attachmentDescriptionContext);
-			}
-			
-			VkSubpassDescription[] subpassDescriptions;
-			foreach( iterationJsonValue; jsonValue["subpassDescriptions"].array ) {
-				subpassDescriptions ~= convertForSubpassDescription(iterationJsonValue);
-			}
-			
-			
-			const(VkAllocationCallbacks*) allocator = null;
-			
-			VulkanDeviceFacade.CreateRenderPassArguments createRenderPassArguments = VulkanDeviceFacade.CreateRenderPassArguments.init;
-			createRenderPassArguments.flags = 0;
-			createRenderPassArguments.attachmentDescriptions = attachmentDescriptions;
-			createRenderPassArguments.subpassDescriptions = subpassDescriptions;
-			createRenderPassArguments.subpassDependencies = [];
-			TypesafeVkRenderPass renderPass = vkDevFacade.createRenderPass(createRenderPassArguments, allocator);
-			
-			VulkanResourceDagResource!TypesafeVkRenderPass renderPassDagResource = new VulkanResourceDagResource!TypesafeVkRenderPass(vkDevFacade, renderPass, allocator, &disposeRenderPass);
-			renderPassResourceNode = resourceDag.createNode(renderPassDagResource, "RenderPass");
-			
-			// we hold this because else the resourceDag would dispose them
-			renderPassResourceNode.incrementExternalReferenceCounter();
-		}
-
-
 		void findBestFramebufferFormat() {
 			VkFormatFeatureFlagBits requiredFramebufferImageFormatFeatures =
 				VK_FORMAT_FEATURE_BLIT_SRC_BIT | // because we need to blit
@@ -487,12 +527,12 @@ class GraphicsVulkan {
 			// create framebuffer
 			
 			TypesafeVkImageView[] attachments = deferredRendererImageViewsResourceNodes.map!(v => (cast(VulkanResourceDagResource!TypesafeVkImageView)v.resource).resource).array;
-			deferredFramebufferResourceNode = vulkanLevel1Abstraction.createFramebuffer(deferredRenderRenderPassReset, attachments, framebufferExtent, "deferred renderer");
+			deferredFramebufferResourceNode = vulkanLevel1Abstraction.createFramebuffer(deferredRenderRenderPassReset.ownedResource, attachments, framebufferExtent, "deferred renderer");
 			
 			foreach( iterationImageView; deferredRendererImageViewsResourceNodes ) {
 				iterationImageView.addChild(deferredFramebufferResourceNode); // link it so if the imageView gets disposed the framebuffer gets disposed too
 			}
-			deferredFramebufferResourceNode.addChild(deferredRenderRenderPassReset); // link it because it depends on the renderpass
+			deferredFramebufferResourceNode.addChild(deferredRenderRenderPassReset.ownedResource); // link it because it depends on the renderpass
 			
 			// TODO< maybe the resource counter is messed up >
 		}
@@ -902,7 +942,7 @@ class GraphicsVulkan {
 			arguments.decoratedMeshToRender = decoratedMeshToRender;
 			arguments.imageExtent = imageExtent;
 			with(arguments) {
-				usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.resource).resource;
+				usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.ownedResource.resource).resource;
 				usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
 				usedPipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutDeferredResourceNode.resource).resource;
 				usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)deferredFramebufferResourceNode.resource).resource;
@@ -1318,7 +1358,7 @@ class GraphicsVulkan {
 			commandBufferScope(commandBufferForDeferredRenderClear, (TypesafeVkCommandBuffer commandBuffer) {
 				TypesafeVkPipeline usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
 				TypesafeVkFramebuffer usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)deferredFramebufferResourceNode.resource).resource;
-				TypesafeVkRenderPass usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.resource).resource;
+				TypesafeVkRenderPass usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.ownedResource.resource).resource;
 
 				VkClearValue[] usedClearValues = deferredRendererClearValues;
 
@@ -1605,41 +1645,55 @@ class GraphicsVulkan {
 		//////////////////
 
 
-		VkFormat[string] deferredFormats = [
-			"diffuse" : deferredRendererDiffuseFormat,
-			"normal" : deferredRendererBFormat,
-			"depth" : deferredRendererCFormat
-		];
-
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassResetWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ forwardRendererRenderPassReset, deferredFormats);
+			createRenderpass(jsonValue, /*out*/ forwardRendererRenderPassReset, /* delegate which returns the formats for the deferred renderer */() {
+				VkFormat[string] deferredFormats = [
+					"diffuse" : deferredRendererDiffuseFormat,
+					"normal" : deferredRendererBFormat,
+					"depth" : deferredRendererCFormat
+				];
+
+				return deferredFormats;
+			});
 		}
 		scope(exit) releaseResourceNodesImmediately([forwardRendererRenderPassReset]);
 
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassDrawoverWithdepth.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ forwardRendererRenderPassDrawover, deferredFormats);
+			createRenderpass(jsonValue, /*out*/ forwardRendererRenderPassDrawover, /* delegate which returns the formats for the deferred renderer */() {
+				VkFormat[string] deferredFormats = [
+					"diffuse" : deferredRendererDiffuseFormat,
+					"normal" : deferredRendererBFormat,
+					"depth" : deferredRendererCFormat
+				];
+
+				return deferredFormats;
+			});
 		}
 		scope(exit) {
 			releaseResourceNodesImmediately([forwardRendererRenderPassDrawover]);
 		}
 
-		{
-			string path = "resources/engine/graphics/configuration/preset/renderpassDeferredReset.json";
-			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ deferredRenderRenderPassReset, deferredFormats);
-		}
-		scope(exit) {
-			releaseResourceNodesImmediately([deferredRenderRenderPassReset]);
-		}
+
+
+		deferredRenderRenderPassReset.construct();
+
 
 		{
 			string path = "resources/engine/graphics/configuration/preset/renderpassDeferredDrawover.json";
 			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ deferredRenderRenderPassDrawover, deferredFormats);
+			createRenderpass(jsonValue, /*out*/ deferredRenderRenderPassDrawover, /* delegate which returns the formats for the deferred renderer */() {
+				VkFormat[string] deferredFormats = [
+					"diffuse" : deferredRendererDiffuseFormat,
+					"normal" : deferredRendererBFormat,
+					"depth" : deferredRendererCFormat
+				];
+
+				return deferredFormats;
+			});
 		}
 		scope(exit) {
 			releaseResourceNodesImmediately([deferredRenderRenderPassDrawover]);
@@ -1705,7 +1759,7 @@ class GraphicsVulkan {
 			JsonValue jsonValue = readJsonEngineResource(path);
 			createPipelineWithRenderPass(
 				jsonValue,
-				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.resource).resource,
+				(cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.ownedResource.resource).resource,
 				Vector2ui.make(500, 400),
 				/*out*/ pipelineDeferredResourceNode,
 				/*out*/ pipelineLayoutDeferredResourceNode
