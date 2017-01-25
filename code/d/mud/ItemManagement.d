@@ -54,25 +54,32 @@ class ContainableManager {
 		return false;
 	}
 
+	static struct BeginTransferWithCheckAsyncArguments {
+		CharacterIdType initiatorCharacterId;
+		ContainableIdType sourceContainableId, destinationContainableId;
+		ItemIdType itemId;
+		ulong count;
+	}
+
 
 	// \param asyncTransferNotifier is used to notify the initiator(code) about the progress of the transfer
-	final void beginTransferWithCheckAsync(CharacterIdType initiatorCharacterId, ContainableIdType sourceContainableId, ContainableIdType destinationContainableId, ItemIdType itemId, ulong count, ITransfer asyncTransferNotifier, out bool initialCheckSuccess) {
+	final void beginTransferWithCheckAsync(BeginTransferWithCheckAsyncArguments arguments, ITransfer asyncTransferNotifier, out bool initialCheckSuccess) {
 		initialCheckSuccess = false;
 
-		if( !allowedToTransferAsSource(initiatorCharacterId, sourceContainableId) || allowedToTransferAsDestination(initiatorCharacterId, destinationContainableId) ) {
+		if( !allowedToTransferAsSource(arguments.initiatorCharacterId, arguments.sourceContainableId) || allowedToTransferAsDestination(arguments.initiatorCharacterId, arguments.destinationContainableId) ) {
 			// TODO< log >
 			return;
 		}
 
 		// check if containables exist
-		if( !(sourceContainableId in containableByIdCached) || !(destinationContainableId in containableByIdCached)) {
+		if( !(arguments.sourceContainableId in containableByIdCached) || !(arguments.destinationContainableId in containableByIdCached)) {
 			// TODO< log >
 			return;
 		}
 
 		// check if the requested # of items is available
-		assert(Tuple!(ContainableIdType, ItemIdType)(sourceContainableId, itemId) in stackedItemInfoByContainableAndItemIdCached);
-		if( stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(sourceContainableId, itemId)].count < count ) {
+		assert(TupleOfContainableItemIds(arguments.sourceContainableId, arguments.itemId) in stackedItemInfoByContainableAndItemIdCached);
+		if( stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(arguments.sourceContainableId, arguments.itemId)].count < arguments.count ) {
 			// TODO< log >
 			return;
 		}
@@ -83,15 +90,16 @@ class ContainableManager {
 
 		asyncTransferNotifier.begin(); // inform that we have begun it
 
-		removeItemsFromContainable(sourceContainableId, itemId, count);
-		checkContainableForEmptyTypesAndRemoveEmptyByItemId(sourceContainableId, itemId);
-		addItemsToContainableWithCreation(destinationContainableId, itemId, count);
+		removeItemsFromContainable(arguments.sourceContainableId, arguments.itemId, arguments.count);
+		checkContainableForEmptyTypesAndRemoveEmptyByItemId(arguments.sourceContainableId, arguments.itemId);
+		addItemsToContainableWithCreation(arguments.destinationContainableId, arguments.itemId, arguments.count);
 
 		asyncTransferNotifier.commited();
 	}
 
 	private final bool queryIsContainableOwnedBy(ContainableIdType containableId, CharacterIdType queryCharacterId) {
 		assert( queryCharacterId in containablesByOwnerCached );
+		// TODO< linear search -> speed this up >
 		foreach( ContainableInfo* iContainableInfo; containablesByOwnerCached[queryCharacterId] ) {
 			if( iContainableInfo.id == containableId ) {
 				return true;
@@ -107,7 +115,7 @@ class ContainableManager {
 	}
 
 	private final void createItemInContainableIfItDoesntExist(ContainableIdType containableId, ItemIdType itemId, ulong count = 0) {
-		if( (Tuple!(ContainableIdType, ItemIdType)(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached) ) {
+		if( (TupleOfContainableItemIds(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached) ) {
 			return;
 		}
 
@@ -115,30 +123,31 @@ class ContainableManager {
 		createdStackedItemInfo.containableId = containableId;
 		createdStackedItemInfo.itemId = itemId;
 		createdStackedItemInfo.count = count;
-		stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(containableId, itemId)] = createdStackedItemInfo;
+		stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(containableId, itemId)] = createdStackedItemInfo;
 	}
 
 	private final void addItemsToContainable(ContainableIdType containableId, ItemIdType itemId, ulong count) {
-		enforce(Tuple!(ContainableIdType, ItemIdType)(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached, "item has to exist already in containable");
+		enforce(TupleOfContainableItemIds(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached, "item has to exist already in containable");
 
-		stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(containableId, itemId)].count += count;
+		stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(containableId, itemId)].count += count;
 	}
 
 	private final void removeItemsFromContainable(ContainableIdType containableId, ItemIdType itemId, ulong count) {
-		assert(Tuple!(ContainableIdType, ItemIdType)(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached);
-		enforce(stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(containableId, itemId)].count >= count);
+		assert(TupleOfContainableItemIds(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached);
+		enforce(stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(containableId, itemId)].count >= count);
 
-		stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(containableId, itemId)].count -= count;
+		stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(containableId, itemId)].count -= count;
 	}
 
 	private final void checkContainableForEmptyTypesAndRemoveEmptyByItemId(ContainableIdType containableId, ItemIdType itemId) {
-		assert(Tuple!(ContainableIdType, ItemIdType)(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached);
-		if( stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(containableId, itemId)].count == 0 ) {
+		assert(TupleOfContainableItemIds(containableId, itemId) in stackedItemInfoByContainableAndItemIdCached);
+		if( stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(containableId, itemId)].count == 0 ) {
 			// remove
 			{ // from array
 				bool found = false;
 
-				StackedItemInfo* stackedItemInfoToRemove = stackedItemInfoByContainableAndItemIdCached[Tuple!(ContainableIdType, ItemIdType)(containableId, itemId)];
+				StackedItemInfo* stackedItemInfoToRemove = stackedItemInfoByContainableAndItemIdCached[TupleOfContainableItemIds(containableId, itemId)];
+				// TODO< linear search -> speed this up >
 				foreach( i, iStackedItem; stackedItems ) {
 					if( iStackedItem is stackedItemInfoToRemove ) {
 						stackedItems = stackedItems.remove(i);
@@ -152,17 +161,19 @@ class ContainableManager {
 			
 			// from dictionary
 			{
-				stackedItemInfoByContainableAndItemIdCached.remove(Tuple!(ContainableIdType, ItemIdType)(containableId, itemId));
+				stackedItemInfoByContainableAndItemIdCached.remove(TupleOfContainableItemIds(containableId, itemId));
 			}
 		}
 	}
 
 	private StackedItemInfo*[] stackedItems;
-	private StackedItemInfo*[Tuple!(ContainableIdType, ItemIdType)] stackedItemInfoByContainableAndItemIdCached;
+	private StackedItemInfo*[TupleOfContainableItemIds] stackedItemInfoByContainableAndItemIdCached;
 
 	private ContainableInfo*[] containables;
 	private ContainableInfo*[][CharacterIdType] containablesByOwnerCached;
 	private ContainableInfo*[ContainableIdType] containableByIdCached;
+
+	private alias Tuple!(ContainableIdType, ItemIdType) TupleOfContainableItemIds;
 	
 }
 
