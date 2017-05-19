@@ -200,7 +200,7 @@ class GraphicsVulkan {
 		ResourceDag.ResourceNode forwardRendererRenderPassReset;
 		ResourceDag.ResourceNode forwardRendererRenderPassDrawover;
 
-		ResourceDag.ResourceNode /*deferredRenderRenderPassReset,*/ deferredRenderRenderPassDrawover;
+		//ResourceDag.ResourceNode /*deferredRenderRenderPassReset,*/ deferredRenderRenderPassDrawover;
 		
 		
 
@@ -229,6 +229,32 @@ class GraphicsVulkan {
 			};
 		}
 		ScopedResource!(ResourceDag.ResourceNode) deferredRenderRenderPassReset = ScopedResource!(ResourceDag.ResourceNode)(scopedResourceArgumentsForResourceNode);
+		
+
+		scopedResourceArgumentsForResourceNode = ScopedResource!(ResourceDag.ResourceNode).Arguments.init;
+		with(scopedResourceArgumentsForResourceNode) {
+			constructor = () {
+				ResourceDag.ResourceNode result;
+
+				string path = "resources/engine/graphics/configuration/preset/renderpassDeferredDrawover.json";
+				JsonValue jsonValue = readJsonEngineResource(path);
+				createRenderpass(jsonValue, /*out*/ result, /* delegate which returns the formats for the deferred renderer */() {
+					VkFormat[string] deferredFormats = [
+						"diffuse" : deferredRendererDiffuseFormat,
+						"normal" : deferredRendererBFormat,
+						"depth" : deferredRendererCFormat
+					];
+
+					return deferredFormats;
+				});
+				return result;
+			};
+
+			destructor = (ResourceDag.ResourceNode toDestroy) {
+				releaseResourceNodesImmediately([toDestroy]);
+			};
+		}
+		ScopedResource!(ResourceDag.ResourceNode) deferredRenderRenderPassDrawover = ScopedResource!(ResourceDag.ResourceNode)(scopedResourceArgumentsForResourceNode);
 		
 		
 		
@@ -443,6 +469,7 @@ class GraphicsVulkan {
 			VkExtent3D framebufferImageExtent = {framebufferExtent.x, framebufferExtent.y, 1};
 
 			VkImageUsageFlagBits usageFlagsForColorImage =
+			    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | // just for testing, not required
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 			VkImageUsageFlagBits usageFlagsForDepthImage =
@@ -860,7 +887,7 @@ class GraphicsVulkan {
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
 					renderArea.extent = DevicelessFacade.makeVkExtent2D(arguments.imageExtent.x, arguments.imageExtent.y);
 					clearValueCount = cast(uint32_t)arguments.clearValues.length;
-					pClearValues = cast(immutable(VkClearValue)*)&arguments.clearValues;
+					pClearValues = cast(immutable(VkClearValue)*)arguments.clearValues.ptr;
 				}
 				renderPassBeginInfo.renderPass = cast(VkRenderPass)arguments.usedRenderPass;
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)arguments.usedFramebuffer;
@@ -942,7 +969,7 @@ class GraphicsVulkan {
 			arguments.decoratedMeshToRender = decoratedMeshToRender;
 			arguments.imageExtent = imageExtent;
 			with(arguments) {
-				usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassReset.ownedResource.resource).resource;
+				usedRenderPass = (cast(VulkanResourceDagResource!TypesafeVkRenderPass)deferredRenderRenderPassDrawover.ownedResource.resource).resource;
 				usedGraphicsPipeline = (cast(VulkanResourceDagResource!TypesafeVkPipeline)pipelineDeferredResourceNode.resource).resource;
 				usedPipelineLayout = (cast(VulkanResourceDagResource!TypesafeVkPipelineLayout)pipelineLayoutDeferredResourceNode.resource).resource;
 				usedFramebuffer = (cast(VulkanResourceDagResource!TypesafeVkFramebuffer)deferredFramebufferResourceNode.resource).resource;
@@ -1368,7 +1395,7 @@ class GraphicsVulkan {
 					renderArea.offset = DevicelessFacade.makeVkOffset2D(0, 0);
 					renderArea.extent = DevicelessFacade.makeVkExtent2D(viewportSize.x, viewportSize.y);
 					clearValueCount = cast(uint32_t)usedClearValues.length;
-					pClearValues = cast(immutable(VkClearValue)*)&usedClearValues;
+					pClearValues = cast(immutable(VkClearValue)*)usedClearValues.ptr;
 				}
 				renderPassBeginInfo.renderPass = cast(VkRenderPass)usedRenderPass;
 				renderPassBeginInfo.framebuffer = cast(VkFramebuffer)usedFramebuffer;
@@ -1680,25 +1707,7 @@ class GraphicsVulkan {
 
 
 		deferredRenderRenderPassReset.construct();
-
-
-		{
-			string path = "resources/engine/graphics/configuration/preset/renderpassDeferredDrawover.json";
-			JsonValue jsonValue = readJsonEngineResource(path);
-			createRenderpass(jsonValue, /*out*/ deferredRenderRenderPassDrawover, /* delegate which returns the formats for the deferred renderer */() {
-				VkFormat[string] deferredFormats = [
-					"diffuse" : deferredRendererDiffuseFormat,
-					"normal" : deferredRendererBFormat,
-					"depth" : deferredRendererCFormat
-				];
-
-				return deferredFormats;
-			});
-		}
-		scope(exit) {
-			releaseResourceNodesImmediately([deferredRenderRenderPassDrawover]);
-		}
-
+		deferredRenderRenderPassDrawover.construct();
 		
 
 		

@@ -6,7 +6,8 @@ module whiteSphereEngine.celestial.GalaxyDensity;
 import linoperixed.linear.Vector;
 import math.VectorAlias;
 
-Vector3p pickNearestPoint(const Vector3p[] points, const Vector3p point) {
+// TODO< move to helper >
+private Vector3p pickNearestPoint(const Vector3p[] points, const Vector3p point) {
 	double nearestDistance = (points[0]-point).magnitudeSquared;
 	Vector3p nearestPoint = points[0];
 

@@ -40,7 +40,7 @@ class WaterStateChangeForFluidSteam {
 	body {
 		stateChange = EnumStateChange.NONSPECIAL;
 
-		const float heatCapacity = calcHeatCapacity(absolutePressureInKpa);
+		const float heatCapacity = calcHeatCapacityOfLiquid(absolutePressureInKpa);
 
 		const float boilingTemperatureByAbsolutePressureInKelvin = lookupBoilingTemperatureByAbsolutePressureInKelvin(absolutePressureInKpa);
 		assert(startTemperatureInKelvin <= boilingTemperatureByAbsolutePressureInKelvin, "a starttemperature above the boiling temperature of the liquid is invalid!");
@@ -150,7 +150,7 @@ class WaterStateChangeForFluidSteam {
 	}
 
 
-	final float calcHeatCapacity(float absolutePressureInKpa) {
+	final float calcHeatCapacityOfLiquid(float absolutePressureInKpa) {
 		float specificEnthalpyInJoules = lookupSpecificEnthalpyOfEnumByAbsolutePressureInJoules(absolutePressureInKpa, EnumEnthalpyColumn.LIQUID);
 
 		// this works fine for water, the author made this up because its consistent with the heat apacity of water at atmospheric pressure

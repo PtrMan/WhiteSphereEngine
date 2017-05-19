@@ -2,6 +2,7 @@ module whiteSphereEngine.physics.material.state.WaterStateFacade;
 
 import whiteSphereEngine.physics.material.thermodynamics.WaterStateChangeForFluidSteam;
 import whiteSphereEngine.physics.material.SpecificHeatLookup;
+import whiteSphereEngine.material.state.MatterPhysicalState;
 
 // is a abstraction over the different table lookups and thermodynamic calculations of heating the different states of water and the transitions between the states
 
@@ -41,6 +42,14 @@ class WaterStateFacade {
 		out WaterStateChangeForFluidSteam.EnumStateChange evaporationCondensationState
 	) {
 		waterStateChangeForFluidSteam.calcEvaporationOfFluid(parameters, deltaFluidMassInKg, deltaSteamMassInKg, deltaEnergyInJoules, evaporationCondensationState);
+	}
+
+	final void calcHeatCapacity(float absolutePressureInKpa, double temperatureInKelvin, EnumMatterPhysicalState matterPhysicalState) {
+		final switch(matterPhysicalState) with(EnumMatterPhysicalState) {
+			case LIQUID: return waterStateChangeForFluidSteam.calcHeatCapacityOfLiquid(absolutePressureInKpa);
+			case SOLID: return heatLookupWaterIce.lookupSpecificHeatInJoules(temperatureInKelvin);
+			case GAS: return heatLookupWaterSteam.lookupSpecificHeatInJoules(temperatureInKelvin);
+		}
 	}
 
 	private SpecificHeatLookup heatLookupWaterSteam, heatLookupWaterIce;

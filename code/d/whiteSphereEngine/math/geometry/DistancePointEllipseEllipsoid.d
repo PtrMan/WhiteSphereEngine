@@ -2,10 +2,7 @@ module whiteSphereEngine.math.geometry.DistancePointEllipseEllipsoid;
 
 import std.math : sqrt, abs, fmax;
 
-// helper
-private Type sqr(Type)(const Type value) {
-	return value*value;
-}
+import whiteSphereEngine.math.Math;
 
 // computes the length of the input vector v0, v1 by avoiding floating-point overflow that could ccur normally when computing v_0^2 + v_1^2
 private Type robustLength(Type)(const Type v0, const Type v1) {

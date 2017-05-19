@@ -2,3 +2,7 @@ C:\VulkanSDK\1.0.21.1\Bin\glslangValidator -V resourcesSrc/engine/graphics/shade
 C:\VulkanSDK\1.0.21.1\Bin\glslangValidator -V resourcesSrc/engine/graphics/shader/src/Simple1.frag -o Simple1.frag.spv
 C:\VulkanSDK\1.0.21.1\Bin\glslangValidator -V resourcesSrc/engine/graphics/shader/src/SimpleNontransforming_2.vert -o SimpleNontransforming_2.vert.spv
 C:\VulkanSDK\1.0.21.1\Bin\glslangValidator -V resourcesSrc/engine/graphics/shader/src/SimpleTransforming_3.vert -o SimpleTransforming_3.vert.spv
+
+C:\VulkanSDK\1.0.21.1\Bin\glslangValidator -V resourcesSrc/engine/graphics/shader/src/TextureTest_4.vert -o TextureTest_4.vert.spv
+C:\VulkanSDK\1.0.21.1\Bin\glslangValidator -V resourcesSrc/engine/graphics/shader/src/Texture1.frag -o Texture1.frag.spv
+

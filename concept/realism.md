@@ -121,3 +121,23 @@ hohmann transfer
 ----
 
 http://ocw.mit.edu/courses/aeronautics-and-astronautics/16-07-dynamics-fall-2009/lecture-notes/MIT16_07F09_Lec17.pdf
+
+
+tech
+---
+
+photonics
+----
+
+http://web.stanford.edu/group/fan/publication/Fang_NaturePhotonics_6_782_2012.pdf
+
+radar
+----
+
+https://www.rt.com/news/358664-china-quantum-radar-test/
+
+propulsion
+----
+
+http://img.pr0gramm.com/2016/10/11/149689a0890e4764.jpg
+

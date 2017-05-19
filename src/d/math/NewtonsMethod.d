@@ -8,6 +8,10 @@ Type newtonsMethod(Type)(Type delegate(Type value) f, Type delegate(Type value) 
 
 	foreach( repetition; 0..maxRepetitions ) {
 		Type nextX = x - f(x)/fDerivative(x);
+		
+		import std.stdio;
+		writeln("newtonsMethod ", abs(f(nextX)));
+		
 		if( abs(f(nextX)) < accuracy ) {
 			return nextX;
 		}

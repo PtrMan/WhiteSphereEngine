@@ -2,8 +2,7 @@ module Array;
 
 // from ProjectSci
 
-// TODO< contract >
-
+// TODO< remove >
 /** \brief removes element at index Index from array
  *
  * \param array is the array
@@ -31,6 +30,7 @@ Type[] removeAt(Type)(Type[] array, uint Index) {
    return output;
 }
 
+// TODO< remove >
 /** \brief tries to find searchFor, if it was found return the index of it
  *
  * \param array ...

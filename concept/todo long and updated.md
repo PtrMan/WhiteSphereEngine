@@ -5,8 +5,6 @@ Graphics - Vulkan
 ---
 
 
-- e 22.08.2016 d - LOW : implement textures
-- e 22.08.2016 d - LOW :  use vkCmdBlitImage for copy for the right conversion
 
 
 - e 22.08.2016 d - LOW :  variable scissor for resolution change (fullscreen/window)
@@ -15,7 +13,6 @@ Graphics - Vulkan
 
 - e 22.08.2016 d - LOW :  instantiated rendering
 
-- e 22.08.2016 d - LOW :  depth buffer
 
 - e 22.08.2016 d - LOW :  deffered rendering
 - e 22.08.2016 d - LOW :  HDR (mipmap down in renderpass for fast calculation of total illumination)
@@ -30,6 +27,9 @@ Graphics - Vulkan
 
 - e 22.08.2016 d - LOW : fullscreen rendering
 
+- e 05.09.2016 d - MEDIUM : generalize internal vulkan handling so that it applies to other API's too (i look at you OpenGL 4.x with AZDO and some nvidia tricks/extensions)
+                            * generalized way to fill/manage commandbuffers
+
 
 AI / physics (just together because we have the todo points together for now)
 ---
@@ -42,6 +42,9 @@ AI / physics (just together because we have the todo points together for now)
 
                      implement more decorators
                      http://aigamedev.com/open/article/decorator/
+
+- e 05.09.2016 d - : improve the performane of the behavior tree by managing  stack and remebering the active node
+- e 05.09.2016 d - : let wait behaviorTree leafs report the time of waiting to the behaviortree execution, so we can skip ahead when we simulate the world over a long peroid of time
 
 GUI
 ---
@@ -58,8 +61,16 @@ refactoring
 core
 ---
 
+- e 18.10.2016 d - : (unified) spatial subdivision scheme based on conics (torus, sphere) for rendering and physics and (later) networking.
+                     This is inspired by the zoning system used in star citizen
+                     www.youtube.com/watch?v=j0r6aOasFEQ
+
+                     the torus can be disected into multiple subzones (sliced over the larger circle)
+
 - e 22.08.2016 d - : include task schedueling code from old engine code (if its there)
 - e 22.08.2016 d - LOW : using task schedueling code for multithreading
+
+- e 05.09.2016 d - : implement event store to log events
 
 atronomical
 ---
@@ -117,12 +128,22 @@ interaction
 
                      we will use this to calculate the parameters of the cut plane of a fluid that the fluid has roughtly the target volume
 
+- e 05.09.2016 d - : antenna/relay system based on the signal/even system for sending/receiving light and other types of radiation
+
+- e 30.09.2016 d - : implement http://web.mit.edu/16.unified/www/FALL/thermodynamics/notes/node111.html
+                     for flame temperature calculation
+
 
 signal
 ----
 
 - e 30.08.2016 d - : implement signal/event system for sending/receiving light and other types of radiation
 
+
+CODE TODO
+---
+
+// TODO< make sure that a unorm format is selected for the swapchain image! >
 
 DONE
 ---
@@ -131,8 +152,21 @@ graphics
 ----
 
 - e 22.08.2016 d 22.08.2016? : implement GraphicsVulkanAbstractGraphicsEngineAdapter and refactor Graphics vulkan for it
+- e 22.08.2016 d before 13.10.2016 LOW :  depth buffer
+
+- e 22.08.2016 d 17.10.2016 LOW : implement textures
+- e 22.08.2016 d 17.10.2016 LOW :  use vkCmdBlitImage for copy for the right conversion
+
+
 
 ai
 ---
 
 - e 22.08.2016 d 23.08.2016 : pull in behaviour tree and refactor to new codebase
+
+
+
+
+
+
+

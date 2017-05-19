@@ -1,5 +1,7 @@
 module common.ArrayQueue;
 
+// TODO< rename to ArrayDequeue >
+
 import std.algorithm.mutation : remove;
 
 void enqueue(Type)(Type[] arr, Type element) {

@@ -80,8 +80,41 @@ https://www.youtube.com/watch?v=xlq5Sn3B-fI
 	* water planet
 
 
+https://www.youtube.com/watch?v=XEIsZjQ_OdU         Dwarf Planet: Physical Characteristics
+	* escape velociy
 
 
+
+https://www.youtube.com/watch?v=80oQBGD7g34         Gas Giant: Physical Characteristics
+	* radius/mass
+	* puffy giant planet
+	* gas dwarf
+
+https://www.youtube.com/watch?v=Ig_DzmEEJ1M         what is an orbit
+	* semi-major axis
+	* eccentricity
+	* pitch (ascending/decending) node      inclination
+	* longitude of ascending node
+	* argument of periapsis
+
+https://www.youtube.com/watch?v=lfY7NOpmClg         Hot Jupiters
+	* b = a*sqrt(1-excentricicty^2)
+	* formula for periapis
+	* formula for apoapsis
+	* formula for orbital peroid
+	* orbital velocity (average)
+	* inclination
+
+https://www.youtube.com/watch?v=qE8WKDmSNNQ
+	* frostline
+
+https://www.youtube.com/watch?v=YGw0kQufhgM       Resonant Dwarf Planet Orbits
+
+https://www.youtube.com/watch?v=TrpOJYshfE4       Orbits For Earth-like Planets
+
+
+https://www.youtube.com/watch?v=CItDiuBWP5I       If Earth had Rings
+	* roche limit
 
 
 

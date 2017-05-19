@@ -1,5 +1,8 @@
+module whiteSphereEngine.physics.material.state.MatterStateFacade;
+
 import whiteSphereEngine.physics.material.state.WaterStateFacade;
 import whiteSphereEngine.physics.material.thermodynamics.WaterStateChangeForFluidSteam;
+import whiteSphereEngine.material.state.MatterPhysicalState;
 
 // abstracts away the specfic model of the matter for the state calculation(s)
 class MatterStateFacade {
@@ -46,6 +49,12 @@ class MatterStateFacade {
 	) {
 		final switch( matterType ) with (EnumMatterType) {
 			case WATER: waterStateFacade.calcEvaporationOfFluid(parameters, deltaFluidMassInKg, deltaSteamMassInKg, deltaEnergyInJoules, evaporationCondensationState); return
+		}
+	}
+
+	final void calcHeatCapacity(float absolutePressureInKpa, double temperatureInKelvin, EnumMatterPhysicalState matterPhysicalState) {
+		final switch( matterType ) with (EnumMatterType) {
+			case WATER: return waterStateFacade.calcHeatCapacity(absolutePressureInKpa, temperatureInKelvin, matterPhysicalState);
 		}
 	}
 

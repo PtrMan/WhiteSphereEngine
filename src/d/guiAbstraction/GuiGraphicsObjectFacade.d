@@ -47,13 +47,13 @@ class GuiGraphicsObjectFacade {
 			
 			Mesh signMesh = new Mesh([positionComponent, relativeTextureComponent], indexMeshComponent, positionComponentIndex);
 			
-			decoratedMeshForSign = graphicsEngine.createMeshWithDecorationForMesh(signMesh);
+			decoratedMeshForSign = graphicsEngine.createDecoratedMesh(signMesh);
 		}
 		
 	}
 	
 	final void dispose() {
-		graphicsEngine.disposeMeshWithDecoration(decoratedMeshForSign);
+		graphicsEngine.disposeDecoratedMesh(decoratedMeshForSign);
 	}
 	
 	protected AbstractDecoratedMesh decoratedMeshForSign;

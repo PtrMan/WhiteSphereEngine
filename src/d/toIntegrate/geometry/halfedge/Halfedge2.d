@@ -110,10 +110,6 @@ void enumerateAdjacentVertices(VertexAttributeType, FaceAttributeType)(Edge!(Ver
 	}
 }
 
-void x(Edge!(int, int)* entryEdge, void delegate(int vertexAttribute) adjacentVertexCallback) {
-	enumerateAdjacentVertices(entryEdge, adjacentVertexCallback)
-}
-
 unittest {
 	alias VertexAttributeType int;
 	alias FaceAttributeType int; // dummy
